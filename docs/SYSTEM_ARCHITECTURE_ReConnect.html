@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>SYSTEM ARCHITECTURE - Re-Connect</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; margin: 40px; color: #333; }
+        h1, h2, h3 { color: #2c3e50; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        th, td { border: 1px solid #bdc3c7; padding: 12px 15px; text-align: left; }
+        th { background-color: #34495e; color: white; font-weight: bold; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        pre { background-color: #ecf0f1; padding: 15px; border-radius: 5px; overflow-x: auto; border-left: 4px solid #3498db; }
+        code { font-family: Consolas, monospace; }
+        .highlight { font-weight: bold; color: #e74c3c; }
+    </style>
+</head>
+<body>
+    <h1>TÀI LIỆU KIẾN TRÚC HỆ THỐNG VÀ THIẾT KẾ CSDL (SYSTEM ARCHITECTURE)</h1>
+    <p><strong>Dự án:</strong> Re-Connect Platform</p>
+
+    <h2>1. Kiến trúc Tổng thể (Tech Stack)</h2>
+    <p>Hệ thống Re-Connect đi theo mô hình <strong>Client-Server Service-Oriented Architecture (SOA)</strong>:</p>
+    <ul>
+        <li><strong>Frontend (Mobile App):</strong> Flutter SDK (Dart) - Giao diện Bệnh nhân.</li>
+        <li><strong>Frontend (Web CMS):</strong> Flutter Web / ReactJS - Giao diện Bác sĩ & Admin.</li>
+        <li><strong>Backend:</strong> Java 17, Spring Boot 3.x, Spring Security (JWT), Spring Data JPA.</li>
+        <li><strong>Cơ sở dữ liệu:</strong> PostgreSQL 15+ (Hỗ trợ tốt JSONB và khóa ngoại chặt chẽ).</li>
+        <li><strong>Core AI Integration:</strong> API HTTP Call sang Google Gemini Pro (Text) và Google Cloud Vision (Image).</li>
+    </ul>
+
+    <h2>2. Thiết kế Cơ sở Dữ liệu Chi tiết (Database Schema)</h2>
+    <p>Hệ thống xoay quanh 5 phân hệ lõi: Authentication, Profiles, Gamification (Quests), Medical Records (Tests/Logs), và Telehealth (Booking).</p>
+
+    <h3>2.1 Chi tiết Bảng (Tables & Columns Definition)</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Tên Bảng</th>
+                <th>Cột (Theo thứ tự)</th>
+                <th>Kiểu Dữ liệu</th>
+                <th>Khóa/Ràng buộc</th>
+                <th>Mô tả</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- users -->
+            <tr>
+                <td rowspan="5" style="background-color: #e8f4f8;"><strong><code>users</code></strong></td>
+                <td><code>id</code></td>
+                <td>UUID</td>
+                <td class="highlight">PK</td>
+                <td>Mã định danh gốc của Account</td>
+            </tr>
+            <tr>
+                <td><code>email</code></td>
+                <td>VARCHAR(100)</td>
+                <td>UNIQUE, NOT NULL</td>
+                <td>Dùng để Login</td>
+            </tr>
+            <tr>
+                <td><code>password_hash</code></td>
+                <td>VARCHAR(255)</td>
+                <td>NOT NULL</td>
+                <td>Pass mã hóa Bcrypt</td>
+            </tr>
+            <tr>
+                <td><code>role</code></td>
+                <td>VARCHAR(20)</td>
+                <td>NOT NULL</td>
+                <td>Giá trị: PATIENT, THERAPIST, ADMIN</td>
+            </tr>
+            <tr>
+                <td><code>created_at</code></td>
+                <td>TIMESTAMP</td>
+                <td>DEFAULT NOW()</td>
+                <td>Ngày tạo account</td>
+            </tr>
+            <!-- patient_profiles -->
+            <tr>
+                <td rowspan="7" style="background-color: #fdf2e9;"><strong><code>patient_profiles</code></strong></td>
+                <td><code>user_id</code></td>
+                <td>UUID</td>
+                <td><span class="highlight">PK</span>, <strong>FK</strong>(users.id)</td>
+                <td>Kế thừa từ User</td>
+            </tr>
+            <tr>
+                <td><code>nickname</code></td>
+                <td>VARCHAR(50)</td>
+                <td>NOT NULL</td>
+                <td>Tên ảo sinh ngẫu nhiên</td>
+            </tr>
+            <tr>
+                <td><code>avatar_icon</code></td>
+                <td>VARCHAR(100)</td>
+                <td>NOT NULL</td>
+                <td>Đường dẫn icon con vật</td>
+            </tr>
+            <tr>
+                <td><code>real_name</code></td>
+                <td>VARCHAR(100)</td>
+                <td>NULLABLE</td>
+                <td>Tên thật (Nếu Tắt Ẩn danh)</td>
+            </tr>
+            <tr>
+                <td><code>is_anonymous</code></td>
+                <td>BOOLEAN</td>
+                <td>DEFAULT TRUE</td>
+                <td>Cờ báo chế độ ẩn danh</td>
+            </tr>
+            <tr>
+                <td><code>therapist_id</code></td>
+                <td>UUID</td>
+                <td><strong>FK</strong>(therapist_profiles.user_id)</td>
+                <td>Bác sĩ đang phụ trách</td>
+            </tr>
+            <tr>
+                <td><code>streak_days</code></td>
+                <td>INT</td>
+                <td>DEFAULT 0</td>
+                <td>Số ngày tương tác liên tiếp</td>
+            </tr>
+            <!-- therapist_profiles -->
+            <tr>
+                <td rowspan="5" style="background-color: #ebf5fb;"><strong><code>therapist_profiles</code></strong></td>
+                <td><code>user_id</code></td>
+                <td>UUID</td>
+                <td><span class="highlight">PK</span>, <strong>FK</strong>(users.id)</td>
+                <td>Kế thừa từ User</td>
+            </tr>
+            <tr>
+                <td><code>real_name</code></td>
+                <td>VARCHAR(100)</td>
+                <td>NOT NULL</td>
+                <td>Tên thật bác sĩ</td>
+            </tr>
+            <tr>
+                <td><code>bio</code></td>
+                <td>TEXT</td>
+                <td>NULLABLE</td>
+                <td>Tiểu sử, Học vị</td>
+            </tr>
+            <tr>
+                <td><code>cert_image_url</code></td>
+                <td>VARCHAR(255)</td>
+                <td>NOT NULL</td>
+                <td>Link chứa ảnh bằng cấp</td>
+            </tr>
+            <tr>
+                <td><code>status</code></td>
+                <td>VARCHAR(20)</td>
+                <td>DEFAULT 'PENDING'</td>
+                <td>PENDING, APPROVED, REJECTED</td>
+            </tr>
+            <!-- sentiment_logs -->
+            <tr>
+                <td rowspan="6" style="background-color: #fceceb;"><strong><code>sentiment_logs</code></strong></td>
+                <td><code>id</code></td>
+                <td>UUID</td>
+                <td class="highlight">PK</td>
+                <td>ID của log</td>
+            </tr>
+            <tr>
+                <td><code>patient_id</code></td>
+                <td>UUID</td>
+                <td><strong>FK</strong>(patient_profiles)</td>
+                <td>Của bệnh nhân nào</td>
+            </tr>
+            <tr>
+                <td><code>session_date</code></td>
+                <td>DATE</td>
+                <td>NOT NULL</td>
+                <td>Ngày phân tích</td>
+            </tr>
+            <tr>
+                <td><code>negative_score</code></td>
+                <td>INT</td>
+                <td>CHK (0-100)</td>
+                <td>Điểm tiêu cực do AI chấm</td>
+            </tr>
+            <tr>
+                <td><code>is_red_alert</code></td>
+                <td>BOOLEAN</td>
+                <td>DEFAULT FALSE</td>
+                <td>Còi báo động khẩn cấp</td>
+            </tr>
+            <tr>
+                <td><code>ai_insight</code></td>
+                <td>TEXT</td>
+                <td>NULLABLE</td>
+                <td>Lời phê tóm tắt từ AI</td>
+            </tr>
+            <!-- roadmaps -->
+            <tr>
+                <td rowspan="4" style="background-color: #eafaf1;"><strong><code>roadmaps</code></strong></td>
+                <td><code>id</code></td>
+                <td>UUID</td>
+                <td class="highlight">PK</td>
+                <td>ID lộ trình khóa học</td>
+            </tr>
+            <tr>
+                <td><code>patient_id</code></td>
+                <td>UUID</td>
+                <td><strong>FK</strong>(patient_profiles)</td>
+                <td>Bệnh nhân tham gia</td>
+            </tr>
+            <tr>
+                <td><code>therapist_id</code></td>
+                <td>UUID</td>
+                <td><strong>FK</strong>(therapist_profiles)</td>
+                <td>Người thiết kế khóa học này</td>
+            </tr>
+            <tr>
+                <td><code>status</code></td>
+                <td>VARCHAR(20)</td>
+                <td>DEFAULT 'ACTIVE'</td>
+                <td>ACTIVE, GRADUATED</td>
+            </tr>
+            <!-- assigned_quests -->
+            <tr>
+                <td rowspan="6" style="background-color: #fef9e7;"><strong><code>assigned_quests</code></strong></td>
+                <td><code>id</code></td>
+                <td>UUID</td>
+                <td class="highlight">PK</td>
+                <td>ID nhiệm vụ gán</td>
+            </tr>
+            <tr>
+                <td><code>roadmap_id</code></td>
+                <td>UUID</td>
+                <td><strong>FK</strong>(roadmaps.id)</td>
+                <td>Thuộc roadmap nào</td>
+            </tr>
+            <tr>
+                <td><code>title</code></td>
+                <td>VARCHAR(200)</td>
+                <td>NOT NULL</td>
+                <td>Ví dụ: "Đi bộ 10 phút"</td>
+            </tr>
+            <tr>
+                <td><code>milestone_order</code></td>
+                <td>INT</td>
+                <td>NOT NULL</td>
+                <td>Vị trí node (Trạm số 1, 2...)</td>
+            </tr>
+            <tr>
+                <td><code>status</code></td>
+                <td>VARCHAR(20)</td>
+                <td>DEFAULT 'LOCKED'</td>
+                <td>LOCKED, UNLOCKED, IMAGE_PENDING, DONE</td>
+            </tr>
+            <tr>
+                <td><code>proof_image_url</code></td>
+                <td>VARCHAR(255)</td>
+                <td>NULLABLE</td>
+                <td>Hình bệnh nhân chụp từ Camera</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>2.2 Sơ đồ Entity-Relationship (ERD)</h3>
+    <pre><code>erDiagram
+    USERS ||--o| PATIENT_PROFILES : includes
+    USERS ||--o| THERAPIST_PROFILES : includes
+
+    USERS {
+        UUID id PK
+        VARCHAR email
+        VARCHAR password_hash
+        VARCHAR role
+    }
+
+    PATIENT_PROFILES {
+        UUID user_id PK, FK
+        VARCHAR nickname
+        VARCHAR avatar_icon
+        BOOLEAN is_anonymous
+        UUID therapist_id FK
+        INT streak_days
+    }
+    
+    THERAPIST_PROFILES {
+        UUID user_id PK, FK
+        VARCHAR real_name
+        TEXT bio
+        VARCHAR cert_image_url
+        VARCHAR status
+    }
+
+    PATIENT_PROFILES }|--|| THERAPIST_PROFILES : is_treated_by
+
+    SENTIMENT_LOGS {
+        UUID id PK
+        UUID patient_id FK
+        DATE session_date
+        INT negative_score
+        BOOLEAN is_red_alert
+        TEXT ai_insight
+    }
+    PATIENT_PROFILES ||--o{ SENTIMENT_LOGS : AI_analyzes_chat
+
+    ROADMAPS {
+        UUID id PK
+        UUID patient_id FK
+        UUID therapist_id FK
+        VARCHAR status
+    }
+    PATIENT_PROFILES ||--o{ ROADMAPS : has
+    THERAPIST_PROFILES ||--o{ ROADMAPS : creates
+
+    ASSIGNED_QUESTS {
+        UUID id PK
+        UUID roadmap_id FK
+        VARCHAR title
+        INT milestone_order
+        VARCHAR status
+        VARCHAR proof_image_url
+    }
+    ROADMAPS ||--|{ ASSIGNED_QUESTS : contains_nodes
+    </code></pre>
+</body>
+</html>

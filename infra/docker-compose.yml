@@ -1,0 +1,53 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mindhealth-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: mindhealth_db
+      MYSQL_USER: mindhealth_user
+      MYSQL_PASSWORD: mindhealth_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql/init:/docker-entrypoint-initdb.d
+    command: --default-authentication-plugin=mysql_native_password
+
+  backend:
+    build:
+      context: ../reconnect_backend
+    container_name: mindhealth-backend
+    restart: unless-stopped
+    depends_on:
+      - mysql
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: mindhealth_db
+      DB_USER: mindhealth_user
+      DB_PASSWORD: mindhealth_password
+      SERVER_PORT: 8081
+      JWT_SECRET: mindhealth-docker-secret-change-this-32chars-min
+      AI_ENABLED: "false"
+    ports:
+      - "8081:8081"
+    volumes:
+      - backend_uploads:/app/uploads
+      - backend_proofs:/app/proofs
+
+  web:
+    build:
+      context: ../reconnect_web
+    container_name: mindhealth-web
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+
+volumes:
+  mysql_data:
+  backend_uploads:
+  backend_proofs:
