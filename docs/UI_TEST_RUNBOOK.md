@@ -14,6 +14,9 @@ Tai khoan demo (seed):
 - Patient: `patient1@mindhealth.com` / `patient123`
 
 Neu login bao "Khong tim thay email", hay kiem tra DB co du lieu chua. Backend se tu auto-seed khi DB con rong.
+Neu vao "Kho CBT" / "Ho so benh nhan" ma khong co du lieu:
+- Cach nhanh (Docker): `docker compose down -v` (xoa volume DB) -> `docker compose up -d --build` de seed lai tu dau.
+- Cach non-docker: drop schema DB `mindhealth_db` -> chay backend lai (se auto-seed).
 
 ## 1) Web CMS - Admin flows (BRD)
 
@@ -25,8 +28,18 @@ Neu login bao "Khong tim thay email", hay kiem tra DB co du lieu chua. Backend s
 1. Vao man "Quan ly Bac si".
 2. Bam "CAP TAI KHOAN" -> nhap FullName/Email/Password.
    - Expected: tao thanh cong, trang thai `PENDING`.
-3. Bam Approve/Activate (set `ACTIVE`).
-   - Expected: therapist chuyen sang `ACTIVE` va dang nhap duoc.
+3. **Therapist dang nhap ngay** bang tai khoan vua tao.
+   - Expected: login OK (du PENDING), bi dieu huong sang man "Upload chung chi".
+4. Therapist upload chung chi (PDF/JPG/PNG <= 5MB).
+   - Expected: upload OK, danh sach chung chi hien ra, trang thai van `PENDING`.
+   - Debug: backend log se co dong `TherapistCredential upload start/success`.
+   - UX: sau khi upload se co thong bao (SnackBar). Neu muon thoat tai khoan, bam "Dang xuat" o goc tren.
+5. Quay lai Admin -> bam "XEM CC" de xem/tai chung chi.
+   - Expected: thay file + tai xuong duoc.
+6. Admin bam "DUYET" (set `ACTIVE`).
+   - Expected: **chi duyet duoc neu da co chung chi**. Neu chua co chung chi -> hien loi.
+7. Therapist bam "Tai lai" / dang nhap lai.
+   - Expected: vao duoc dashboard therapist (ACTIVE).
 
 ### 1.2) Kho Noi dung CBT (Quest Templates)
 1. Vao man "Kho Noi dung CBT".
@@ -44,8 +57,10 @@ Neu login bao "Khong tim thay email", hay kiem tra DB co du lieu chua. Backend s
 
 ## 2) Web CMS - Therapist flow (Patient Monitoring + Red Flag)
 
-1. Dang nhap bang Therapist (ACTIVE).
-   - Expected: vao duoc dashboard therapist.
+1. Dang nhap bang Therapist.
+   - Expected:
+     - Neu `PENDING`: chi vao duoc man upload chung chi, cac API chuyen mon (patients...) bi chan.
+     - Neu `ACTIVE`: vao duoc dashboard therapist.
 2. Mo man "Patient Monitoring" / "Patients".
    - Expected: hien danh sach patient.
 3. Bat filter "Red flag only" (neu co).
@@ -77,4 +92,3 @@ Expected:
 - Login admin -> set `jwtAdmin`
 - Create therapist -> set `therapistId`
 - Login therapist -> set `jwtTherapist`
-

@@ -21,6 +21,7 @@ import com.reconnect.mindhealth.modules.clinical.dto.CreateTherapistAccountReque
 import com.reconnect.mindhealth.modules.clinical.dto.TherapistApplicantDto;
 import com.reconnect.mindhealth.modules.clinical.entity.TherapistProfile;
 import com.reconnect.mindhealth.modules.clinical.enums.ApprovalStatus;
+import com.reconnect.mindhealth.modules.clinical.repository.TherapistCredentialRepository;
 import com.reconnect.mindhealth.modules.clinical.repository.TherapistProfileRepository;
 import com.reconnect.mindhealth.modules.clinical.service.AdminTherapistAccountService;
 
@@ -31,14 +32,17 @@ public class AdminTherapistApprovalController {
     private final AuthContextService authContextService;
     private final TherapistProfileRepository therapistProfileRepository;
     private final AdminTherapistAccountService adminTherapistAccountService;
+    private final TherapistCredentialRepository therapistCredentialRepository;
 
     public AdminTherapistApprovalController(
             AuthContextService authContextService,
             TherapistProfileRepository therapistProfileRepository,
-            AdminTherapistAccountService adminTherapistAccountService) {
+            AdminTherapistAccountService adminTherapistAccountService,
+            TherapistCredentialRepository therapistCredentialRepository) {
         this.authContextService = authContextService;
         this.therapistProfileRepository = therapistProfileRepository;
         this.adminTherapistAccountService = adminTherapistAccountService;
+        this.therapistCredentialRepository = therapistCredentialRepository;
     }
 
     private void requireAdmin() {
@@ -56,7 +60,9 @@ public class AdminTherapistApprovalController {
             List<TherapistProfile> list = status == null
                     ? therapistProfileRepository.findAll()
                     : therapistProfileRepository.findByApprovalStatusOrderByFullNameAsc(status);
-            List<TherapistApplicantDto> dtos = list.stream().map(TherapistApplicantDto::new).toList();
+            List<TherapistApplicantDto> dtos = list.stream()
+                    .map(p -> new TherapistApplicantDto(p, therapistCredentialRepository.countByTherapistProfile_Id(p.getId())))
+                    .toList();
             return ResponseEntity.ok(ApiResponse.success("OK", dtos));
         } catch (Exception e) {
             return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
@@ -81,7 +87,7 @@ public class AdminTherapistApprovalController {
             }
 
             TherapistProfile savedProfile = adminTherapistAccountService.createTherapistAccount(request);
-            return ResponseEntity.ok(ApiResponse.success("OK", new TherapistApplicantDto(savedProfile)));
+            return ResponseEntity.ok(ApiResponse.success("OK", new TherapistApplicantDto(savedProfile, 0)));
         } catch (Exception e) {
             return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
         }
@@ -94,10 +100,10 @@ public class AdminTherapistApprovalController {
         try {
             requireAdmin();
             TherapistProfile saved = adminTherapistAccountService.setApproval(therapistId, status);
-            return ResponseEntity.ok(ApiResponse.success("OK", new TherapistApplicantDto(saved)));
+            long credentialCount = therapistCredentialRepository.countByTherapistProfile_Id(therapistId);
+            return ResponseEntity.ok(ApiResponse.success("OK", new TherapistApplicantDto(saved, credentialCount)));
         } catch (Exception e) {
             return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
         }
     }
 }
-

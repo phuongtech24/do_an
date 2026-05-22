@@ -38,6 +38,7 @@ dependencies:
   fl_chart: ^1.1.1
   provider: ^6.1.5+1
   http: ^1.2.2
+  http_parser: ^4.1.0
 
 dev_dependencies:
   flutter_test:

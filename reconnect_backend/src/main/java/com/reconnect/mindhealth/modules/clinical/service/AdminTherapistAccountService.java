@@ -12,6 +12,7 @@ import com.reconnect.mindhealth.modules.auth.repository.UserRepository;
 import com.reconnect.mindhealth.modules.clinical.dto.CreateTherapistAccountRequestDto;
 import com.reconnect.mindhealth.modules.clinical.entity.TherapistProfile;
 import com.reconnect.mindhealth.modules.clinical.enums.ApprovalStatus;
+import com.reconnect.mindhealth.modules.clinical.repository.TherapistCredentialRepository;
 import com.reconnect.mindhealth.modules.clinical.repository.TherapistProfileRepository;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -21,14 +22,17 @@ public class AdminTherapistAccountService {
 
     private final UserRepository userRepository;
     private final TherapistProfileRepository therapistProfileRepository;
+    private final TherapistCredentialRepository therapistCredentialRepository;
     private final PasswordEncoder passwordEncoder;
 
     public AdminTherapistAccountService(
             UserRepository userRepository,
             TherapistProfileRepository therapistProfileRepository,
+            TherapistCredentialRepository therapistCredentialRepository,
             PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.therapistProfileRepository = therapistProfileRepository;
+        this.therapistCredentialRepository = therapistCredentialRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -36,7 +40,7 @@ public class AdminTherapistAccountService {
     public TherapistProfile createTherapistAccount(CreateTherapistAccountRequestDto request) {
         String email = request.getEmail().trim();
         if (userRepository.existsByEmail(email)) {
-            throw new IllegalStateException("Email đã được sử dụng.");
+            throw new IllegalStateException("Email Ä‘Ã£ Ä‘Æ°á»£c sá»­ dá»¥ng.");
         }
 
         User u = new User();
@@ -62,9 +66,15 @@ public class AdminTherapistAccountService {
     @Transactional
     public TherapistProfile setApproval(UUID therapistId, ApprovalStatus status) {
         TherapistProfile profile = therapistProfileRepository.findById(therapistId)
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy therapist: " + therapistId));
+                .orElseThrow(() -> new EntityNotFoundException("KhÃ´ng tÃ¬m tháº¥y therapist: " + therapistId));
+        if (status == ApprovalStatus.ACTIVE) {
+            long credentialCount = therapistCredentialRepository.countByTherapistProfile_Id(therapistId);
+            if (credentialCount <= 0) {
+                throw new IllegalStateException("Chưa có chứng chỉ. Không thể duyệt ACTIVE.");
+            }
+        }
+
         profile.setApprovalStatus(status);
         return therapistProfileRepository.save(profile);
     }
 }
-

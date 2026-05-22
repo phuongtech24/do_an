@@ -96,16 +96,27 @@ public class DatabaseSeeder implements CommandLineRunner {
         }
 
         System.out.println("====== RECONNECT: STARTING DATABASE SEEDING FROM CSV (AUTO) ======");
+
+        safeSeed("users", this::seedUsers);
+        safeSeed("therapist_profiles", this::seedTherapistProfiles);
+        safeSeed("patient_profiles", this::seedPatientProfiles);
+        safeSeed("phq9_questions", this::seedPhq9Questions);
+        safeSeed("journals", this::seedJournals);
+        safeSeed("quest_templates", this::seedQuestTemplates);
+
+        System.out.println("====== RECONNECT: DATABASE SEEDING FINISHED (CHECK LOGS ABOVE) ======");
+    }
+
+    @FunctionalInterface
+    private interface SeedTask {
+        void run() throws Exception;
+    }
+
+    private void safeSeed(String name, SeedTask task) {
         try {
-            seedUsers();
-            seedTherapistProfiles();
-            seedPatientProfiles();
-            seedPhq9Questions();
-            seedJournals();
-            seedQuestTemplates();
-            System.out.println("====== RECONNECT: DATABASE SEEDING COMPLETED SUCCESSFULLY ======");
+            task.run();
         } catch (Exception e) {
-            System.err.println("====== RECONNECT: ERROR SEEDING DATABASE ======");
+            System.err.println("====== RECONNECT: SEED STEP FAILED: " + name + " ======");
             e.printStackTrace();
         }
     }
@@ -208,7 +219,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                 }
 
                 TherapistProfile profile = new TherapistProfile();
-                profile.setUser(user);
+                profile.setUser(userRepository.getReferenceById(user.getId()));
                 profile.setFullName(fullName.isBlank() ? user.getUsername() : fullName);
                 profile.setSpecialization(specialization.isBlank() ? null : specialization);
                 profile.setBio(bio.isBlank() ? null : bio);
@@ -220,8 +231,12 @@ public class DatabaseSeeder implements CommandLineRunner {
                 }
                 profile.setApprovalStatus(approvalStatus);
 
-                therapistProfileRepository.save(profile);
-                System.out.println("Successfully seeded therapist profile: " + profile.getFullName());
+                try {
+                    therapistProfileRepository.save(profile);
+                    System.out.println("Successfully seeded therapist profile: " + profile.getFullName());
+                } catch (Exception ex) {
+                    System.out.println("Skipping seed therapist profile (constraint): " + userId);
+                }
             }
         }
     }
@@ -254,13 +269,17 @@ public class DatabaseSeeder implements CommandLineRunner {
                 
                 if (user != null && !patientProfileRepository.existsById(user.getId())) {
                     PatientProfile profile = new PatientProfile();
-                    profile.setUser(user);
+                    profile.setUser(userRepository.getReferenceById(user.getId()));
                     profile.setNickName(nickname);
                     profile.setStatus(status);
                     profile.setAvatarIcon(avatarIcon);
                     profile.setIsRedFlagActive(isRedFlagActive);
-                    patientProfileRepository.save(profile);
-                    System.out.println("Successfully seeded patient profile: " + nickname);
+                    try {
+                        patientProfileRepository.save(profile);
+                        System.out.println("Successfully seeded patient profile: " + nickname);
+                    } catch (Exception ex) {
+                        System.out.println("Skipping seed patient profile (constraint): " + user.getId());
+                    }
                 }
             }
         }

@@ -33,6 +33,8 @@ Quy tắc: Khi hoàn thành một tính năng hoặc Phase, AI (Antigravity) B�
   - [x] Backend API nền: Admin assign/reassign therapist (gắn cứng 1 bệnh nhân - 1 bác sĩ).
   - [x] Backend API nền: Therapist patient list + filter red-flag (phục vụ Emergency Alert).
 
+- [x] Duyệt therapist theo chứng chỉ (upload credentials + gating theo trạng thái ACTIVE).
+
 ### Phase 5: System Admin & Background Jobs
 - [x] Admin CRUD User / Nội dung Nhiệm vụ.
 - [x] Cron Job: Chấm điểm Risk Index mỗi 00:00 đêm.

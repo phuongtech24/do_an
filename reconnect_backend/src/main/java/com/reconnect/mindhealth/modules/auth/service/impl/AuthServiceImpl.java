@@ -41,16 +41,16 @@ public class AuthServiceImpl implements IAuthService {
     @Override
     public UserDto register(String email, String password, String role, Boolean isAnonymous, String nickname, String avatarIcon) {
         if (userRepository.existsByEmail(email)) {
-            throw new RuntimeException("Email đã được sử dụng!");
+            throw new RuntimeException("Email Ä‘Ã£ Ä‘Æ°á»£c sá»­ dá»¥ng!");
         }
 
-        // Validation cho trường hợp ẩn danh (theo đặc tả Module 1)
+        // Validation cho trÆ°á»ng há»£p áº©n danh (theo Ä‘áº·c táº£ Module 1)
         if (Boolean.TRUE.equals(isAnonymous)) {
             if (nickname == null || nickname.trim().isEmpty()) {
-                throw new RuntimeException("Đăng ký ẩn danh bắt buộc phải có Nickname!");
+                throw new RuntimeException("ÄÄƒng kÃ½ áº©n danh báº¯t buá»™c pháº£i cÃ³ Nickname!");
             }
             if (avatarIcon == null || avatarIcon.trim().isEmpty()) {
-                throw new RuntimeException("Đăng ký ẩn danh bắt buộc phải có Avatar!");
+                throw new RuntimeException("ÄÄƒng kÃ½ áº©n danh báº¯t buá»™c pháº£i cÃ³ Avatar!");
             }
         }
 
@@ -64,13 +64,13 @@ public class AuthServiceImpl implements IAuthService {
         
         User savedUser = this.userRepository.save(entity);
 
-        // Nếu là bệnh nhân, tự động tạo Profile
+        // Náº¿u lÃ  bá»‡nh nhÃ¢n, tá»± Ä‘á»™ng táº¡o Profile
         if (entity.getRole() == Role.PATIENT) {
             PatientProfile profile = new PatientProfile();
             profile.setUser(savedUser);
             profile.setNickName(nickname);
             profile.setAvatarIcon(avatarIcon);
-            profile.setStatus(Status.STABLE); // Mặc định
+            profile.setStatus(Status.STABLE); // Máº·c Ä‘á»‹nh
             profile.setTaperingStage(TaperingStage.NONE);
             profile.setCurrentRiskScore(0);
             patientProfileRepository.save(profile);
@@ -83,16 +83,16 @@ public class AuthServiceImpl implements IAuthService {
     public LoginResponse login(LoginRequest request) {
         User entity = this.userRepository
             .findByEmail(request.getEmail())
-            .orElseThrow(() -> new RuntimeException("Không tìm thấy email"));
+            .orElseThrow(() -> new RuntimeException("KhÃ´ng tÃ¬m tháº¥y email"));
 
         if (Boolean.FALSE.equals(entity.getIsActive())) {
-            throw new RuntimeException("Tài khoản đã bị khóa");
+            throw new RuntimeException("TÃ i khoáº£n Ä‘Ã£ bá»‹ khÃ³a");
         }
 
         validatePasswordOrThrow(request, entity);
 
         if (entity.getRole() == Role.THERAPIST) {
-            enforceTherapistApproved(entity);
+            enforceTherapistNotRejected(entity);
         }
 
         String token = this.jwtUtil.generateToken(entity.getEmail());
@@ -104,33 +104,23 @@ public class AuthServiceImpl implements IAuthService {
             return;
         }
 
-        // Fallback cho mật khẩu dạng thô chưa mã hóa (dữ liệu seed từ CSV)
+        // Fallback cho máº­t kháº©u dáº¡ng thÃ´ chÆ°a mÃ£ hÃ³a (dá»¯ liá»‡u seed tá»« CSV)
         if (request.getPassword() != null && request.getPassword().equals(user.getPasswordHash())) {
             return;
         }
 
-        throw new RuntimeException("Sai mật khẩu");
+        throw new RuntimeException("Sai máº­t kháº©u");
     }
 
-    private void enforceTherapistApproved(User user) {
+    private void enforceTherapistNotRejected(User user) {
         TherapistProfile profile = therapistProfileRepository
             .findById(user.getId())
-            .orElseThrow(() -> new RuntimeException("Tài khoản therapist chưa có profile"));
+            .orElseThrow(() -> new RuntimeException("TÃ i khoáº£n therapist chÆ°a cÃ³ profile"));
 
         ApprovalStatus approvalStatus = profile.getApprovalStatus();
-        if (approvalStatus == ApprovalStatus.ACTIVE) {
-            return;
-        }
-
-        if (approvalStatus == ApprovalStatus.PENDING) {
-            throw new RuntimeException("Tài khoản therapist đang chờ duyệt. Vui lòng thử lại sau.");
-        }
-
         if (approvalStatus == ApprovalStatus.REJECTED) {
             throw new RuntimeException("Tài khoản therapist đã bị từ chối duyệt. Vui lòng liên hệ admin.");
         }
-
-        throw new RuntimeException("Tài khoản therapist chưa được duyệt.");
     }
 
     @Override
@@ -141,19 +131,19 @@ public class AuthServiceImpl implements IAuthService {
                                             User newGuest = new User();
                                             newGuest.setEmail(guestEmail);
                                             newGuest.setUsername("Guest_" + deviceId.substring(0, 4));
-                                            newGuest.setPasswordHash(passwordEncoder.encode(deviceId)); // Dùng chính deviceId làm pass ẩn
+                                            newGuest.setPasswordHash(passwordEncoder.encode(deviceId)); // DÃ¹ng chÃ­nh deviceId lÃ m pass áº©n
                                             newGuest.setRole(Role.PATIENT);
                                             newGuest.setIsAnonymous(true);
                                             return userRepository.save(newGuest);
                                         });
 
-        // Tự động tạo PatientProfile cho khách ẩn danh nếu chưa tồn tại
+        // Tá»± Ä‘á»™ng táº¡o PatientProfile cho khÃ¡ch áº©n danh náº¿u chÆ°a tá»“n táº¡i
         if (!patientProfileRepository.existsById(entity.getId())) {
             PatientProfile profile = new PatientProfile();
             profile.setUser(entity);
             profile.setNickName(entity.getUsername());
             profile.setAvatarIcon("avatar_boy_1"); // Default icon
-            profile.setStatus(Status.STABLE); // Mặc định
+            profile.setStatus(Status.STABLE); // Máº·c Ä‘á»‹nh
             profile.setTaperingStage(TaperingStage.NONE);
             profile.setCurrentRiskScore(0);
             patientProfileRepository.save(profile);

@@ -8,6 +8,7 @@ D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\ai\dto\
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\assessment\dto\Phq9QuestionDto.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\assessment\enums\Phq9Type.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\booster\service\impl\BoosterServiceImpl.java
+D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\clinical\entity\TherapistCredential.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\security\SecurityConfig.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\clinical\dto\TherapistApplicantDto.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\roadmap\dto\VerifyQuestProofResponseDto.java
@@ -23,7 +24,9 @@ D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\roadmap
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\ai\dto\GuidedDiscoveryResponseDto.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\clinical\dto\AssignTherapistRequestDto.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\booster\job\TaperingBoosterCronJob.java
+D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\clinical\controller\AdminTherapistCredentialController.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\auth\dto\LoginResponse.java
+D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\clinical\repository\TherapistCredentialRepository.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\common\domain\BaseObject.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\ai\service\RuleBasedJournalRiskScorer.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\common\util\JwtUtil.java
@@ -40,6 +43,7 @@ D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\assessm
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\common\config\StaticResourceConfig.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\roadmap\package-info.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\auth\repository\UserRepository.java
+D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\clinical\service\TherapistCredentialService.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\clinical\enums\TaperingStage.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\roadmap\entity\PatientQuest.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\auth\dto\UserDto.java
@@ -58,6 +62,7 @@ D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\clinica
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\booster\repository\AppointmentRepository.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\booster\dto\AvailableSlotDto.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\risk\controller\RiskController.java
+D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\clinical\dto\TherapistProfileStatusDto.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\common\security\AuthContextService.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\clinical\dto\AdminPatientProfileListItemDto.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\ai\config\AiProperties.java
@@ -75,6 +80,7 @@ D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\journal
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\clinical\service\AdminTherapistAccountService.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\assessment\controller\AssessmentController.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\ai\service\impl\GeminiQuestProofVisionServiceImpl.java
+D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\clinical\controller\TherapistCredentialController.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\ai\dto\JournalAiRiskResultDto.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\booster\enums\AppointmentStatus.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\auth\entity\User.java
@@ -106,6 +112,7 @@ D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\ai\serv
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\booster\service\IBoosterService.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\auth\controller\UserController.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\clinical\entity\TherapistProfile.java
+D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\clinical\service\TherapistAccessGuardService.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\booster\service\impl\TaperingBoosterSchedulingServiceImpl.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\auth\dto\LoginRequest.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\journal\controller\JournalController.java
@@ -123,3 +130,4 @@ D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\ai\cont
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\ai\dto\QuestProofVisionResultDto.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\clinical\service\AdminPatientProfileService.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\auth\service\IUserService.java
+D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\clinical\dto\TherapistCredentialDto.java

@@ -23,14 +23,17 @@ public class TherapistAssignmentService {
     private final AuthContextService authContextService;
     private final PatientProfileRepository patientProfileRepository;
     private final TherapistProfileRepository therapistProfileRepository;
+    private final TherapistAccessGuardService therapistAccessGuardService;
 
     public TherapistAssignmentService(
             AuthContextService authContextService,
             PatientProfileRepository patientProfileRepository,
-            TherapistProfileRepository therapistProfileRepository) {
+            TherapistProfileRepository therapistProfileRepository,
+            TherapistAccessGuardService therapistAccessGuardService) {
         this.authContextService = authContextService;
         this.patientProfileRepository = patientProfileRepository;
         this.therapistProfileRepository = therapistProfileRepository;
+        this.therapistAccessGuardService = therapistAccessGuardService;
     }
 
     public PatientProfile assignTherapist(UUID patientId, UUID therapistId) {
@@ -65,10 +68,11 @@ public class TherapistAssignmentService {
             return patientProfileRepository.findByIsActiveTrue();
         }
 
+        therapistAccessGuardService.requireActiveTherapist();
+
         if (redFlagOnly) {
             return patientProfileRepository.findByTherapist_User_IdAndIsRedFlagActiveTrueOrderByCurrentRiskScoreDesc(therapistUserId);
         }
         return patientProfileRepository.findByTherapist_User_IdOrderByCurrentRiskScoreDesc(therapistUserId);
     }
 }
-

@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../core/auth/auth_provider.dart';
+import '../../features/therapist/data/repositories/therapist_credential_repository.dart';
 import '../../theme/app_colors.dart';
 import 'patient_detail_screen.dart';
 import 'therapist_appointments_screen.dart';
 import 'therapist_profile_screen.dart';
+import 'therapist_credentials_upload_screen.dart';
 
 class MainTherapistScreen extends StatefulWidget {
   const MainTherapistScreen({super.key});
@@ -13,6 +18,29 @@ class MainTherapistScreen extends StatefulWidget {
 
 class _MainTherapistScreenState extends State<MainTherapistScreen> {
   int _selectedIndex = 0;
+  final TherapistCredentialRepository _credentialRepo = TherapistCredentialRepository();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _guard());
+  }
+
+  Future<void> _guard() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = auth.token;
+    if (token == null || token.isEmpty) return;
+
+    try {
+      final status = await _credentialRepo.myStatus(token: token);
+      if (!mounted) return;
+      if (status.approvalStatus != 'ACTIVE') {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const TherapistCredentialsUploadScreen()));
+      }
+    } catch (_) {
+      // Ignore guard errors to avoid blocking UI in demo mode.
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -11,18 +11,26 @@ public class TherapistApplicantDto {
     private String email;
     private String specialization;
     private ApprovalStatus approvalStatus;
+    private long credentialCount;
+    private boolean active;
 
     public TherapistApplicantDto() {
     }
 
     public TherapistApplicantDto(TherapistProfile profile) {
+        this(profile, 0);
+    }
+
+    public TherapistApplicantDto(TherapistProfile profile, long credentialCount) {
         if (profile != null) {
             this.therapistId = profile.getId();
             this.fullName = profile.getFullName();
             this.specialization = profile.getSpecialization();
             this.approvalStatus = profile.getApprovalStatus();
+            this.credentialCount = credentialCount;
             if (profile.getUser() != null) {
                 this.email = profile.getUser().getEmail();
+                this.active = Boolean.TRUE.equals(profile.getUser().getIsActive());
             }
         }
     }
@@ -66,5 +74,20 @@ public class TherapistApplicantDto {
     public void setApprovalStatus(ApprovalStatus approvalStatus) {
         this.approvalStatus = approvalStatus;
     }
-}
 
+    public long getCredentialCount() {
+        return credentialCount;
+    }
+
+    public void setCredentialCount(long credentialCount) {
+        this.credentialCount = credentialCount;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+}

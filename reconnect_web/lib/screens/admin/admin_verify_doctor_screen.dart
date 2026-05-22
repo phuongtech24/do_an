@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
 
 import '../../core/auth/auth_provider.dart';
 import '../../features/admin/data/models/therapist_applicant_model.dart';
+import '../../features/admin/data/models/therapist_credential_model.dart';
+import '../../features/admin/data/repositories/admin_therapist_credentials_repository.dart';
 import '../../features/admin/data/repositories/admin_therapist_approval_repository.dart';
 import '../../theme/app_colors.dart';
 
@@ -15,6 +19,7 @@ class AdminVerifyDoctorScreen extends StatefulWidget {
 
 class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
   final AdminTherapistApprovalRepository _repo = AdminTherapistApprovalRepository();
+  final AdminTherapistCredentialsRepository _credRepo = AdminTherapistCredentialsRepository();
   bool _loading = false;
   String _error = '';
   String _query = '';
@@ -66,6 +71,11 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
     final token = auth.token;
     if (token == null || token.isEmpty) return;
 
+    if (status == 'ACTIVE' && item.credentialCount <= 0) {
+      setState(() => _error = 'Chưa có chứng chỉ. Không thể duyệt ACTIVE.');
+      return;
+    }
+
     setState(() {
       _loading = true;
       _error = '';
@@ -77,6 +87,7 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
                   email: x.email,
                   specialization: x.specialization,
                   approvalStatus: status,
+                  credentialCount: x.credentialCount,
                 )
               : x)
           .toList();
@@ -94,6 +105,83 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
       if (!mounted) return;
       setState(() => _loading = false);
     }
+  }
+
+  Future<void> _showCredentialsDialog(TherapistApplicantModel item) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = auth.token;
+    if (token == null || token.isEmpty) return;
+
+    setState(() {
+      _loading = true;
+      _error = '';
+    });
+
+    List<AdminTherapistCredentialModel> list = [];
+    try {
+      list = await _credRepo.list(token: token, therapistId: item.therapistId);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+
+    if (!mounted) return;
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Chứng chỉ: ${item.fullName}', style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: SizedBox(
+          width: 520,
+          child: list.isEmpty
+              ? const Text('Chưa có chứng chỉ nào.')
+              : ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: list.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final c = list[index];
+                    return ListTile(
+                      leading: const Icon(Icons.description_outlined),
+                      title: Text(c.fileName, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      subtitle: Text('${(c.sizeBytes / 1024).toStringAsFixed(1)} KB • ${c.uploadedAt}'),
+                      trailing: TextButton(
+                        onPressed: _loading
+                            ? null
+                            : () async {
+                                try {
+                                  final bytes = await _credRepo.downloadBytes(
+                                    token: token,
+                                    therapistId: item.therapistId,
+                                    credentialId: c.id,
+                                  );
+                                  final blob = html.Blob([bytes], c.mimeType);
+                                  final url = html.Url.createObjectUrlFromBlob(blob);
+                                  final a = html.AnchorElement(href: url)
+                                    ..download = c.fileName
+                                    ..style.display = 'none';
+                                  html.document.body?.children.add(a);
+                                  a.click();
+                                  a.remove();
+                                  html.Url.revokeObjectUrl(url);
+                                } catch (e) {
+                                  if (!mounted) return;
+                                  setState(() => _error = e.toString().replaceAll('Exception: ', ''));
+                                }
+                              },
+                        child: const Text('Tải'),
+                      ),
+                    );
+                  },
+                ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Đóng')),
+        ],
+      ),
+    );
   }
 
   Future<void> _showCreateAccountDialog() async {
@@ -307,11 +395,18 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
                             ),
                           ],
                         ),
-                        subtitle: Text('Email: ${doc.email}${doc.specialization == null ? '' : ' • ${doc.specialization}'}'),
+                        subtitle: Text(
+                          'Email: ${doc.email}${doc.specialization == null ? '' : ' • ${doc.specialization}'} • Chứng chỉ: ${doc.credentialCount}',
+                        ),
                         trailing: isPending
                             ? Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
+                                  OutlinedButton(
+                                    onPressed: _loading ? null : () => _showCredentialsDialog(doc),
+                                    child: const Text('XEM CC'),
+                                  ),
+                                  const SizedBox(width: 8),
                                   ElevatedButton(
                                     style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
                                     onPressed: _loading ? null : () => _setApproval(doc, 'ACTIVE'),
@@ -335,4 +430,3 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
     );
   }
 }
-

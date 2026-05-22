@@ -4,12 +4,14 @@ com\reconnect\mindhealth\modules\booster\service\impl\TaperingBoosterSchedulingS
 com\reconnect\mindhealth\modules\ai\service\IQuestProofVisionService.class
 com\reconnect\mindhealth\modules\auth\service\impl\AuthServiceImpl.class
 com\reconnect\mindhealth\modules\risk\dto\RiskCalculationResultDto.class
+com\reconnect\mindhealth\modules\clinical\service\TherapistCredentialService.class
 com\reconnect\mindhealth\modules\ai\controller\AiController.class
 com\reconnect\mindhealth\modules\ai\dto\GuidedDiscoveryResponseDto.class
 com\reconnect\mindhealth\modules\clinical\dto\AssignTherapistRequestDto.class
 com\reconnect\mindhealth\common\util\EncryptionUtil.class
 com\reconnect\mindhealth\modules\clinical\enums\Status.class
 com\reconnect\mindhealth\modules\auth\controller\UserController.class
+com\reconnect\mindhealth\modules\clinical\repository\TherapistCredentialRepository.class
 com\reconnect\mindhealth\modules\clinical\service\AdminTherapistAccountService.class
 com\reconnect\mindhealth\modules\ai\dto\QuestProofVisionResultDto.class
 com\reconnect\mindhealth\modules\clinical\dto\OnboardingStatusDto.class
@@ -37,6 +39,7 @@ com\reconnect\mindhealth\security\SecurityConfig.class
 com\reconnect\mindhealth\modules\clinical\package-info.class
 com\reconnect\mindhealth\modules\journal\repository\JournalRepository.class
 com\reconnect\mindhealth\MindHealthApplication.class
+com\reconnect\mindhealth\modules\clinical\dto\TherapistProfileStatusDto.class
 com\reconnect\mindhealth\security\JwtFilter.class
 com\reconnect\mindhealth\modules\clinical\controller\AdminTherapistAssignmentController.class
 com\reconnect\mindhealth\modules\clinical\repository\PatientProfileRepository.class
@@ -44,6 +47,7 @@ com\reconnect\mindhealth\modules\clinical\service\TherapistAssignmentService.cla
 com\reconnect\mindhealth\modules\auth\service\IUserService.class
 com\reconnect\mindhealth\modules\booster\dto\AppointmentDto.class
 com\reconnect\mindhealth\modules\clinical\service\IClinicalService.class
+com\reconnect\mindhealth\modules\clinical\entity\TherapistCredential.class
 com\reconnect\mindhealth\modules\roadmap\controller\AdminQuestTemplateController.class
 com\reconnect\mindhealth\modules\journal\entity\Journal.class
 com\reconnect\mindhealth\modules\assessment\dto\UserMoodDto.class
@@ -60,6 +64,8 @@ com\reconnect\mindhealth\modules\clinical\controller\TherapistDashboardControlle
 com\reconnect\mindhealth\modules\ai\service\RuleBasedJournalRiskScorer$1.class
 com\reconnect\mindhealth\modules\roadmap\package-info.class
 com\reconnect\mindhealth\modules\ai\dto\JournalAiRiskResultDto.class
+com\reconnect\mindhealth\modules\clinical\controller\TherapistCredentialController.class
+com\reconnect\mindhealth\modules\clinical\dto\TherapistCredentialDto.class
 com\reconnect\mindhealth\modules\ai\config\AiProperties$Gemini.class
 com\reconnect\mindhealth\modules\assessment\repository\Phq9Repository.class
 com\reconnect\mindhealth\modules\journal\enums\JournalType.class
@@ -82,12 +88,14 @@ com\reconnect\mindhealth\modules\auth\dto\UserDto.class
 com\reconnect\mindhealth\modules\booster\dto\AvailableSlotDto.class
 com\reconnect\mindhealth\common\dto\ApiResponse.class
 com\reconnect\mindhealth\modules\assessment\repository\UserMoodRepository.class
+com\reconnect\mindhealth\common\seeder\DatabaseSeeder$SeedTask.class
 com\reconnect\mindhealth\modules\assessment\dto\Phq9SubmissionDto.class
 com\reconnect\mindhealth\modules\ai\service\RuleBasedCognitiveDistortionDetector.class
 com\reconnect\mindhealth\modules\roadmap\entity\PatientQuest.class
 com\reconnect\mindhealth\modules\roadmap\dto\PatientQuestDto.class
 com\reconnect\mindhealth\modules\clinical\service\AdminPatientProfileService.class
 com\reconnect\mindhealth\modules\roadmap\enums\QuestDifficulty.class
+com\reconnect\mindhealth\modules\clinical\service\TherapistAccessGuardService.class
 com\reconnect\mindhealth\modules\clinical\enums\ApprovalStatus.class
 com\reconnect\mindhealth\modules\roadmap\enums\QuestStatus.class
 com\reconnect\mindhealth\modules\ai\dto\CognitiveDistortionRequestDto.class
@@ -130,4 +138,5 @@ com\reconnect\mindhealth\modules\clinical\service\impl\ClinicalServiceImpl.class
 com\reconnect\mindhealth\modules\auth\dto\RegisterRequest.class
 com\reconnect\mindhealth\modules\roadmap\service\IRoadmapService.class
 com\reconnect\mindhealth\modules\risk\job\RiskIndexCronJob.class
+com\reconnect\mindhealth\modules\clinical\controller\AdminTherapistCredentialController.class
 com\reconnect\mindhealth\modules\journal\service\IJournalService.class

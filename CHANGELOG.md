@@ -102,3 +102,13 @@ Quy tắc: Định dạng theo chuẩn [Keep a Changelog](https://keepachangelog
 - Khởi tạo Spring Boot Backend (Auth, Assessment, Security JWT).
 - Khởi tạo Flutter Mobile App (Provider architecture, Dio API client).
 - Tích hợp Database MySQL và cấu hình Seeder cơ bản.
+## [1.0.3] - 2026-05-22
+### Added
+- **Clinical (Backend):** Thêm entity `TherapistCredential` + lưu file vào `uploads/therapist-credentials/<therapistId>/...` và API upload/list/download cho therapist & admin.
+- **Clinical (Backend):** Thêm `TherapistAccessGuardService` để chặn các API chuyên môn của therapist khi chưa `ACTIVE` (PENDING chỉ được upload chứng chỉ).
+- **CMS (Web):** Thêm màn therapist upload chứng chỉ + Admin xem/tải chứng chỉ trong màn “Quản lý Bác sĩ (Approval)”, và chặn duyệt `ACTIVE` nếu chưa có chứng chỉ.
+- **Seeder (Backend):** Seed theo từng bước, lỗi 1 bảng không làm dừng seed các bảng khác; seed profiles dùng `getReferenceById` để tránh detached.
+### Changed
+- **Auth (Backend):** Therapist `PENDING` được login để upload chứng chỉ (chỉ chặn login khi `REJECTED` hoặc `is_active=false`).
+### Docs
+- Cập nhật `docs/UI_TEST_RUNBOOK.md` theo luồng “Upload chứng chỉ -> Admin duyệt -> ACTIVE”.
