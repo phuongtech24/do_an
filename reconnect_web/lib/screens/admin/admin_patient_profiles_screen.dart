@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/auth/auth_provider.dart';
@@ -38,7 +38,7 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final token = auth.token;
     if (token == null || token.isEmpty) {
-      setState(() => _error = 'Chưa đăng nhập.');
+      setState(() => _error = 'ChÆ°a Ä‘Äƒng nháº­p.');
       return;
     }
     setState(() {
@@ -108,7 +108,7 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text(
-          'Gán Chuyên gia phụ trách',
+          'GÃ¡n ChuyÃªn gia phá»¥ trÃ¡ch',
           style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
         ),
         content: SizedBox(
@@ -118,17 +118,18 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Bệnh nhân: ${item.nickname ?? item.email ?? item.patientId}',
+                'Bá»‡nh nhÃ¢n: ${item.nickname ?? item.email ?? item.patientId}',
                 style: const TextStyle(color: Colors.black54),
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 value: selectedId,
-                decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Chuyên gia (ACTIVE)'),
+                decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'ChuyÃªn gia (ACTIVE)'),
                 items: therapists
                     .map((t) => DropdownMenuItem<String>(
                           value: t.therapistId,
-                          child: Text('${t.fullName} • ${t.email}'),
+                          enabled: !(t.caseloadFull && selectedId != t.therapistId),
+                          child: Text('${t.fullName} • ${t.email} • ${t.caseloadCount}/${t.caseloadLimit}${t.caseloadFull ? " • FULL" : ""}', overflow: TextOverflow.ellipsis),
                         ))
                     .toList(),
                 onChanged: (v) => selectedId = v,
@@ -137,11 +138,11 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Há»§y')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Lưu', style: TextStyle(color: Colors.white)),
+            child: const Text('LÆ°u', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -162,7 +163,7 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
       if (!mounted) return;
       await _load();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã gán chuyên gia cho bệnh nhân.'), backgroundColor: AppColors.success),
+        const SnackBar(content: Text('ÄÃ£ gÃ¡n chuyÃªn gia cho bá»‡nh nhÃ¢n.'), backgroundColor: AppColors.success),
       );
     } catch (e) {
       if (!mounted) return;
@@ -184,9 +185,9 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: const [
-                Text('Quản lý hồ sơ bệnh nhân', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                Text('Quáº£n lÃ½ há»“ sÆ¡ bá»‡nh nhÃ¢n', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                 SizedBox(height: 8),
-                Text('Dữ liệu lấy từ backend (/api/admin/patients).', style: TextStyle(color: AppColors.textSecondary)),
+                Text('Dá»¯ liá»‡u láº¥y tá»« backend (/api/admin/patients).', style: TextStyle(color: AppColors.textSecondary)),
               ],
             ),
             Row(
@@ -210,7 +211,7 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
         const SizedBox(height: 16),
         TextField(
           decoration: InputDecoration(
-            hintText: 'Tìm theo nickname / email / chuyên gia...',
+            hintText: 'TÃ¬m theo nickname / email / chuyÃªn gia...',
             prefixIcon: const Icon(Icons.search, color: Colors.grey),
             filled: true,
             fillColor: Colors.white,
@@ -236,7 +237,7 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
           child: _loading
               ? const Center(child: CircularProgressIndicator())
               : _items.isEmpty
-                  ? const Center(child: Text('Không có dữ liệu.'))
+                  ? const Center(child: Text('KhÃ´ng cÃ³ dá»¯ liá»‡u.'))
                   : ListView.separated(
                       itemCount: _items.length,
                       separatorBuilder: (_, __) => const Divider(height: 1),
@@ -259,12 +260,12 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      '${it.email ?? ''} • risk: $risk • redFlag: $red',
+                                      '${it.email ?? ''} â€¢ risk: $risk â€¢ redFlag: $red',
                                       style: const TextStyle(color: Colors.black54),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      'Therapist: ${it.therapistName ?? 'Chưa gán'}',
+                                      'Therapist: ${it.therapistName ?? 'ChÆ°a gÃ¡n'}',
                                       style: const TextStyle(color: Colors.black54),
                                     ),
                                   ],
@@ -285,7 +286,7 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
                               ElevatedButton(
                                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
                                 onPressed: _loading ? null : () => _assignTherapist(it),
-                                child: const Text('Gán BS', style: TextStyle(color: Colors.white)),
+                                child: const Text('GÃ¡n BS', style: TextStyle(color: Colors.white)),
                               ),
                             ],
                           ),

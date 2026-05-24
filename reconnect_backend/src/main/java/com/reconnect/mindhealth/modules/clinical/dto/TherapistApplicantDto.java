@@ -10,15 +10,20 @@ public class TherapistApplicantDto {
     private String fullName;
     private String email;
     private String specialization;
+    private String bio;
+    private String meetingLink;
     private ApprovalStatus approvalStatus;
     private long credentialCount;
     private boolean active;
+    private long caseloadCount;
+    private int caseloadLimit = 20;
+    private boolean caseloadFull;
 
     public TherapistApplicantDto() {
     }
 
     public TherapistApplicantDto(TherapistProfile profile) {
-        this(profile, 0);
+        this(profile, 0, 0);
     }
 
     public TherapistApplicantDto(TherapistProfile profile, long credentialCount) {
@@ -26,6 +31,8 @@ public class TherapistApplicantDto {
             this.therapistId = profile.getId();
             this.fullName = profile.getFullName();
             this.specialization = profile.getSpecialization();
+            this.bio = profile.getBio();
+            this.meetingLink = profile.getMeetingLink();
             this.approvalStatus = profile.getApprovalStatus();
             this.credentialCount = credentialCount;
             if (profile.getUser() != null) {
@@ -33,6 +40,12 @@ public class TherapistApplicantDto {
                 this.active = Boolean.TRUE.equals(profile.getUser().getIsActive());
             }
         }
+    }
+
+    public TherapistApplicantDto(TherapistProfile profile, long credentialCount, long caseloadCount) {
+        this(profile, credentialCount);
+        this.caseloadCount = caseloadCount;
+        this.caseloadFull = caseloadCount >= this.caseloadLimit;
     }
 
     public UUID getTherapistId() {
@@ -67,6 +80,22 @@ public class TherapistApplicantDto {
         this.specialization = specialization;
     }
 
+    public String getBio() {
+        return bio;
+    }
+
+    public void setBio(String bio) {
+        this.bio = bio;
+    }
+
+    public String getMeetingLink() {
+        return meetingLink;
+    }
+
+    public void setMeetingLink(String meetingLink) {
+        this.meetingLink = meetingLink;
+    }
+
     public ApprovalStatus getApprovalStatus() {
         return approvalStatus;
     }
@@ -89,5 +118,31 @@ public class TherapistApplicantDto {
 
     public void setActive(boolean active) {
         this.active = active;
+    }
+
+    public long getCaseloadCount() {
+        return caseloadCount;
+    }
+
+    public void setCaseloadCount(long caseloadCount) {
+        this.caseloadCount = caseloadCount;
+        this.caseloadFull = caseloadCount >= this.caseloadLimit;
+    }
+
+    public int getCaseloadLimit() {
+        return caseloadLimit;
+    }
+
+    public void setCaseloadLimit(int caseloadLimit) {
+        this.caseloadLimit = caseloadLimit;
+        this.caseloadFull = this.caseloadCount >= caseloadLimit;
+    }
+
+    public boolean isCaseloadFull() {
+        return caseloadFull;
+    }
+
+    public void setCaseloadFull(boolean caseloadFull) {
+        this.caseloadFull = caseloadFull;
     }
 }

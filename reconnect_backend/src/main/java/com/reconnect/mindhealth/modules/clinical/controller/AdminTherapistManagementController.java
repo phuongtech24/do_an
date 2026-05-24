@@ -20,6 +20,7 @@ import com.reconnect.mindhealth.modules.clinical.dto.AdminTherapistUpdateRequest
 import com.reconnect.mindhealth.modules.clinical.dto.TherapistApplicantDto;
 import com.reconnect.mindhealth.modules.clinical.entity.TherapistProfile;
 import com.reconnect.mindhealth.modules.clinical.repository.TherapistCredentialRepository;
+import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
 import com.reconnect.mindhealth.modules.clinical.service.AdminTherapistManagementService;
 
 @RestController
@@ -29,14 +30,17 @@ public class AdminTherapistManagementController {
     private final AuthContextService authContextService;
     private final AdminTherapistManagementService adminTherapistManagementService;
     private final TherapistCredentialRepository therapistCredentialRepository;
+    private final PatientProfileRepository patientProfileRepository;
 
     public AdminTherapistManagementController(
             AuthContextService authContextService,
             AdminTherapistManagementService adminTherapistManagementService,
-            TherapistCredentialRepository therapistCredentialRepository) {
+            TherapistCredentialRepository therapistCredentialRepository,
+            PatientProfileRepository patientProfileRepository) {
         this.authContextService = authContextService;
         this.adminTherapistManagementService = adminTherapistManagementService;
         this.therapistCredentialRepository = therapistCredentialRepository;
+        this.patientProfileRepository = patientProfileRepository;
     }
 
     private void requireAdmin() {
@@ -54,7 +58,8 @@ public class AdminTherapistManagementController {
             requireAdmin();
             TherapistProfile saved = adminTherapistManagementService.updateTherapistProfile(therapistId, request);
             long credentialCount = therapistCredentialRepository.countByTherapistProfile_Id(therapistId);
-            return ResponseEntity.ok(ApiResponse.success("OK", new TherapistApplicantDto(saved, credentialCount)));
+            long caseload = patientProfileRepository.countByTherapist_IdAndIsActiveTrueAndGraduatedAtIsNull(therapistId);
+            return ResponseEntity.ok(ApiResponse.success("OK", new TherapistApplicantDto(saved, credentialCount, caseload)));
         } catch (Exception e) {
             return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
         }
@@ -75,4 +80,3 @@ public class AdminTherapistManagementController {
         }
     }
 }
-

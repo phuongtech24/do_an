@@ -22,6 +22,7 @@ import com.reconnect.mindhealth.modules.clinical.dto.TherapistApplicantDto;
 import com.reconnect.mindhealth.modules.clinical.entity.TherapistProfile;
 import com.reconnect.mindhealth.modules.clinical.enums.ApprovalStatus;
 import com.reconnect.mindhealth.modules.clinical.repository.TherapistCredentialRepository;
+import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
 import com.reconnect.mindhealth.modules.clinical.repository.TherapistProfileRepository;
 import com.reconnect.mindhealth.modules.clinical.service.AdminTherapistAccountService;
 
@@ -33,16 +34,19 @@ public class AdminTherapistApprovalController {
     private final TherapistProfileRepository therapistProfileRepository;
     private final AdminTherapistAccountService adminTherapistAccountService;
     private final TherapistCredentialRepository therapistCredentialRepository;
+    private final PatientProfileRepository patientProfileRepository;
 
     public AdminTherapistApprovalController(
             AuthContextService authContextService,
             TherapistProfileRepository therapistProfileRepository,
             AdminTherapistAccountService adminTherapistAccountService,
-            TherapistCredentialRepository therapistCredentialRepository) {
+            TherapistCredentialRepository therapistCredentialRepository,
+            PatientProfileRepository patientProfileRepository) {
         this.authContextService = authContextService;
         this.therapistProfileRepository = therapistProfileRepository;
         this.adminTherapistAccountService = adminTherapistAccountService;
         this.therapistCredentialRepository = therapistCredentialRepository;
+        this.patientProfileRepository = patientProfileRepository;
     }
 
     private void requireAdmin() {
@@ -61,7 +65,11 @@ public class AdminTherapistApprovalController {
                     ? therapistProfileRepository.findAll()
                     : therapistProfileRepository.findByApprovalStatusOrderByFullNameAsc(status);
             List<TherapistApplicantDto> dtos = list.stream()
-                    .map(p -> new TherapistApplicantDto(p, therapistCredentialRepository.countByTherapistProfile_Id(p.getId())))
+                    .map(p -> {
+                        long credentialCount = therapistCredentialRepository.countByTherapistProfile_Id(p.getId());
+                        long caseload = patientProfileRepository.countByTherapist_IdAndIsActiveTrueAndGraduatedAtIsNull(p.getId());
+                        return new TherapistApplicantDto(p, credentialCount, caseload);
+                    })
                     .toList();
             return ResponseEntity.ok(ApiResponse.success("OK", dtos));
         } catch (Exception e) {
@@ -87,7 +95,7 @@ public class AdminTherapistApprovalController {
             }
 
             TherapistProfile savedProfile = adminTherapistAccountService.createTherapistAccount(request);
-            return ResponseEntity.ok(ApiResponse.success("OK", new TherapistApplicantDto(savedProfile, 0)));
+            return ResponseEntity.ok(ApiResponse.success("OK", new TherapistApplicantDto(savedProfile, 0, 0)));
         } catch (Exception e) {
             return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
         }
@@ -101,7 +109,8 @@ public class AdminTherapistApprovalController {
             requireAdmin();
             TherapistProfile saved = adminTherapistAccountService.setApproval(therapistId, status);
             long credentialCount = therapistCredentialRepository.countByTherapistProfile_Id(therapistId);
-            return ResponseEntity.ok(ApiResponse.success("OK", new TherapistApplicantDto(saved, credentialCount)));
+            long caseload = patientProfileRepository.countByTherapist_IdAndIsActiveTrueAndGraduatedAtIsNull(therapistId);
+            return ResponseEntity.ok(ApiResponse.success("OK", new TherapistApplicantDto(saved, credentialCount, caseload)));
         } catch (Exception e) {
             return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
         }

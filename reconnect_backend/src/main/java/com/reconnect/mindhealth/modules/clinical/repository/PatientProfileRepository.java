@@ -21,4 +21,6 @@ public interface PatientProfileRepository extends JpaRepository<PatientProfile, 
 
     java.util.List<PatientProfile> findByIsRedFlagActiveTrueOrderByCurrentRiskScoreDesc();
 
+    long countByTherapist_IdAndIsActiveTrueAndGraduatedAtIsNull(UUID therapistId);
+
 }

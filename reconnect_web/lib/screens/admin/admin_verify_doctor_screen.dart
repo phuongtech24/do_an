@@ -8,6 +8,8 @@ import '../../features/admin/data/models/therapist_applicant_model.dart';
 import '../../features/admin/data/models/therapist_credential_model.dart';
 import '../../features/admin/data/repositories/admin_therapist_credentials_repository.dart';
 import '../../features/admin/data/repositories/admin_therapist_approval_repository.dart';
+import '../../features/admin/data/repositories/admin_user_repository.dart';
+import '../../features/admin/data/repositories/admin_therapist_management_repository.dart';
 import '../../theme/app_colors.dart';
 
 class AdminVerifyDoctorScreen extends StatefulWidget {
@@ -20,6 +22,8 @@ class AdminVerifyDoctorScreen extends StatefulWidget {
 class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
   final AdminTherapistApprovalRepository _repo = AdminTherapistApprovalRepository();
   final AdminTherapistCredentialsRepository _credRepo = AdminTherapistCredentialsRepository();
+  final AdminUserRepository _adminUserRepo = AdminUserRepository();
+  final AdminTherapistManagementRepository _managementRepo = AdminTherapistManagementRepository();
   bool _loading = false;
   String _error = '';
   String _query = '';
@@ -86,8 +90,14 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
                   fullName: x.fullName,
                   email: x.email,
                   specialization: x.specialization,
+                  bio: x.bio,
+                  meetingLink: x.meetingLink,
                   approvalStatus: status,
                   credentialCount: x.credentialCount,
+                  active: x.active,
+                  caseloadCount: x.caseloadCount,
+                  caseloadLimit: x.caseloadLimit,
+                  caseloadFull: x.caseloadFull,
                 )
               : x)
           .toList();
@@ -101,6 +111,143 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
       if (!mounted) return;
       setState(() => _error = e.toString().replaceAll('Exception: ', ''));
       await _load();
+    } finally {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _toggleActive(TherapistApplicantModel item) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = auth.token;
+    if (token == null || token.isEmpty) return;
+
+    setState(() {
+      _loading = true;
+      _error = '';
+    });
+
+    try {
+      final updated = await _adminUserRepo.setActive(token: token, userId: item.therapistId, active: !item.active);
+      if (!mounted) return;
+      setState(() {
+        _items = _items
+            .map((x) => x.therapistId == item.therapistId
+                ? TherapistApplicantModel(
+                    therapistId: x.therapistId,
+                    fullName: x.fullName,
+                    email: x.email,
+                    specialization: x.specialization,
+                    bio: x.bio,
+                    meetingLink: x.meetingLink,
+                    approvalStatus: x.approvalStatus,
+                    credentialCount: x.credentialCount,
+                    active: updated.isActive,
+                    caseloadCount: x.caseloadCount,
+                    caseloadLimit: x.caseloadLimit,
+                    caseloadFull: x.caseloadFull,
+                  )
+                : x)
+            .toList();
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _resetPassword(TherapistApplicantModel item) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = auth.token;
+    if (token == null || token.isEmpty) return;
+
+    setState(() {
+      _loading = true;
+      _error = '';
+    });
+
+    try {
+      final newPw = await _managementRepo.resetPassword(token: token, therapistId: item.therapistId);
+      if (!mounted) return;
+      await showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Đặt lại mật khẩu'),
+          content: SelectableText('Mật khẩu mới: $newPw'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Đóng')),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _editTherapist(TherapistApplicantModel item) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = auth.token;
+    if (token == null || token.isEmpty) return;
+
+    final fullNameCtrl = TextEditingController(text: item.fullName);
+    final specializationCtrl = TextEditingController(text: item.specialization ?? '');
+    final meetingLinkCtrl = TextEditingController(text: item.meetingLink ?? '');
+    final bioCtrl = TextEditingController(text: item.bio ?? '');
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Chỉnh sửa hồ sơ bác sĩ'),
+        content: SizedBox(
+          width: 520,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: fullNameCtrl, decoration: const InputDecoration(labelText: 'Họ tên')),
+              const SizedBox(height: 10),
+              TextField(controller: specializationCtrl, decoration: const InputDecoration(labelText: 'Chuyên môn')),
+              const SizedBox(height: 10),
+              TextField(controller: meetingLinkCtrl, decoration: const InputDecoration(labelText: 'Meeting link')),
+              const SizedBox(height: 10),
+              TextField(controller: bioCtrl, decoration: const InputDecoration(labelText: 'Bio'), maxLines: 3),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Lưu')),
+        ],
+      ),
+    );
+
+    if (ok != true) return;
+
+    setState(() {
+      _loading = true;
+      _error = '';
+    });
+
+    try {
+      final updated = await _managementRepo.updateProfile(
+        token: token,
+        therapistId: item.therapistId,
+        fullName: fullNameCtrl.text.trim(),
+        specialization: specializationCtrl.text.trim(),
+        meetingLink: meetingLinkCtrl.text.trim(),
+        bio: bioCtrl.text.trim(),
+      );
+      if (!mounted) return;
+      setState(() => _items = _items.map((x) => x.therapistId == item.therapistId ? updated : x).toList());
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.toString().replaceAll('Exception: ', ''));
     } finally {
       if (!mounted) return;
       setState(() => _loading = false);
@@ -398,29 +545,51 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
                         subtitle: Text(
                           'Email: ${doc.email}${doc.specialization == null ? '' : ' • ${doc.specialization}'} • Chứng chỉ: ${doc.credentialCount}',
                         ),
-                        trailing: isPending
-                            ? Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  OutlinedButton(
-                                    onPressed: _loading ? null : () => _showCredentialsDialog(doc),
-                                    child: const Text('XEM CC'),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  ElevatedButton(
-                                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
-                                    onPressed: _loading ? null : () => _setApproval(doc, 'ACTIVE'),
-                                    child: const Text('DUYỆT', style: TextStyle(color: Colors.white)),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  ElevatedButton(
-                                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.alert),
-                                    onPressed: _loading ? null : () => _setApproval(doc, 'REJECTED'),
-                                    child: const Text('TỪ CHỐI', style: TextStyle(color: Colors.white)),
-                                  ),
-                                ],
-                              )
-                            : null,
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            OutlinedButton(
+                              onPressed: _loading ? null : () => _showCredentialsDialog(doc),
+                              child: const Text('XEM CC'),
+                            ),
+                            const SizedBox(width: 8),
+                            if (isPending) ...[
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
+                                onPressed: _loading ? null : () => _setApproval(doc, 'ACTIVE'),
+                                child: const Text('DUYỆT', style: TextStyle(color: Colors.white)),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(backgroundColor: AppColors.alert),
+                                onPressed: _loading ? null : () => _setApproval(doc, 'REJECTED'),
+                                child: const Text('TỪ CHỐI', style: TextStyle(color: Colors.white)),
+                              ),
+                              const SizedBox(width: 8),
+                            ],
+                            Tooltip(
+                              message: doc.active ? 'Khóa tài khoản' : 'Mở khóa tài khoản',
+                              child: Switch(
+                                value: doc.active,
+                                onChanged: _loading ? null : (_) => _toggleActive(doc),
+                              ),
+                            ),
+                            PopupMenuButton<String>(
+                              onSelected: (v) {
+                                if (v == 'edit') _editTherapist(doc);
+                                if (v == 'reset_pw') _resetPassword(doc);
+                              },
+                              itemBuilder: (context) => [
+                                const PopupMenuItem(value: 'edit', child: Text('Chỉnh sửa hồ sơ')),
+                                const PopupMenuItem(value: 'reset_pw', child: Text('Đặt lại mật khẩu')),
+                              ],
+                              child: const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 6),
+                                child: Icon(Icons.more_vert),
+                              ),
+                            ),
+                          ],
+                        ),
                       );
                     },
                   ),

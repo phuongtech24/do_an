@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -36,7 +36,7 @@ class _BookingCalendarScreenState extends State<BookingCalendarScreen> {
   Future<void> _confirmBooking() async {
     if (_selectedSlotStartAt == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng chọn khung giờ trống!')),
+        const SnackBar(content: Text('Vui lÃ²ng chá»n khung giá» trá»‘ng!')),
       );
       return;
     }
@@ -46,7 +46,7 @@ class _BookingCalendarScreenState extends State<BookingCalendarScreen> {
     final token = auth.loginResponse?.token;
     if (patientId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bạn cần đăng nhập trước khi đặt lịch.')),
+        const SnackBar(content: Text('Báº¡n cáº§n Ä‘Äƒng nháº­p trÆ°á»›c khi Ä‘áº·t lá»‹ch.')),
       );
       return;
     }
@@ -57,7 +57,7 @@ class _BookingCalendarScreenState extends State<BookingCalendarScreen> {
 
     if (appt == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi: ${telehealth.errorMessage}')),
+        SnackBar(content: Text('Lá»—i: ${telehealth.errorMessage}')),
       );
       return;
     }
@@ -67,9 +67,9 @@ class _BookingCalendarScreenState extends State<BookingCalendarScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Đặt lịch thành công'),
+        title: const Text('Äáº·t lá»‹ch thÃ nh cÃ´ng'),
         content: Text(
-          'Ca khám của bạn đã được chốt vào thời gian:\n$timeText.\n\nChế độ ẩn danh: ${_isAnonymous ? "BẬT" : "TẮT"}',
+          'Ca khÃ¡m cá»§a báº¡n Ä‘Ã£ Ä‘Æ°á»£c chá»‘t vÃ o thá»i gian:\n$timeText.\n\nCháº¿ Ä‘á»™ áº©n danh: ${_isAnonymous ? "Báº¬T" : "Táº®T"}',
         ),
         actions: [
           TextButton(
@@ -89,7 +89,7 @@ class _BookingCalendarScreenState extends State<BookingCalendarScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Chọn Lịch Khám'),
+        title: const Text('Chá»n Lá»‹ch KhÃ¡m'),
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -111,11 +111,11 @@ class _BookingCalendarScreenState extends State<BookingCalendarScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: const [
                         Text(
-                          'Bác sĩ/Therapist',
+                          'BÃ¡c sÄ©/Therapist',
                           style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         SizedBox(height: 4),
-                        Text('Lịch sẽ đặt theo therapist đã được gán', style: TextStyle(color: Colors.white70)),
+                        Text('Lá»‹ch sáº½ Ä‘áº·t theo therapist Ä‘Ã£ Ä‘Æ°á»£c gÃ¡n', style: TextStyle(color: Colors.white70)),
                       ],
                     ),
                   )
@@ -128,7 +128,7 @@ class _BookingCalendarScreenState extends State<BookingCalendarScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Khung giờ trống (Hôm nay)',
+                    'Khung giá» trá»‘ng (HÃ´m nay)',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                   ),
                   const SizedBox(height: 16),
@@ -141,12 +141,20 @@ class _BookingCalendarScreenState extends State<BookingCalendarScreen> {
                         ));
                       }
                       if (telehealth.status == TelehealthStatus.error && telehealth.slots.isEmpty) {
-                        return Text('Lỗi: ${telehealth.errorMessage}', style: const TextStyle(color: Colors.red));
+                        final msg = telehealth.errorMessage;
+                        final lower = msg.toLowerCase();
+                        if (lower.contains('chưa được gán') || lower.contains('chua duoc gan')) {
+                          return const Text(
+                            'Bạn chưa được gán bác sĩ phụ trách. Vui lòng chờ Admin gán bác sĩ để đặt lịch.',
+                            style: TextStyle(color: Colors.red),
+                          );
+                        }
+                        return Text('Lỗi: $msg', style: const TextStyle(color: Colors.red));
                       }
 
                       final slots = telehealth.slots;
                       if (slots.isEmpty) {
-                        return const Text('Hôm nay không còn slot trống.');
+                        return const Text('HÃ´m nay khÃ´ng cÃ²n slot trá»‘ng.');
                       }
 
                       return Wrap(
@@ -184,15 +192,15 @@ class _BookingCalendarScreenState extends State<BookingCalendarScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Quyền Riêng Tư', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                        const Text('Quyá»n RiÃªng TÆ°', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                         const SizedBox(height: 16),
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
-                          title: const Text('Giao tiếp Ẩn Danh', style: TextStyle(fontWeight: FontWeight.bold)),
+                          title: const Text('Giao tiáº¿p áº¨n Danh', style: TextStyle(fontWeight: FontWeight.bold)),
                           subtitle: Text(
                             _isAnonymous
-                                ? 'Therapist chỉ thấy nickname; thông tin thật được giữ kín.'
-                                : 'Therapist có thể thấy thông tin thật (nếu hệ thống cho phép).',
+                                ? 'Therapist chá»‰ tháº¥y nickname; thÃ´ng tin tháº­t Ä‘Æ°á»£c giá»¯ kÃ­n.'
+                                : 'Therapist cÃ³ thá»ƒ tháº¥y thÃ´ng tin tháº­t (náº¿u há»‡ thá»‘ng cho phÃ©p).',
                           ),
                           activeColor: AppColors.primary,
                           value: _isAnonymous,
@@ -220,7 +228,7 @@ class _BookingCalendarScreenState extends State<BookingCalendarScreen> {
                   borderRadius: BorderRadius.circular(16),
                 ),
               ),
-              child: const Text('XÁC NHẬN ĐẶT CA', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              child: const Text('XÃC NHáº¬N Äáº¶T CA', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
           ),
         ),

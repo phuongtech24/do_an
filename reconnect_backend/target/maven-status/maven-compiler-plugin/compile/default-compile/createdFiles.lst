@@ -3,6 +3,7 @@ com\reconnect\mindhealth\modules\clinical\dto\CreateTherapistAccountRequestDto.c
 com\reconnect\mindhealth\modules\booster\service\impl\TaperingBoosterSchedulingServiceImpl.class
 com\reconnect\mindhealth\modules\ai\service\IQuestProofVisionService.class
 com\reconnect\mindhealth\modules\auth\service\impl\AuthServiceImpl.class
+com\reconnect\mindhealth\modules\booster\dto\TherapistScheduleSlotDto.class
 com\reconnect\mindhealth\modules\risk\dto\RiskCalculationResultDto.class
 com\reconnect\mindhealth\modules\clinical\service\TherapistCredentialService.class
 com\reconnect\mindhealth\modules\ai\controller\AiController.class
@@ -31,8 +32,10 @@ com\reconnect\mindhealth\modules\roadmap\controller\RoadmapController.class
 com\reconnect\mindhealth\modules\roadmap\entity\QuestTemplate.class
 com\reconnect\mindhealth\common\util\JwtUtil.class
 com\reconnect\mindhealth\modules\booster\enums\AppointmentStatus.class
+com\reconnect\mindhealth\modules\clinical\service\AdminTherapistManagementService.class
 com\reconnect\mindhealth\common\config\StaticResourceConfig.class
 com\reconnect\mindhealth\modules\ai\service\impl\GeminiAiAssistantServiceImpl$1.class
+com\reconnect\mindhealth\modules\clinical\dto\AdminTherapistUpdateRequestDto.class
 com\reconnect\mindhealth\modules\ai\dto\GuidedDiscoveryRequestDto.class
 com\reconnect\mindhealth\modules\booster\service\impl\BoosterServiceImpl.class
 com\reconnect\mindhealth\security\SecurityConfig.class
@@ -60,6 +63,7 @@ com\reconnect\mindhealth\modules\assessment\service\IAssessmentService.class
 com\reconnect\mindhealth\modules\clinical\controller\AdminTherapistApprovalController.class
 com\reconnect\mindhealth\modules\clinical\enums\TaperingStage.class
 com\reconnect\mindhealth\modules\booster\controller\BoosterController.class
+com\reconnect\mindhealth\modules\clinical\dto\AdminResetPasswordRequestDto.class
 com\reconnect\mindhealth\modules\clinical\controller\TherapistDashboardController.class
 com\reconnect\mindhealth\modules\ai\service\RuleBasedJournalRiskScorer$1.class
 com\reconnect\mindhealth\modules\roadmap\package-info.class
@@ -68,6 +72,7 @@ com\reconnect\mindhealth\modules\clinical\controller\TherapistCredentialControll
 com\reconnect\mindhealth\modules\clinical\dto\TherapistCredentialDto.class
 com\reconnect\mindhealth\modules\ai\config\AiProperties$Gemini.class
 com\reconnect\mindhealth\modules\assessment\repository\Phq9Repository.class
+com\reconnect\mindhealth\modules\booster\entity\TherapistScheduleSlot.class
 com\reconnect\mindhealth\modules\journal\enums\JournalType.class
 com\reconnect\mindhealth\modules\journal\service\impl\JournalServiceImpl.class
 com\reconnect\mindhealth\modules\assessment\controller\AssessmentController.class
@@ -75,6 +80,7 @@ com\reconnect\mindhealth\modules\assessment\entity\UserMood.class
 com\reconnect\mindhealth\modules\auth\repository\UserRepository.class
 com\reconnect\mindhealth\modules\ai\config\AiProperties$Risk.class
 com\reconnect\mindhealth\modules\booster\dto\BookAppointmentRequestDto.class
+com\reconnect\mindhealth\modules\booster\repository\TherapistScheduleSlotRepository.class
 com\reconnect\mindhealth\modules\assessment\service\impl\AssessmentServiceImpl.class
 com\reconnect\mindhealth\modules\ai\service\IAiAssistantService.class
 com\reconnect\mindhealth\modules\auth\entity\User.class
@@ -82,6 +88,7 @@ com\reconnect\mindhealth\modules\clinical\entity\TherapistProfile.class
 com\reconnect\mindhealth\modules\booster\service\impl\TaperingBoosterSchedulingServiceImpl$1.class
 com\reconnect\mindhealth\modules\clinical\dto\GoalSettingDto.class
 com\reconnect\mindhealth\modules\clinical\dto\TherapistApplicantDto.class
+com\reconnect\mindhealth\modules\booster\dto\ToggleSlotRequestDto.class
 com\reconnect\mindhealth\modules\clinical\service\impl\ClinicalServiceImpl$1.class
 com\reconnect\mindhealth\common\seeder\DatabaseSeeder.class
 com\reconnect\mindhealth\modules\auth\dto\UserDto.class
@@ -113,6 +120,7 @@ com\reconnect\mindhealth\modules\auth\dto\LoginRequest.class
 com\reconnect\mindhealth\modules\assessment\package-info.class
 com\reconnect\mindhealth\modules\clinical\dto\AdminPatientProfileListItemDto.class
 com\reconnect\mindhealth\modules\assessment\enums\Phq9Type.class
+com\reconnect\mindhealth\modules\clinical\dto\AdminResetPasswordResponseDto.class
 com\reconnect\mindhealth\modules\assessment\dto\Phq9SubmissionDto$1.class
 com\reconnect\mindhealth\modules\roadmap\dto\VerifyQuestProofResponseDto.class
 com\reconnect\mindhealth\modules\risk\service\impl\RiskScoringServiceImpl.class
@@ -124,6 +132,7 @@ com\reconnect\mindhealth\modules\auth\enums\Role.class
 com\reconnect\mindhealth\modules\auth\controller\AdminUserController.class
 com\reconnect\mindhealth\modules\booster\job\TaperingBoosterCronJob.class
 com\reconnect\mindhealth\modules\ai\service\RuleBasedJournalRiskScorer.class
+com\reconnect\mindhealth\modules\clinical\controller\AdminTherapistManagementController.class
 com\reconnect\mindhealth\modules\risk\controller\RiskController.class
 com\reconnect\mindhealth\modules\assessment\entity\Phq9Question.class
 com\reconnect\mindhealth\modules\roadmap\service\impl\RoadmapServiceImpl.class

@@ -4,6 +4,10 @@ Tất cả các thay đổi lớn về tính năng, sửa lỗi, và cấu trúc
 Quy tắc: Định dạng theo chuẩn [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). AI phải tự động thêm vào đây sau mỗi lần hoàn thành một phase hoặc fix xong một issue.
 
 ## [Unreleased]
+### Fixed
+- **Web Admin CMS:** Khắc phục lỗi hiển thị của nút "Khoá tài khoản" (bấm khoá nhưng UI bật lại trạng thái cũ) do API Backend `UserDto` thiếu trường `isActive` khi trả về sau lệnh PATCH. Đã bổ sung `isActive` vào `UserDto` để đồng bộ chính xác trạng thái UI.
+- **Web Admin CMS:** Sửa triệt để lỗi font tiếng Việt (mojibake) hiển thị trên giao diện quản trị viên duyệt chuyên gia (`reconnect_web/lib/screens/admin/admin_verify_doctor_screen.dart`), chuyển đổi toàn bộ các chuỗi ký tự bị lỗi (như "Chưa đăng nhập", "Chứng chỉ", "Họ tên", "Đã tạo tài khoản...", "ĐÃ CẤP PHÉP", "TỪ CHỐI", "Đóng") về định dạng tiếng Việt chuẩn UTF-8. Bảo toàn 100% các tính năng chỉnh sửa hồ sơ và đặt lại mật khẩu bác sĩ được phát triển trước đó.
+
 ### Added
 - **Docs:** Thêm “AI Context Pack” để giảm token nạp ngữ cảnh: `docs/AI_CONTEXT.md`, `docs/BRD_SUMMARY.md`, `docs/summaries/*`, kèm audit `docs/TOKEN_AUDIT.md` và script generate `scratch/audit_md_tokens.py`.
 - **DevTools:** Thêm Postman artifacts demo nhanh (admin/approval/login): `infra/postman/ReConnectMindHealth_AdminApprovalLogin.postman_collection.json` + env local `infra/postman/ReConnectMindHealth_Local.postman_environment.json`.
@@ -108,6 +112,8 @@ Quy tắc: Định dạng theo chuẩn [Keep a Changelog](https://keepachangelog
 - **Clinical (Backend):** Thêm `TherapistAccessGuardService` để chặn các API chuyên môn của therapist khi chưa `ACTIVE` (PENDING chỉ được upload chứng chỉ).
 - **CMS (Web):** Thêm màn therapist upload chứng chỉ + Admin xem/tải chứng chỉ trong màn “Quản lý Bác sĩ (Approval)”, và chặn duyệt `ACTIVE` nếu chưa có chứng chỉ.
 - **Seeder (Backend):** Seed theo từng bước, lỗi 1 bảng không làm dừng seed các bảng khác; seed profiles dùng `getReferenceById` để tránh detached.
+- **Admin CMS:** Bổ sung quản lý tài khoản bác sĩ: khóa/mở (`/api/admin/users/{id}/active`), chỉnh sửa profile + reset mật khẩu (`/api/admin/therapists/{id}` / `reset-password`).
+- **Clinical (Backend/Web/App):** Admin gán bác sĩ thủ công cho bệnh nhân + giới hạn caseload 20; app patient bỏ luồng chọn bác sĩ, booking chỉ theo therapist đã gán.
 ### Changed
 - **Auth (Backend):** Therapist `PENDING` được login để upload chứng chỉ (chỉ chặn login khi `REJECTED` hoặc `is_active=false`).
 ### Docs

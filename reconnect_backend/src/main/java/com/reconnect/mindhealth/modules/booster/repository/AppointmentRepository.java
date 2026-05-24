@@ -23,6 +23,9 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
 
     List<Appointment> findByPatientProfile_IdOrderByStartAtDesc(UUID patientId);
 
+    List<Appointment> findByTherapistProfile_IdOrderByStartAtDesc(UUID therapistId);
+
+
     Appointment findTopByPatientProfile_IdAndPurposeOrderByStartAtDesc(UUID patientId, AppointmentPurpose purpose);
 
     @Query("SELECT a FROM Appointment a WHERE a.therapistProfile.id = :therapistId AND a.startAt BETWEEN :from AND :to ORDER BY a.startAt ASC")

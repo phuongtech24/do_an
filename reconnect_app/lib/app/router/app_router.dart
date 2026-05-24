@@ -20,7 +20,6 @@ import '../../features/settings/presentation/pages/settings_screen.dart';
 import '../../features/telehealth/booking_calendar_screen.dart';
 import '../../features/telehealth/my_appointments_screen.dart';
 import '../../features/telehealth/presentation/pages/telehealth_screen.dart';
-import '../../features/telehealth/therapist_directory_screen.dart';
 import '../../features/onboarding/presentation/pages/goal_setting_screen.dart';
 import '../../features/onboarding/presentation/pages/psycho_education_screen.dart';
 
@@ -161,11 +160,6 @@ class AppRouter {
             icon: extra['icon'] as IconData? ?? Icons.star,
           );
         },
-      ),
-      GoRoute(
-        path: '/telehealth/directory',
-        name: 'telehealth-directory',
-        builder: (context, state) => const TherapistDirectoryScreen(),
       ),
       GoRoute(
         path: '/telehealth/booking',

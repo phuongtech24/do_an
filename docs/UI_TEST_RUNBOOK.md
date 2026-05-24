@@ -40,6 +40,10 @@ Neu vao "Kho CBT" / "Ho so benh nhan" ma khong co du lieu:
    - Expected: **chi duyet duoc neu da co chung chi**. Neu chua co chung chi -> hien loi.
 7. Therapist bam "Tai lai" / dang nhap lai.
    - Expected: vao duoc dashboard therapist (ACTIVE).
+8. (Optional) Thu cac thao tac quan tri tai khoan:
+   - Khoa/mo tai khoan: toggle switch (user.active) -> Expected: khoa thi login bao "Tai khoan da bi khoa".
+   - Chinh sua ho so: menu `...` -> "Chinh sua ho so" -> Luu.
+   - Dat lai mat khau: menu `...` -> "Dat lai mat khau" -> Expected: hien mat khau moi (demo).
 
 ### 1.2) Kho Noi dung CBT (Quest Templates)
 1. Vao man "Kho Noi dung CBT".
@@ -54,6 +58,10 @@ Neu vao "Kho CBT" / "Ho so benh nhan" ma khong co du lieu:
    - Expected: user bi khoa thi khong login duoc, mo lai thi login duoc.
 3. Thu "Gan BS" -> chon 1 therapist ACTIVE -> Luu.
    - Expected: benh nhan duoc gan therapist; therapist thay benh nhan trong dashboard.
+   - Rule: moi therapist ACTIVE theo doi toi da 20 benh nhan (active + chua tot nghiep). Neu FULL thi khong chon duoc/bi chan.
+
+4. (Lien quan Telehealth) Neu patient app muon "Dat lich kham":
+   - Expected: patient bat buoc phai duoc Admin gan BS truoc; neu chua gan se bao loi.
 
 ## 2) Web CMS - Therapist flow (Patient Monitoring + Red Flag)
 

@@ -9,6 +9,7 @@ public class UserDto extends BaseObjectDto {
     private String email;
     private Role role;
     private Boolean isAnonymous;
+    private Boolean isActive;
 
     // Constructor mặc định
     public UserDto() {}
@@ -24,6 +25,7 @@ public class UserDto extends BaseObjectDto {
             this.email = entity.getEmail();
             this.role = entity.getRole() != null ? entity.getRole() : null;
             this.isAnonymous = entity.getIsAnonymous();
+            this.isActive = entity.getIsActive();
         }
     }
 
@@ -50,6 +52,14 @@ public class UserDto extends BaseObjectDto {
 
     public void setIsAnonymous(Boolean isAnonymous) {
         this.isAnonymous = isAnonymous;
+    }
+
+    public Boolean getIsActive() {
+        return isActive;
+    }
+
+    public void setIsActive(Boolean isActive) {
+        this.isActive = isActive;
     }
     
 }

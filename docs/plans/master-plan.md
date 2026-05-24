@@ -34,6 +34,7 @@ Quy tắc: Khi hoàn thành một tính năng hoặc Phase, AI (Antigravity) B�
   - [x] Backend API nền: Therapist patient list + filter red-flag (phục vụ Emergency Alert).
 
 - [x] Duyệt therapist theo chứng chỉ (upload credentials + gating theo trạng thái ACTIVE).
+- [x] Admin gán therapist thủ công + giới hạn caseload (20 bệnh nhân/therapist).
 
 ### Phase 5: System Admin & Background Jobs
 - [x] Admin CRUD User / Nội dung Nhiệm vụ.

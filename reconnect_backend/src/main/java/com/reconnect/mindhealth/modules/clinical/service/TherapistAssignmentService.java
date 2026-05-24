@@ -20,6 +20,8 @@ import jakarta.persistence.EntityNotFoundException;
 @Transactional
 public class TherapistAssignmentService {
 
+    public static final int CASELOAD_LIMIT = 20;
+
     private final AuthContextService authContextService;
     private final PatientProfileRepository patientProfileRepository;
     private final TherapistProfileRepository therapistProfileRepository;
@@ -45,8 +47,23 @@ public class TherapistAssignmentService {
         PatientProfile patient = patientProfileRepository.findById(patientId)
                 .orElseThrow(() -> new EntityNotFoundException("Patient not found: " + patientId));
 
-        TherapistProfile therapist = therapistProfileRepository.findById(therapistId)
-                .orElseThrow(() -> new EntityNotFoundException("Therapist not found: " + therapistId));
+        TherapistProfile therapist = therapistProfileRepository.findByIdForUpdate(therapistId);
+        if (therapist == null) {
+            throw new EntityNotFoundException("Therapist not found: " + therapistId);
+        }
+        if (therapist.getApprovalStatus() != com.reconnect.mindhealth.modules.clinical.enums.ApprovalStatus.ACTIVE) {
+            throw new IllegalStateException("Therapist chưa được duyệt ACTIVE.");
+        }
+
+        // Count caseload (active + not graduated)
+        long caseload = patientProfileRepository.countByTherapist_IdAndIsActiveTrueAndGraduatedAtIsNull(therapistId);
+
+        // If assigning to same therapist, allow (no increase)
+        if (patient.getTherapist() == null || !therapistId.equals(patient.getTherapist().getId())) {
+            if (caseload >= CASELOAD_LIMIT) {
+                throw new IllegalStateException("Bác sĩ đã đủ 20 bệnh nhân đang theo dõi.");
+            }
+        }
 
         patient.setTherapist(therapist);
         return patientProfileRepository.save(patient);

@@ -23,20 +23,19 @@ class TelehealthScreen extends StatelessWidget {
             ),
           ),
           FeatureCard(
-            title: 'Danh ba bac si',
-            subtitle: 'FR6.3 - xem danh sach va danh gia',
-            icon: Icons.badge_outlined,
-            onTap: () {
-              context.push('/telehealth/directory');
-            },
-          ),
-          FeatureCard(
             title: 'Dat lich kham',
             subtitle: 'FR6.3 - chon khung gio trong',
             icon: Icons.schedule_outlined,
             onTap: () {
-              // Same screen but you could handle logic differently if needed
-              context.push('/telehealth/directory'); 
+              context.push('/telehealth/booking');
+            },
+          ),
+          FeatureCard(
+            title: 'Lich su dat kham',
+            subtitle: 'Xem cac ca kham da dat',
+            icon: Icons.history,
+            onTap: () {
+              context.push('/telehealth/my-appointments');
             },
           ),
           FeatureCard(
@@ -53,4 +52,3 @@ class TelehealthScreen extends StatelessWidget {
     );
   }
 }
-
