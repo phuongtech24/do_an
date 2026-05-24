@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/models/available_slot_model.dart';
 import '../../data/models/appointment_model.dart';
+import '../../data/models/therapist_assignment_status_model.dart';
 import '../../data/repositories/telehealth_repository.dart';
 
 enum TelehealthStatus { idle, loading, success, error }
@@ -13,11 +14,32 @@ class TelehealthProvider extends ChangeNotifier {
   String _errorMessage = '';
   List<AvailableSlotModel> _slots = [];
   List<AppointmentModel> _myAppointments = [];
+  TherapistAssignmentStatusModel? _assignmentStatus;
 
   TelehealthStatus get status => _status;
   String get errorMessage => _errorMessage;
   List<AvailableSlotModel> get slots => _slots;
   List<AppointmentModel> get myAppointments => _myAppointments;
+  TherapistAssignmentStatusModel? get assignmentStatus => _assignmentStatus;
+
+  bool get isAssigned => _assignmentStatus?.assigned == true;
+  String get assignmentMessage => _assignmentStatus?.message ?? '';
+  String get therapistName => _assignmentStatus?.therapistName ?? '';
+
+  Future<void> loadAssignmentStatus(String patientId, {String? token}) async {
+    _status = TelehealthStatus.loading;
+    _errorMessage = '';
+    notifyListeners();
+
+    try {
+      _assignmentStatus = await _repository.getTherapistAssignmentStatus(patientId, token: token);
+      _status = TelehealthStatus.success;
+    } catch (e) {
+      _status = TelehealthStatus.error;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+    }
+    notifyListeners();
+  }
 
   Future<void> loadSlots(String patientId, DateTime date, {String? token}) async {
     _status = TelehealthStatus.loading;
@@ -72,4 +94,3 @@ class TelehealthProvider extends ChangeNotifier {
     notifyListeners();
   }
 }
-

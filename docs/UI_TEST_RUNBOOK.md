@@ -74,6 +74,14 @@ Neu vao "Kho CBT" / "Ho so benh nhan" ma khong co du lieu:
 3. Bat filter "Red flag only" (neu co).
    - Expected: danh sach chi con patient co red flag.
 
+### 2.1) Lich hen (Telehealth) - tao slot theo ngay (toi gian)
+1. Vao tab "Lich hen (Telehealth)" -> tab "Lich lam viec".
+2. Chon ngay bat ky -> xem 6 slot mac dinh.
+   - Expected: moi slot co trang thai `MO` / `DONG` / `DA DAT`.
+3. Toggle 1 slot tu `MO` -> `DONG`.
+   - Expected: dong slot thanh cong, tai lai van thay `DONG`.
+4. (Neu co benh nhan dat) slot `DA DAT` se khong toggle duoc.
+
 ## 3) Flutter App - Patient flow (Daily Loop)
 
 Luu y base URL:

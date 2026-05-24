@@ -1,5 +1,7 @@
 package com.reconnect.mindhealth.modules.clinical.controller;
 
+import java.util.UUID;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,9 +14,10 @@ import org.springframework.web.bind.annotation.RestController;
 import com.reconnect.mindhealth.common.dto.ApiResponse;
 import com.reconnect.mindhealth.modules.clinical.dto.GoalSettingDto;
 import com.reconnect.mindhealth.modules.clinical.dto.OnboardingStatusDto;
+import com.reconnect.mindhealth.modules.clinical.dto.TherapistAssignmentStatusDto;
+import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
+import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
 import com.reconnect.mindhealth.modules.clinical.service.IClinicalService;
-
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/clinical")
@@ -22,6 +25,9 @@ public class ClinicalController {
 
     @Autowired
     private IClinicalService clinicalService;
+
+    @Autowired
+    private PatientProfileRepository patientProfileRepository;
 
     @PostMapping("/goals")
     public ResponseEntity<ApiResponse<GoalSettingDto>> saveGoals(@RequestBody GoalSettingDto dto) {
@@ -62,4 +68,46 @@ public class ClinicalController {
             return ResponseEntity.ok(ApiResponse.error("Lỗi khi tải onboarding status: " + e.getMessage()));
         }
     }
+
+    /**
+     * GET /api/clinical/therapist-assignment-status?patientId=...
+     * Dùng để UI patient gating: đã được gán bác sĩ phụ trách chưa.
+     */
+    @GetMapping("/therapist-assignment-status")
+    public ResponseEntity<ApiResponse<TherapistAssignmentStatusDto>> getTherapistAssignmentStatus(@RequestParam UUID patientId) {
+        try {
+            PatientProfile patient = patientProfileRepository.findById(patientId).orElse(null);
+            if (patient == null) {
+                return ResponseEntity.ok(ApiResponse.error("Không tìm thấy bệnh nhân."));
+            }
+
+            if (patient.getTherapist() == null) {
+                TherapistAssignmentStatusDto dto = new TherapistAssignmentStatusDto(
+                        patientId,
+                        false,
+                        null,
+                        null,
+                        "Bạn chưa được gán bác sĩ phụ trách. Vui lòng chờ Admin gán bác sĩ để đặt lịch."
+                );
+                return ResponseEntity.ok(ApiResponse.success("OK", dto));
+            }
+
+            String therapistName = patient.getTherapist().getFullName();
+            if (therapistName == null || therapistName.isBlank()) {
+                therapistName = patient.getTherapist().getUser() != null ? patient.getTherapist().getUser().getEmail() : null;
+            }
+
+            TherapistAssignmentStatusDto dto = new TherapistAssignmentStatusDto(
+                    patientId,
+                    true,
+                    patient.getTherapist().getId(),
+                    therapistName,
+                    "OK"
+            );
+            return ResponseEntity.ok(ApiResponse.success("OK", dto));
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.error("Lỗi khi kiểm tra bác sĩ phụ trách: " + e.getMessage()));
+        }
+    }
 }
+

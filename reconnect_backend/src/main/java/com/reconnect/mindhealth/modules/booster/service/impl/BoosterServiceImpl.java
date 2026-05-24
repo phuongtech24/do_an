@@ -11,6 +11,8 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +39,8 @@ import jakarta.persistence.EntityNotFoundException;
 @Transactional
 public class BoosterServiceImpl implements IBoosterService {
 
+    private static final Logger log = LoggerFactory.getLogger(BoosterServiceImpl.class);
+
     /** 6 slot mặc định trong ngày */
     private static final List<LocalTime> DEFAULT_SLOTS = List.of(
             LocalTime.of(9, 0),
@@ -59,7 +63,7 @@ public class BoosterServiceImpl implements IBoosterService {
     private TherapistProfileRepository therapistProfileRepository;
 
     // ====================================================
-    // Bệnh nhân: Đặt lịch
+    // Patient: Đặt lịch
     // ====================================================
 
     @Override
@@ -81,12 +85,12 @@ public class BoosterServiceImpl implements IBoosterService {
 
         LocalDateTime startAt = request.getStartAt();
 
-        // Kiểm tra slot đã bị đặt chưa
+        log.info("Book appointment: patientId={}, therapistId={}, startAt={}", patient.getId(), therapist.getId(), startAt);
+
         if (appointmentRepository.existsByTherapistProfile_IdAndStartAt(therapist.getId(), startAt)) {
             throw new IllegalStateException("Khung giờ này đã được đặt. Vui lòng chọn khung giờ khác.");
         }
 
-        // Kiểm tra bác sĩ có đóng slot này không
         LocalDate slotDate = startAt.toLocalDate();
         LocalTime slotTime = startAt.toLocalTime();
         Optional<TherapistScheduleSlot> closedSlot = scheduleSlotRepository
@@ -109,7 +113,7 @@ public class BoosterServiceImpl implements IBoosterService {
     }
 
     // ====================================================
-    // Bệnh nhân: Xem lịch đã đặt
+    // Patient: Xem lịch đã đặt
     // ====================================================
 
     @Override
@@ -121,7 +125,7 @@ public class BoosterServiceImpl implements IBoosterService {
     }
 
     // ====================================================
-    // Bệnh nhân: Xem slot còn trống
+    // Patient: Xem slot còn trống
     // ====================================================
 
     @Override
@@ -142,9 +146,7 @@ public class BoosterServiceImpl implements IBoosterService {
         LocalDateTime from = date.atStartOfDay();
         LocalDateTime to = date.atTime(LocalTime.MAX);
 
-        // Lịch hẹn đã đặt
         List<Appointment> booked = appointmentRepository.findTherapistAppointmentsInRange(therapistId, from, to);
-        // Slot bác sĩ đã đóng
         List<TherapistScheduleSlot> closedSlots = scheduleSlotRepository
                 .findByTherapistProfile_IdAndSlotDate(therapistId, date);
         Map<LocalTime, Boolean> closedMap = closedSlots.stream()
@@ -154,14 +156,14 @@ public class BoosterServiceImpl implements IBoosterService {
         for (LocalTime t : DEFAULT_SLOTS) {
             LocalDateTime startAt = date.atTime(t);
             boolean isBooked = booked.stream().anyMatch(a -> a.getStartAt() != null && a.getStartAt().equals(startAt));
-            boolean isClosed = closedMap.getOrDefault(t, false); // false = mặc định OPEN
+            boolean isClosed = closedMap.getOrDefault(t, false);
             slots.add(new AvailableSlotDto(startAt, !isBooked && !isClosed));
         }
         return slots;
     }
 
     // ====================================================
-    // Bác sĩ: Xem lịch của mình theo ngày
+    // Therapist: Xem lịch của mình theo ngày
     // ====================================================
 
     @Override
@@ -173,17 +175,15 @@ public class BoosterServiceImpl implements IBoosterService {
         LocalDateTime from = date.atStartOfDay();
         LocalDateTime to = date.atTime(LocalTime.MAX);
 
-        // Lịch hẹn đã đặt trong ngày
         List<Appointment> bookedAppts = appointmentRepository.findTherapistAppointmentsInRange(therapistId, from, to);
         Map<LocalTime, Appointment> bookedMap = bookedAppts.stream()
                 .filter(a -> a.getStartAt() != null)
                 .collect(Collectors.toMap(
                         a -> a.getStartAt().toLocalTime(),
                         Function.identity(),
-                        (a, b) -> a // keep first nếu trùng
+                        (a, b) -> a
                 ));
 
-        // Slot bác sĩ đã toggle
         List<TherapistScheduleSlot> savedSlots = scheduleSlotRepository
                 .findByTherapistProfile_IdAndSlotDate(therapistId, date);
         Map<LocalTime, TherapistScheduleSlot> savedMap = savedSlots.stream()
@@ -197,18 +197,19 @@ public class BoosterServiceImpl implements IBoosterService {
             } else if (savedMap.containsKey(t)) {
                 result.add(new TherapistScheduleSlotDto(savedMap.get(t)));
             } else {
-                result.add(new TherapistScheduleSlotDto(finalDate, t)); // mặc định OPEN
+                result.add(new TherapistScheduleSlotDto(finalDate, t));
             }
         }
         return result;
     }
 
     // ====================================================
-    // Bác sĩ: Toggle slot
+    // Therapist: Toggle slot
     // ====================================================
 
     @Override
     public TherapistScheduleSlotDto toggleSlot(ToggleSlotRequestDto request) {
+        if (request == null) throw new IllegalArgumentException("Thiếu request.");
         if (request.getTherapistId() == null) throw new IllegalArgumentException("Thiếu therapistId.");
         if (request.getSlotDate() == null) throw new IllegalArgumentException("Thiếu slotDate.");
         if (request.getStartTime() == null) throw new IllegalArgumentException("Thiếu startTime.");
@@ -216,13 +217,14 @@ public class BoosterServiceImpl implements IBoosterService {
         TherapistProfile therapist = therapistProfileRepository.findById(request.getTherapistId())
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy therapist: " + request.getTherapistId()));
 
-        // Kiểm tra slot không phải đang BOOKED
         LocalDateTime startAt = LocalDateTime.of(request.getSlotDate(), request.getStartTime());
         if (appointmentRepository.existsByTherapistProfile_IdAndStartAt(request.getTherapistId(), startAt)) {
             throw new IllegalStateException("Không thể thay đổi slot đã có lịch hẹn.");
         }
 
-        // Upsert record
+        log.info("Toggle slot: therapistId={}, date={}, time={}, open={}",
+                request.getTherapistId(), request.getSlotDate(), request.getStartTime(), request.isOpen());
+
         TherapistScheduleSlot slot = scheduleSlotRepository
                 .findByTherapistProfile_IdAndSlotDateAndStartTime(
                         request.getTherapistId(), request.getSlotDate(), request.getStartTime())
@@ -238,7 +240,7 @@ public class BoosterServiceImpl implements IBoosterService {
     }
 
     // ====================================================
-    // Bác sĩ: Xem lịch hẹn của mình
+    // Therapist: Xem lịch hẹn của mình
     // ====================================================
 
     @Override
@@ -249,3 +251,4 @@ public class BoosterServiceImpl implements IBoosterService {
                 .stream().map(AppointmentDto::new).collect(Collectors.toList());
     }
 }
+

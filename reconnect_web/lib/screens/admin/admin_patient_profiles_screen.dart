@@ -108,7 +108,7 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text(
-          'GÃ¡n ChuyÃªn gia phá»¥ trÃ¡ch',
+          'Gán chuyên gia phụ trách',
           style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
         ),
         content: SizedBox(
@@ -118,13 +118,13 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Bá»‡nh nhÃ¢n: ${item.nickname ?? item.email ?? item.patientId}',
+                'Bệnh nhân: ${item.nickname ?? item.email ?? item.patientId}',
                 style: const TextStyle(color: Colors.black54),
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 value: selectedId,
-                decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'ChuyÃªn gia (ACTIVE)'),
+                decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Chuyên gia (ACTIVE)'),
                 items: therapists
                     .map((t) => DropdownMenuItem<String>(
                           value: t.therapistId,
@@ -163,7 +163,7 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
       if (!mounted) return;
       await _load();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ÄÃ£ gÃ¡n chuyÃªn gia cho bá»‡nh nhÃ¢n.'), backgroundColor: AppColors.success),
+        const SnackBar(content: Text('Đã gán chuyên gia cho bệnh nhân.'), backgroundColor: AppColors.success),
       );
     } catch (e) {
       if (!mounted) return;
@@ -185,7 +185,7 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: const [
-                Text('Quáº£n lÃ½ há»“ sÆ¡ bá»‡nh nhÃ¢n', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                Text('Quản lý hồ sơ bệnh nhân', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                 SizedBox(height: 8),
                 Text('Dá»¯ liá»‡u láº¥y tá»« backend (/api/admin/patients).', style: TextStyle(color: AppColors.textSecondary)),
               ],
@@ -211,7 +211,7 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
         const SizedBox(height: 16),
         TextField(
           decoration: InputDecoration(
-            hintText: 'TÃ¬m theo nickname / email / chuyÃªn gia...',
+            hintText: 'Tìm theo nickname / email / chuyên gia...',
             prefixIcon: const Icon(Icons.search, color: Colors.grey),
             filled: true,
             fillColor: Colors.white,
@@ -237,7 +237,7 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
           child: _loading
               ? const Center(child: CircularProgressIndicator())
               : _items.isEmpty
-                  ? const Center(child: Text('KhÃ´ng cÃ³ dá»¯ liá»‡u.'))
+                  ? const Center(child: Text('Không có dữ liệu.'))
                   : ListView.separated(
                       itemCount: _items.length,
                       separatorBuilder: (_, __) => const Divider(height: 1),
@@ -265,7 +265,7 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      'Therapist: ${it.therapistName ?? 'ChÆ°a gÃ¡n'}',
+                                      'Chuyên gia: ${it.therapistName ?? 'Chưa gán'}',
                                       style: const TextStyle(color: Colors.black54),
                                     ),
                                   ],
@@ -286,7 +286,7 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
                               ElevatedButton(
                                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
                                 onPressed: _loading ? null : () => _assignTherapist(it),
-                                child: const Text('GÃ¡n BS', style: TextStyle(color: Colors.white)),
+                                child: const Text('Gán BS', style: TextStyle(color: Colors.white)),
                               ),
                             ],
                           ),

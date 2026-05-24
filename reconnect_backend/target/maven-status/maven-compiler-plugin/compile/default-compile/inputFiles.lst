@@ -78,6 +78,7 @@ D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\ai\dto\
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\roadmap\controller\AdminQuestTemplateController.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\clinical\controller\AdminPatientProfileController.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\clinical\dto\CreateTherapistAccountRequestDto.java
+D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\clinical\dto\TherapistAssignmentStatusDto.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\roadmap\dto\QuestTemplateDto.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\journal\service\IJournalService.java
 D:\DOAN\reconnect_backend\src\main\java\com\reconnect\mindhealth\modules\clinical\service\AdminTherapistManagementService.java

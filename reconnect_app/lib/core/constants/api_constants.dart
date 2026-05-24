@@ -29,6 +29,7 @@ class ApiConstants {
   static const String saveGoals = '$baseUrl/clinical/goals';
   static const String getOnboardingStatus = '$baseUrl/clinical/onboarding-status';
   static const String completePsychoeducation = '$baseUrl/clinical/psychoeducation/complete';
+  static const String therapistAssignmentStatus = '$baseUrl/clinical/therapist-assignment-status';
 
   // Roadmap Endpoints
   static const String getDailyQuests = '$baseUrl/roadmap/daily';
@@ -49,3 +50,4 @@ class ApiConstants {
   static const String bookAppointment = '$baseUrl/booster/appointments/book';
   static const String myAppointments = '$baseUrl/booster/appointments/my';
 }
+

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -27,16 +27,25 @@ class _BookingCalendarScreenState extends State<BookingCalendarScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final patientId = auth.loginResponse?.user.id ?? '';
     final token = auth.loginResponse?.token;
+    final telehealth = Provider.of<TelehealthProvider>(context, listen: false);
+
     if (patientId.isNotEmpty) {
-      Provider.of<TelehealthProvider>(context, listen: false).loadSlots(patientId, _selectedDate, token: token);
+      () async {
+        await telehealth.loadAssignmentStatus(patientId, token: token);
+        if (!mounted) return;
+        if (telehealth.isAssigned) {
+          await telehealth.loadSlots(patientId, _selectedDate, token: token);
+        }
+      }();
     }
+
     _loaded = true;
   }
 
   Future<void> _confirmBooking() async {
     if (_selectedSlotStartAt == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lÃ²ng chá»n khung giá» trá»‘ng!')),
+        const SnackBar(content: Text('Vui lòng chọn khung giờ trống!')),
       );
       return;
     }
@@ -46,18 +55,25 @@ class _BookingCalendarScreenState extends State<BookingCalendarScreen> {
     final token = auth.loginResponse?.token;
     if (patientId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Báº¡n cáº§n Ä‘Äƒng nháº­p trÆ°á»›c khi Ä‘áº·t lá»‹ch.')),
+        const SnackBar(content: Text('Bạn cần đăng nhập trước khi đặt lịch.')),
       );
       return;
     }
 
     final telehealth = Provider.of<TelehealthProvider>(context, listen: false);
+    if (!telehealth.isAssigned) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(telehealth.assignmentMessage.isNotEmpty ? telehealth.assignmentMessage : 'Bạn chưa được gán bác sĩ phụ trách.')),
+      );
+      return;
+    }
+
     final appt = await telehealth.book(patientId, _selectedSlotStartAt!, _isAnonymous, token: token);
     if (!mounted) return;
 
     if (appt == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lá»—i: ${telehealth.errorMessage}')),
+        SnackBar(content: Text('Lỗi: ${telehealth.errorMessage}')),
       );
       return;
     }
@@ -67,9 +83,9 @@ class _BookingCalendarScreenState extends State<BookingCalendarScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Äáº·t lá»‹ch thÃ nh cÃ´ng'),
+        title: const Text('Đặt lịch thành công'),
         content: Text(
-          'Ca khÃ¡m cá»§a báº¡n Ä‘Ã£ Ä‘Æ°á»£c chá»‘t vÃ o thá»i gian:\n$timeText.\n\nCháº¿ Ä‘á»™ áº©n danh: ${_isAnonymous ? "Báº¬T" : "Táº®T"}',
+          'Ca khám của bạn đã được chốt vào thời gian:\n$timeText.\n\nChế độ ẩn danh: ${_isAnonymous ? "BẬT" : "TẮT"}',
         ),
         actions: [
           TextButton(
@@ -86,152 +102,166 @@ class _BookingCalendarScreenState extends State<BookingCalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final patientId = auth.loginResponse?.user.id ?? '';
+    final token = auth.loginResponse?.token;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Chá»n Lá»‹ch KhÃ¡m'),
+        title: const Text('Chọn Lịch Khám'),
         elevation: 0,
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              color: AppColors.primary,
-              child: Row(
-                children: [
-                  const CircleAvatar(
-                    radius: 30,
-                    backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=32'),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          'BÃ¡c sÄ©/Therapist',
-                          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        SizedBox(height: 4),
-                        Text('Lá»‹ch sáº½ Ä‘áº·t theo therapist Ä‘Ã£ Ä‘Æ°á»£c gÃ¡n', style: TextStyle(color: Colors.white70)),
-                      ],
-                    ),
-                  )
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Khung giá» trá»‘ng (HÃ´m nay)',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
-                  ),
-                  const SizedBox(height: 16),
-                  Consumer<TelehealthProvider>(
-                    builder: (context, telehealth, _) {
-                      if (telehealth.status == TelehealthStatus.loading && telehealth.slots.isEmpty) {
-                        return const Center(child: Padding(
-                          padding: EdgeInsets.all(16),
-                          child: CircularProgressIndicator(),
-                        ));
-                      }
-                      if (telehealth.status == TelehealthStatus.error && telehealth.slots.isEmpty) {
-                        final msg = telehealth.errorMessage;
-                        final lower = msg.toLowerCase();
-                        if (lower.contains('chưa được gán') || lower.contains('chua duoc gan')) {
-                          return const Text(
-                            'Bạn chưa được gán bác sĩ phụ trách. Vui lòng chờ Admin gán bác sĩ để đặt lịch.',
-                            style: TextStyle(color: Colors.red),
-                          );
-                        }
-                        return Text('Lỗi: $msg', style: const TextStyle(color: Colors.red));
-                      }
+      body: Consumer<TelehealthProvider>(
+        builder: (context, telehealth, _) {
+          if (telehealth.status == TelehealthStatus.loading && telehealth.assignmentStatus == null) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-                      final slots = telehealth.slots;
-                      if (slots.isEmpty) {
-                        return const Text('HÃ´m nay khÃ´ng cÃ²n slot trá»‘ng.');
-                      }
-
-                      return Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
-                        children: slots.map((slot) {
-                          final isSelected = _selectedSlotStartAt != null && slot.startAt.isAtSameMomentAs(_selectedSlotStartAt!);
-                          final label = DateFormat('HH:mm').format(slot.startAt);
-                          return ChoiceChip(
-                            label: Text(label),
-                            selected: isSelected,
-                            onSelected: slot.available
-                                ? (selected) => setState(() => _selectedSlotStartAt = selected ? slot.startAt : null)
-                                : null,
-                            selectedColor: AppColors.primary,
-                            labelStyle: TextStyle(
-                              color: isSelected ? Colors.white : (slot.available ? AppColors.textPrimary : Colors.grey),
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                            ),
-                            backgroundColor: Colors.white,
-                            padding: const EdgeInsets.all(12),
-                          );
-                        }).toList(),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 40),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.primary.withOpacity(0.3)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+          if (!telehealth.isAssigned) {
+            final msg = telehealth.assignmentMessage.isNotEmpty
+                ? telehealth.assignmentMessage
+                : 'Bạn chưa được gán bác sĩ phụ trách. Vui lòng chờ Admin gán bác sĩ để đặt lịch.';
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.info_outline, size: 48, color: AppColors.alert),
+                    const SizedBox(height: 12),
+                    Text(msg, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.alert, fontSize: 16)),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text('Quyá»n RiÃªng TÆ°', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                        const SizedBox(height: 16),
-                        SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: const Text('Giao tiáº¿p áº¨n Danh', style: TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text(
-                            _isAnonymous
-                                ? 'Therapist chá»‰ tháº¥y nickname; thÃ´ng tin tháº­t Ä‘Æ°á»£c giá»¯ kÃ­n.'
-                                : 'Therapist cÃ³ thá»ƒ tháº¥y thÃ´ng tin tháº­t (náº¿u há»‡ thá»‘ng cho phÃ©p).',
-                          ),
-                          activeColor: AppColors.primary,
-                          value: _isAnonymous,
-                          onChanged: (val) => setState(() => _isAnonymous = val),
-                        )
+                        OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Quay lại'),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton.icon(
+                          onPressed: patientId.isEmpty
+                              ? null
+                              : () async {
+                                  await telehealth.loadAssignmentStatus(patientId, token: token);
+                                  if (!mounted) return;
+                                  if (telehealth.isAssigned) {
+                                    await telehealth.loadSlots(patientId, _selectedDate, token: token);
+                                  }
+                                },
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Tải lại'),
+                        ),
                       ],
                     ),
-                  ),
-                ],
-              ),
-            )
-          ],
-        ),
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: SizedBox(
-            height: 56,
-            child: ElevatedButton(
-              onPressed: _confirmBooking,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.secondary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  ],
                 ),
               ),
-              child: const Text('XÃC NHáº¬N Äáº¶T CA', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            );
+          }
+
+          final therapistName = telehealth.therapistName.isNotEmpty ? telehealth.therapistName : 'Bác sĩ/Therapist';
+
+          return SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  color: AppColors.primary,
+                  child: Row(
+                    children: [
+                      const CircleAvatar(
+                        radius: 30,
+                        backgroundImage: NetworkImage('https://i.pravatar.cc/150?img=32'),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              therapistName,
+                              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text('Lịch sẽ đặt theo therapist đã được gán', style: TextStyle(color: Colors.white70)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Khung giờ trống (Hôm nay)', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                      const SizedBox(height: 8),
+                      if (telehealth.status == TelehealthStatus.loading && telehealth.slots.isEmpty)
+                        const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()))
+                      else if (telehealth.status == TelehealthStatus.error)
+                        Text('Lỗi: ${telehealth.errorMessage}', style: const TextStyle(color: AppColors.alert))
+                      else if (telehealth.slots.where((e) => e.isAvailable).isEmpty)
+                        const Text('Hôm nay không còn slot trống.')
+                      else
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children: telehealth.slots.map((slot) {
+                            final timeText = DateFormat('HH:mm').format(slot.startAt);
+                            final selected = _selectedSlotStartAt != null && slot.startAt.isAtSameMomentAs(_selectedSlotStartAt!);
+                            final disabled = !slot.isAvailable;
+                            return ChoiceChip(
+                              label: Text(timeText),
+                              selected: selected,
+                              onSelected: disabled
+                                  ? null
+                                  : (_) {
+                                      setState(() => _selectedSlotStartAt = slot.startAt);
+                                    },
+                            );
+                          }).toList(),
+                        ),
+                      const SizedBox(height: 20),
+                      const Text('Quyền Riêng Tư', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                      const SizedBox(height: 8),
+                      Card(
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          side: BorderSide(color: Colors.grey[300]!),
+                        ),
+                        child: SwitchListTile(
+                          value: _isAnonymous,
+                          onChanged: (v) => setState(() => _isAnonymous = v),
+                          title: const Text('Giao tiếp ẩn danh'),
+                          subtitle: Text(
+                            _isAnonymous
+                                ? 'Therapist chỉ thấy nickname; thông tin thật được giữ kín.'
+                                : 'Therapist có thể thấy thông tin thật (nếu hệ thống cho phép).',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: ElevatedButton(
+                          onPressed: telehealth.status == TelehealthStatus.loading ? null : _confirmBooking,
+                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.alert, foregroundColor: Colors.white),
+                          child: const Text('XÁC NHẬN ĐẶT CA', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

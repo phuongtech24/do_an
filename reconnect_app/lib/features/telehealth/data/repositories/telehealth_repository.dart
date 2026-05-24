@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../../../../core/constants/api_constants.dart';
 import '../models/available_slot_model.dart';
 import '../models/appointment_model.dart';
+import '../models/therapist_assignment_status_model.dart';
 
 class TelehealthRepository {
   void _handleHttpError(http.Response response, String actionName) {
@@ -16,9 +17,32 @@ class TelehealthRepository {
     }
   }
 
+  Future<TherapistAssignmentStatusModel> getTherapistAssignmentStatus(String patientId, {String? token}) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiConstants.therapistAssignmentStatus}?patientId=$patientId'),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      _handleHttpError(response, 'kiểm tra bác sĩ phụ trách');
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+
+      if (json['status'] == 200 && json['data'] != null) {
+        return TherapistAssignmentStatusModel.fromJson(json['data'] as Map<String, dynamic>);
+      }
+      throw Exception(json['message'] ?? 'Không thể kiểm tra bác sĩ phụ trách');
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
   Future<List<AvailableSlotModel>> getAvailableSlots(String patientId, DateTime date, {String? token}) async {
     try {
-      final dateStr = '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      final dateStr =
+          '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
       final response = await http.get(
         Uri.parse('${ApiConstants.getAvailableSlots}?patientId=$patientId&date=$dateStr'),
         headers: {

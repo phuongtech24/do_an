@@ -97,16 +97,17 @@ class RoadmapRepository {
       final streamed = await request.send();
       final response = await http.Response.fromStream(streamed);
 
-      _handleHttpError(response, 'xÃ¡c minh minh chá»©ng áº£nh');
+      _handleHttpError(response, 'xác minh minh chứng ảnh');
 
       final json = jsonDecode(utf8.decode(response.bodyBytes));
       if (json['status'] == 200 && json['data'] != null) {
         return VerifyQuestProofResult.fromJson(json['data'] as Map<String, dynamic>);
       } else {
-        throw Exception(json['message'] ?? 'KhÃ´ng thá»ƒ xÃ¡c minh minh chá»©ng');
+        throw Exception(json['message'] ?? 'Không thể xác minh minh chứng');
       }
     } catch (e) {
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
   }
 }
+

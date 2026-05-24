@@ -4,6 +4,14 @@ Tất cả các thay đổi lớn về tính năng, sửa lỗi, và cấu trúc
 Quy tắc: Định dạng theo chuẩn [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). AI phải tự động thêm vào đây sau mỗi lần hoàn thành một phase hoặc fix xong một issue.
 
 ## [Unreleased]
+### Added
+- **Clinical (Backend):** Thêm API `GET /api/clinical/therapist-assignment-status?patientId=...` để UI patient gating “đã được gán bác sĩ chưa?”.
+- **Therapist Web:** Thêm màn “Lịch làm việc” (toggle 6 slot/ngày) + “Lịch đã đặt” (load từ backend) dùng `/api/booster/*`.
+- **Seed:** Bổ sung & sửa encoding UTF-8 cho `reconnect_backend/src/main/resources/seed_data/quest_templates.csv` để “Kho CBT” luôn có dữ liệu mẫu.
+
+### Fixed
+- **Telehealth:** Chuẩn hóa message tiếng Việt (UTF-8) trên backend Booster/Clinical/Auth, tránh lỗi mojibake khi hiển thị trên UI.
+- **Patient App:** Sửa toàn bộ text bị mojibake ở flow Telehealth/Booking và Roadmap repository.
 ### Fixed
 - **Web Admin CMS:** Khắc phục lỗi hiển thị của nút "Khoá tài khoản" (bấm khoá nhưng UI bật lại trạng thái cũ) do API Backend `UserDto` thiếu trường `isActive` khi trả về sau lệnh PATCH. Đã bổ sung `isActive` vào `UserDto` để đồng bộ chính xác trạng thái UI.
 - **Web Admin CMS:** Sửa triệt để lỗi font tiếng Việt (mojibake) hiển thị trên giao diện quản trị viên duyệt chuyên gia (`reconnect_web/lib/screens/admin/admin_verify_doctor_screen.dart`), chuyển đổi toàn bộ các chuỗi ký tự bị lỗi (như "Chưa đăng nhập", "Chứng chỉ", "Họ tên", "Đã tạo tài khoản...", "ĐÃ CẤP PHÉP", "TỪ CHỐI", "Đóng") về định dạng tiếng Việt chuẩn UTF-8. Bảo toàn 100% các tính năng chỉnh sửa hồ sơ và đặt lại mật khẩu bác sĩ được phát triển trước đó.

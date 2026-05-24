@@ -3,6 +3,8 @@ package com.reconnect.mindhealth.modules.clinical.controller;
 import java.util.List;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -24,6 +26,8 @@ import com.reconnect.mindhealth.modules.clinical.service.TherapistCredentialServ
 @RequestMapping("/api/therapist/credentials")
 public class TherapistCredentialController {
 
+    private static final Logger log = LoggerFactory.getLogger(TherapistCredentialController.class);
+
     private final TherapistCredentialService therapistCredentialService;
 
     public TherapistCredentialController(TherapistCredentialService therapistCredentialService) {
@@ -38,6 +42,7 @@ public class TherapistCredentialController {
                     .toList();
             return ResponseEntity.ok(ApiResponse.success("OK", dtos));
         } catch (Exception e) {
+            log.warn("List therapist credentials failed: err={}", e.toString());
             return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
         }
     }
@@ -48,6 +53,7 @@ public class TherapistCredentialController {
             TherapistProfileStatusDto dto = therapistCredentialService.getMyStatus();
             return ResponseEntity.ok(ApiResponse.success("OK", dto));
         } catch (Exception e) {
+            log.warn("Get therapist credentials status failed: err={}", e.toString());
             return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
         }
     }
@@ -55,9 +61,12 @@ public class TherapistCredentialController {
     @PostMapping
     public ResponseEntity<ApiResponse<TherapistCredentialDto>> upload(@RequestParam("file") MultipartFile file) {
         try {
+            log.info("Upload therapist credential: name={}, size={}", file != null ? file.getOriginalFilename() : null,
+                    file != null ? file.getSize() : null);
             TherapistCredentialDto dto = new TherapistCredentialDto(therapistCredentialService.uploadMyCredential(file));
             return ResponseEntity.ok(ApiResponse.success("OK", dto));
         } catch (Exception e) {
+            log.warn("Upload therapist credential failed: err={}", e.toString());
             return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
         }
     }

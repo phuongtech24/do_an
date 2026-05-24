@@ -3,6 +3,8 @@ package com.reconnect.mindhealth.modules.clinical.service;
 import java.util.List;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,6 +13,7 @@ import com.reconnect.mindhealth.modules.auth.entity.User;
 import com.reconnect.mindhealth.modules.auth.enums.Role;
 import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
 import com.reconnect.mindhealth.modules.clinical.entity.TherapistProfile;
+import com.reconnect.mindhealth.modules.clinical.enums.ApprovalStatus;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
 import com.reconnect.mindhealth.modules.clinical.repository.TherapistProfileRepository;
 
@@ -21,6 +24,7 @@ import jakarta.persistence.EntityNotFoundException;
 public class TherapistAssignmentService {
 
     public static final int CASELOAD_LIMIT = 20;
+    private static final Logger log = LoggerFactory.getLogger(TherapistAssignmentService.class);
 
     private final AuthContextService authContextService;
     private final PatientProfileRepository patientProfileRepository;
@@ -44,6 +48,8 @@ public class TherapistAssignmentService {
             throw new SecurityException("Forbidden: ADMIN role required.");
         }
 
+        log.info("Admin assign therapist: adminId={}, patientId={}, therapistId={}", current.getId(), patientId, therapistId);
+
         PatientProfile patient = patientProfileRepository.findById(patientId)
                 .orElseThrow(() -> new EntityNotFoundException("Patient not found: " + patientId));
 
@@ -51,16 +57,15 @@ public class TherapistAssignmentService {
         if (therapist == null) {
             throw new EntityNotFoundException("Therapist not found: " + therapistId);
         }
-        if (therapist.getApprovalStatus() != com.reconnect.mindhealth.modules.clinical.enums.ApprovalStatus.ACTIVE) {
-            throw new IllegalStateException("Therapist chưa được duyệt ACTIVE.");
+        if (therapist.getApprovalStatus() != ApprovalStatus.ACTIVE) {
+            throw new IllegalStateException("Bác sĩ chưa được duyệt ACTIVE.");
         }
 
-        // Count caseload (active + not graduated)
         long caseload = patientProfileRepository.countByTherapist_IdAndIsActiveTrueAndGraduatedAtIsNull(therapistId);
 
-        // If assigning to same therapist, allow (no increase)
         if (patient.getTherapist() == null || !therapistId.equals(patient.getTherapist().getId())) {
             if (caseload >= CASELOAD_LIMIT) {
+                log.warn("Caseload full: therapistId={}, caseload={}, limit={}", therapistId, caseload, CASELOAD_LIMIT);
                 throw new IllegalStateException("Bác sĩ đã đủ 20 bệnh nhân đang theo dõi.");
             }
         }
@@ -78,7 +83,6 @@ public class TherapistAssignmentService {
 
         UUID therapistUserId = current.getId();
         if (current.getRole() == Role.ADMIN) {
-            // Admin can see all red-flag patients for Emergency Alert.
             if (redFlagOnly) {
                 return patientProfileRepository.findByIsRedFlagActiveTrueOrderByCurrentRiskScoreDesc();
             }
@@ -93,3 +97,4 @@ public class TherapistAssignmentService {
         return patientProfileRepository.findByTherapist_User_IdOrderByCurrentRiskScoreDesc(therapistUserId);
     }
 }
+

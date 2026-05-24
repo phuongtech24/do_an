@@ -40,7 +40,7 @@ public class AdminTherapistAccountService {
     public TherapistProfile createTherapistAccount(CreateTherapistAccountRequestDto request) {
         String email = request.getEmail().trim();
         if (userRepository.existsByEmail(email)) {
-            throw new IllegalStateException("Email Ä‘Ã£ Ä‘Æ°á»£c sá»­ dá»¥ng.");
+            throw new IllegalStateException("Email đã được sử dụng.");
         }
 
         User u = new User();
@@ -66,7 +66,7 @@ public class AdminTherapistAccountService {
     @Transactional
     public TherapistProfile setApproval(UUID therapistId, ApprovalStatus status) {
         TherapistProfile profile = therapistProfileRepository.findById(therapistId)
-                .orElseThrow(() -> new EntityNotFoundException("KhÃ´ng tÃ¬m tháº¥y therapist: " + therapistId));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy therapist: " + therapistId));
         if (status == ApprovalStatus.ACTIVE) {
             long credentialCount = therapistCredentialRepository.countByTherapistProfile_Id(therapistId);
             if (credentialCount <= 0) {
@@ -78,3 +78,4 @@ public class AdminTherapistAccountService {
         return therapistProfileRepository.save(profile);
     }
 }
+
