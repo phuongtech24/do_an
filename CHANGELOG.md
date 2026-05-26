@@ -5,6 +5,10 @@ Quy tắc: Định dạng theo chuẩn [Keep a Changelog](https://keepachangelog
 
 ## [Unreleased]
 ### Added
+- **Telehealth:** Thêm ghi chú sau buổi tư vấn (`therapistNotes`) cho appointment và API `PATCH /api/booster/appointments/{appointmentId}/notes`; chỉ admin hoặc bác sĩ phụ trách được lưu.
+- **Telehealth:** Thêm lịch làm việc cố định theo tuần qua `therapist_weekly_schedule_slots`, API `GET /api/booster/weekly-schedule` và `POST /api/booster/weekly-schedule/toggle`; lịch theo ngày vẫn dùng để ghi đè ngoại lệ.
+- **CBT:** Thêm API therapist gán quest cá nhân hóa cho bệnh nhân (`GET /api/therapist/quest-templates`, `POST /api/therapist/patients/{patientId}/quests`) và màn web chọn/gán bài tập CBT từ kho thật.
+- **Docs:** Thêm `docs/GEMINI_SETUP.md` hướng dẫn lấy Gemini API key, bật/tắt `AI_ENABLED` và các luồng đang dùng Gemini.
 - **Therapist Profile:** Thêm upload avatar `POST /api/therapist/profile/avatar` và quản lý chứng chỉ ngay trong hồ sơ; hỗ trợ xóa chứng chỉ của chính bác sĩ qua `DELETE /api/therapist/credentials/{credentialId}`.
 - **Therapist Profile:** Thêm API `GET/PUT /api/therapist/profile` để bác sĩ tự lưu hồ sơ và `meetingLink`; khi lưu link sẽ tự bổ sung cho các lịch `BOOKED` đang thiếu link.
 - **Telehealth:** Bổ sung API cập nhật trạng thái lịch hẹn `PATCH /api/booster/appointments/{appointmentId}/status?status=COMPLETED|CANCELLED`, chỉ cho admin hoặc bác sĩ phụ trách thao tác.

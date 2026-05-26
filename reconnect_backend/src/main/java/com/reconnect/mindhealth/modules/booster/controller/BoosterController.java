@@ -17,11 +17,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.reconnect.mindhealth.common.dto.ApiResponse;
+import com.reconnect.mindhealth.modules.booster.dto.AppointmentNoteRequestDto;
 import com.reconnect.mindhealth.modules.booster.dto.AppointmentDto;
 import com.reconnect.mindhealth.modules.booster.dto.AvailableSlotDto;
 import com.reconnect.mindhealth.modules.booster.dto.BookAppointmentRequestDto;
 import com.reconnect.mindhealth.modules.booster.dto.TherapistScheduleSlotDto;
+import com.reconnect.mindhealth.modules.booster.dto.TherapistWeeklyScheduleSlotDto;
 import com.reconnect.mindhealth.modules.booster.dto.ToggleSlotRequestDto;
+import com.reconnect.mindhealth.modules.booster.dto.ToggleWeeklySlotRequestDto;
 import com.reconnect.mindhealth.modules.booster.enums.AppointmentStatus;
 import com.reconnect.mindhealth.modules.booster.service.IBoosterService;
 import com.reconnect.mindhealth.modules.booster.service.ITaperingBoosterSchedulingService;
@@ -93,6 +96,20 @@ public class BoosterController {
         }
     }
 
+    @PatchMapping("/appointments/{appointmentId}/notes")
+    public ResponseEntity<ApiResponse<AppointmentDto>> updateAppointmentNotes(
+            @PathVariable UUID appointmentId,
+            @RequestBody(required = false) AppointmentNoteRequestDto request) {
+        try {
+            log.info("Update appointment notes: appointmentId={}", appointmentId);
+            String notes = request != null ? request.getNotes() : null;
+            return ResponseEntity.ok(ApiResponse.success("OK", boosterService.updateAppointmentNotes(appointmentId, notes)));
+        } catch (Exception e) {
+            log.warn("Update appointment notes failed: appointmentId={}, err={}", appointmentId, e.toString());
+            return ResponseEntity.ok(ApiResponse.error("Lỗi khi lưu ghi chú: " + e.getMessage()));
+        }
+    }
+
     @GetMapping("/schedule")
     public ResponseEntity<ApiResponse<List<TherapistScheduleSlotDto>>> getTherapistSchedule(
             @RequestParam UUID therapistId,
@@ -127,6 +144,37 @@ public class BoosterController {
         }
     }
 
+    @GetMapping("/weekly-schedule")
+    public ResponseEntity<ApiResponse<List<TherapistWeeklyScheduleSlotDto>>> getWeeklySchedule(@RequestParam UUID therapistId) {
+        try {
+            log.info("Get weekly schedule: therapistId={}", therapistId);
+            return ResponseEntity.ok(ApiResponse.success("OK", boosterService.getWeeklySchedule(therapistId)));
+        } catch (Exception e) {
+            log.warn("Get weekly schedule failed: therapistId={}, err={}", therapistId, e.toString());
+            return ResponseEntity.ok(ApiResponse.error("Lỗi khi tải lịch tuần: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/weekly-schedule/toggle")
+    public ResponseEntity<ApiResponse<TherapistWeeklyScheduleSlotDto>> toggleWeeklySlot(@RequestBody ToggleWeeklySlotRequestDto request) {
+        try {
+            log.info("Toggle weekly slot: therapistId={}, dayOfWeek={}, time={}, open={}",
+                    request != null ? request.getTherapistId() : null,
+                    request != null ? request.getDayOfWeek() : null,
+                    request != null ? request.getStartTime() : null,
+                    request != null ? request.isOpen() : null);
+            return ResponseEntity.ok(ApiResponse.success("OK", boosterService.toggleWeeklySlot(request)));
+        } catch (Exception e) {
+            log.warn("Toggle weekly slot failed: therapistId={}, dayOfWeek={}, time={}, open={}, err={}",
+                    request != null ? request.getTherapistId() : null,
+                    request != null ? request.getDayOfWeek() : null,
+                    request != null ? request.getStartTime() : null,
+                    request != null ? request.isOpen() : null,
+                    e.toString());
+            return ResponseEntity.ok(ApiResponse.error("Lỗi khi thay đổi lịch tuần: " + e.getMessage()));
+        }
+    }
+
     @GetMapping("/appointments/therapist")
     public ResponseEntity<ApiResponse<List<AppointmentDto>>> therapistAppointments(@RequestParam UUID therapistId) {
         try {
@@ -149,4 +197,3 @@ public class BoosterController {
         }
     }
 }
-

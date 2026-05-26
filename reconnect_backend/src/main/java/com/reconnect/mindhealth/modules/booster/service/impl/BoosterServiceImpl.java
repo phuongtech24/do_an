@@ -1,5 +1,6 @@
 package com.reconnect.mindhealth.modules.booster.service.impl;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -22,13 +23,17 @@ import com.reconnect.mindhealth.modules.booster.dto.AppointmentDto;
 import com.reconnect.mindhealth.modules.booster.dto.AvailableSlotDto;
 import com.reconnect.mindhealth.modules.booster.dto.BookAppointmentRequestDto;
 import com.reconnect.mindhealth.modules.booster.dto.TherapistScheduleSlotDto;
+import com.reconnect.mindhealth.modules.booster.dto.TherapistWeeklyScheduleSlotDto;
 import com.reconnect.mindhealth.modules.booster.dto.ToggleSlotRequestDto;
+import com.reconnect.mindhealth.modules.booster.dto.ToggleWeeklySlotRequestDto;
 import com.reconnect.mindhealth.modules.booster.entity.Appointment;
 import com.reconnect.mindhealth.modules.booster.entity.TherapistScheduleSlot;
+import com.reconnect.mindhealth.modules.booster.entity.TherapistWeeklyScheduleSlot;
 import com.reconnect.mindhealth.modules.booster.enums.AppointmentPurpose;
 import com.reconnect.mindhealth.modules.booster.enums.AppointmentStatus;
 import com.reconnect.mindhealth.modules.booster.repository.AppointmentRepository;
 import com.reconnect.mindhealth.modules.booster.repository.TherapistScheduleSlotRepository;
+import com.reconnect.mindhealth.modules.booster.repository.TherapistWeeklyScheduleSlotRepository;
 import com.reconnect.mindhealth.modules.booster.service.IBoosterService;
 import com.reconnect.mindhealth.modules.auth.entity.User;
 import com.reconnect.mindhealth.modules.auth.enums.Role;
@@ -62,6 +67,9 @@ public class BoosterServiceImpl implements IBoosterService {
 
     @Autowired
     private TherapistScheduleSlotRepository scheduleSlotRepository;
+
+    @Autowired
+    private TherapistWeeklyScheduleSlotRepository weeklyScheduleSlotRepository;
 
     @Autowired
     private TherapistProfileRepository therapistProfileRepository;
@@ -156,14 +164,19 @@ public class BoosterServiceImpl implements IBoosterService {
         List<Appointment> booked = appointmentRepository.findTherapistAppointmentsInRange(therapistId, from, to);
         List<TherapistScheduleSlot> closedSlots = scheduleSlotRepository
                 .findByTherapistProfile_IdAndSlotDate(therapistId, date);
-        Map<LocalTime, Boolean> closedMap = closedSlots.stream()
-                .collect(Collectors.toMap(TherapistScheduleSlot::getStartTime, s -> !s.isOpen()));
+        Map<LocalTime, Boolean> dateOpenMap = closedSlots.stream()
+                .collect(Collectors.toMap(TherapistScheduleSlot::getStartTime, TherapistScheduleSlot::isOpen));
+        Map<LocalTime, Boolean> weeklyOpenMap = weeklyScheduleSlotRepository
+                .findByTherapistProfile_IdAndDayOfWeek(therapistId, date.getDayOfWeek())
+                .stream()
+                .collect(Collectors.toMap(TherapistWeeklyScheduleSlot::getStartTime, TherapistWeeklyScheduleSlot::isOpen));
 
         List<AvailableSlotDto> slots = new ArrayList<>();
         for (LocalTime t : DEFAULT_SLOTS) {
             LocalDateTime startAt = date.atTime(t);
             boolean isBooked = booked.stream().anyMatch(a -> a.getStartAt() != null && a.getStartAt().equals(startAt));
-            boolean isClosed = closedMap.getOrDefault(t, false);
+            boolean isOpen = dateOpenMap.getOrDefault(t, weeklyOpenMap.getOrDefault(t, true));
+            boolean isClosed = !isOpen;
             slots.add(new AvailableSlotDto(startAt, !isBooked && !isClosed));
         }
         return slots;
@@ -195,6 +208,10 @@ public class BoosterServiceImpl implements IBoosterService {
                 .findByTherapistProfile_IdAndSlotDate(therapistId, date);
         Map<LocalTime, TherapistScheduleSlot> savedMap = savedSlots.stream()
                 .collect(Collectors.toMap(TherapistScheduleSlot::getStartTime, Function.identity()));
+        Map<LocalTime, Boolean> weeklyOpenMap = weeklyScheduleSlotRepository
+                .findByTherapistProfile_IdAndDayOfWeek(therapistId, date.getDayOfWeek())
+                .stream()
+                .collect(Collectors.toMap(TherapistWeeklyScheduleSlot::getStartTime, TherapistWeeklyScheduleSlot::isOpen));
 
         final LocalDate finalDate = date;
         List<TherapistScheduleSlotDto> result = new ArrayList<>();
@@ -203,6 +220,8 @@ public class BoosterServiceImpl implements IBoosterService {
                 result.add(new TherapistScheduleSlotDto(finalDate, t, bookedMap.get(t)));
             } else if (savedMap.containsKey(t)) {
                 result.add(new TherapistScheduleSlotDto(savedMap.get(t)));
+            } else if (weeklyOpenMap.containsKey(t)) {
+                result.add(new TherapistScheduleSlotDto(finalDate, t, weeklyOpenMap.get(t)));
             } else {
                 result.add(new TherapistScheduleSlotDto(finalDate, t));
             }
@@ -246,6 +265,56 @@ public class BoosterServiceImpl implements IBoosterService {
         return new TherapistScheduleSlotDto(saved);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<TherapistWeeklyScheduleSlotDto> getWeeklySchedule(UUID therapistId) {
+        if (therapistId == null) throw new IllegalArgumentException("Thiếu therapistId.");
+
+        Map<DayOfWeek, Map<LocalTime, Boolean>> savedMap = weeklyScheduleSlotRepository
+                .findByTherapistProfile_Id(therapistId)
+                .stream()
+                .collect(Collectors.groupingBy(
+                        TherapistWeeklyScheduleSlot::getDayOfWeek,
+                        Collectors.toMap(TherapistWeeklyScheduleSlot::getStartTime, TherapistWeeklyScheduleSlot::isOpen)
+                ));
+
+        List<TherapistWeeklyScheduleSlotDto> result = new ArrayList<>();
+        for (DayOfWeek day : DayOfWeek.values()) {
+            Map<LocalTime, Boolean> dayMap = savedMap.getOrDefault(day, Map.of());
+            for (LocalTime time : DEFAULT_SLOTS) {
+                result.add(new TherapistWeeklyScheduleSlotDto(day, time, dayMap.getOrDefault(time, true)));
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public TherapistWeeklyScheduleSlotDto toggleWeeklySlot(ToggleWeeklySlotRequestDto request) {
+        if (request == null) throw new IllegalArgumentException("Thiếu request.");
+        if (request.getTherapistId() == null) throw new IllegalArgumentException("Thiếu therapistId.");
+        if (request.getDayOfWeek() == null) throw new IllegalArgumentException("Thiếu dayOfWeek.");
+        if (request.getStartTime() == null) throw new IllegalArgumentException("Thiếu startTime.");
+
+        TherapistProfile therapist = therapistProfileRepository.findById(request.getTherapistId())
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy therapist: " + request.getTherapistId()));
+
+        log.info("Toggle weekly slot: therapistId={}, dayOfWeek={}, time={}, open={}",
+                request.getTherapistId(), request.getDayOfWeek(), request.getStartTime(), request.isOpen());
+
+        TherapistWeeklyScheduleSlot slot = weeklyScheduleSlotRepository
+                .findByTherapistProfile_IdAndDayOfWeekAndStartTime(
+                        request.getTherapistId(), request.getDayOfWeek(), request.getStartTime())
+                .orElse(new TherapistWeeklyScheduleSlot());
+
+        slot.setTherapistProfile(therapist);
+        slot.setDayOfWeek(request.getDayOfWeek());
+        slot.setStartTime(request.getStartTime());
+        slot.setOpen(request.isOpen());
+
+        TherapistWeeklyScheduleSlot saved = weeklyScheduleSlotRepository.save(slot);
+        return new TherapistWeeklyScheduleSlotDto(saved.getDayOfWeek(), saved.getStartTime(), saved.isOpen());
+    }
+
     // ====================================================
     // Therapist: Xem lịch hẹn của mình
     // ====================================================
@@ -285,5 +354,29 @@ public class BoosterServiceImpl implements IBoosterService {
         appointment.setStatus(status);
         Appointment saved = appointmentRepository.save(appointment);
         return new AppointmentDto(saved);
+    }
+
+    @Override
+    public AppointmentDto updateAppointmentNotes(UUID appointmentId, String notes) {
+        if (appointmentId == null) throw new IllegalArgumentException("Thiếu appointmentId.");
+
+        User current = authContextService.requireCurrentUser();
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy lịch hẹn: " + appointmentId));
+
+        boolean isAdmin = current.getRole() == Role.ADMIN;
+        boolean isAssignedTherapist = current.getRole() == Role.THERAPIST
+                && appointment.getTherapistProfile() != null
+                && appointment.getTherapistProfile().getId().equals(current.getId());
+        if (!isAdmin && !isAssignedTherapist) {
+            throw new SecurityException("Bạn không có quyền ghi chú lịch hẹn này.");
+        }
+        if (appointment.getStatus() == AppointmentStatus.CANCELLED) {
+            throw new IllegalStateException("Lịch hẹn đã hủy, không thể ghi chú.");
+        }
+
+        String normalized = notes == null ? null : notes.trim();
+        appointment.setTherapistNotes(normalized == null || normalized.isEmpty() ? null : normalized);
+        return new AppointmentDto(appointmentRepository.save(appointment));
     }
 }

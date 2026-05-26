@@ -49,6 +49,9 @@ public class Appointment extends BaseObject {
     @Column(name = "meeting_link")
     private String meetingLink;
 
+    @Column(name = "therapist_notes", columnDefinition = "TEXT")
+    private String therapistNotes;
+
     public PatientProfile getPatientProfile() {
         return patientProfile;
     }
@@ -111,5 +114,13 @@ public class Appointment extends BaseObject {
 
     public void setMeetingLink(String meetingLink) {
         this.meetingLink = meetingLink;
+    }
+
+    public String getTherapistNotes() {
+        return therapistNotes;
+    }
+
+    public void setTherapistNotes(String therapistNotes) {
+        this.therapistNotes = therapistNotes;
     }
 }

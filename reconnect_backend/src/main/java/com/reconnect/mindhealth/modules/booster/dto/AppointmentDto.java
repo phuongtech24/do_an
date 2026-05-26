@@ -19,6 +19,7 @@ public class AppointmentDto extends BaseObjectDto {
     private String meetingLink;
     private String patientDisplayName;
     private String therapistDisplayName;
+    private String therapistNotes;
 
     public AppointmentDto() {
     }
@@ -52,6 +53,7 @@ public class AppointmentDto extends BaseObjectDto {
             if (this.meetingLink == null || this.meetingLink.isBlank()) {
                 this.meetingLink = entity.getMeetingLink();
             }
+            this.therapistNotes = entity.getTherapistNotes();
         }
     }
 
@@ -133,6 +135,14 @@ public class AppointmentDto extends BaseObjectDto {
 
     public void setTherapistDisplayName(String therapistDisplayName) {
         this.therapistDisplayName = therapistDisplayName;
+    }
+
+    public String getTherapistNotes() {
+        return therapistNotes;
+    }
+
+    public void setTherapistNotes(String therapistNotes) {
+        this.therapistNotes = therapistNotes;
     }
 
     private String firstNonBlank(String... values) {

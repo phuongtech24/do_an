@@ -2,6 +2,7 @@ import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_response.dart';
 import '../models/appointment_model.dart';
 import '../models/therapist_schedule_slot_model.dart';
+import '../models/therapist_weekly_schedule_slot_model.dart';
 
 class TherapistBoosterRepository {
   final ApiClient _api = ApiClient();
@@ -82,5 +83,63 @@ class TherapistBoosterRepository {
     }
     return res.data!;
   }
-}
 
+  Future<AppointmentModel> updateAppointmentNotes({
+    required String token,
+    required String appointmentId,
+    required String notes,
+  }) async {
+    final ApiResponse<AppointmentModel> res = await _api.patch<AppointmentModel>(
+      '/booster/appointments/$appointmentId/notes',
+      headers: {'Authorization': 'Bearer $token'},
+      body: {'notes': notes},
+      parseData: (raw) => raw == null ? null : AppointmentModel.fromJson(raw as Map<String, dynamic>),
+    );
+    if (res.status != 200 || res.data == null) {
+      throw Exception(res.message.isNotEmpty ? res.message : 'Không thể lưu ghi chú');
+    }
+    return res.data!;
+  }
+
+  Future<List<TherapistWeeklyScheduleSlotModel>> getWeeklySchedule({
+    required String token,
+    required String therapistId,
+  }) async {
+    final ApiResponse<List<TherapistWeeklyScheduleSlotModel>> res = await _api.get<List<TherapistWeeklyScheduleSlotModel>>(
+      '/booster/weekly-schedule?therapistId=$therapistId',
+      headers: {'Authorization': 'Bearer $token'},
+      parseData: (raw) {
+        final list = (raw as List<dynamic>? ?? const []);
+        return list.map((e) => TherapistWeeklyScheduleSlotModel.fromJson(e as Map<String, dynamic>)).toList();
+      },
+    );
+    if (res.status != 200 || res.data == null) {
+      throw Exception(res.message.isNotEmpty ? res.message : 'Không thể tải lịch tuần');
+    }
+    return res.data!;
+  }
+
+  Future<TherapistWeeklyScheduleSlotModel> toggleWeeklySlot({
+    required String token,
+    required String therapistId,
+    required String dayOfWeek,
+    required String startTime,
+    required bool open,
+  }) async {
+    final ApiResponse<TherapistWeeklyScheduleSlotModel> res = await _api.post<TherapistWeeklyScheduleSlotModel>(
+      '/booster/weekly-schedule/toggle',
+      headers: {'Authorization': 'Bearer $token'},
+      body: {
+        'therapistId': therapistId,
+        'dayOfWeek': dayOfWeek,
+        'startTime': startTime,
+        'open': open,
+      },
+      parseData: (raw) => raw == null ? null : TherapistWeeklyScheduleSlotModel.fromJson(raw as Map<String, dynamic>),
+    );
+    if (res.status != 200 || res.data == null) {
+      throw Exception(res.message.isNotEmpty ? res.message : 'Không thể thay đổi lịch tuần');
+    }
+    return res.data!;
+  }
+}

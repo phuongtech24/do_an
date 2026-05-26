@@ -39,6 +39,13 @@ public class TherapistScheduleSlotDto {
         this.status = "OPEN";
     }
 
+    public TherapistScheduleSlotDto(LocalDate date, LocalTime time, boolean open) {
+        this.slotDate = date;
+        this.startTime = time;
+        this.startAt = LocalDateTime.of(date, time);
+        this.status = open ? "OPEN" : "CLOSED";
+    }
+
     /** Constructor cho slot đã được đặt (BOOKED) */
     public TherapistScheduleSlotDto(LocalDate date, LocalTime time, Appointment appt) {
         this.slotDate = date;

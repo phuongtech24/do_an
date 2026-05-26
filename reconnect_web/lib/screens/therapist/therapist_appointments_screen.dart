@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../features/therapist/data/models/appointment_model.dart';
 import '../../features/therapist/data/models/therapist_schedule_slot_model.dart';
+import '../../features/therapist/data/models/therapist_weekly_schedule_slot_model.dart';
 import '../../features/therapist/data/repositories/therapist_booster_repository.dart';
 import '../../theme/app_colors.dart';
 
@@ -22,10 +23,12 @@ class _TherapistAppointmentsScreenState extends State<TherapistAppointmentsScree
   bool _loaded = false;
   bool _loadingSchedule = false;
   bool _loadingAppointments = false;
+  bool _loadingWeekly = false;
   String? _error;
 
   DateTime _selectedDate = DateTime.now();
   List<TherapistScheduleSlotModel> _slots = [];
+  List<TherapistWeeklyScheduleSlotModel> _weeklySlots = [];
   List<AppointmentModel> _appointments = [];
 
   @override
@@ -40,15 +43,46 @@ class _TherapistAppointmentsScreenState extends State<TherapistAppointmentsScree
   String _formatHumanDate(DateTime date) => DateFormat('dd/MM/yyyy').format(date);
 
   Future<void> _loadAll() async {
-    await Future.wait([_loadSchedule(), _loadAppointments()]);
+    await Future.wait([_loadWeeklySchedule(), _loadSchedule(), _loadAppointments()]);
+  }
+
+  String? _token() {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = auth.token;
+    return token == null || token.isEmpty ? null : token;
+  }
+
+  String? _therapistId() {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final therapistId = auth.userId;
+    return therapistId == null || therapistId.isEmpty ? null : therapistId;
+  }
+
+  Future<void> _loadWeeklySchedule() async {
+    final token = _token();
+    final therapistId = _therapistId();
+    if (token == null || therapistId == null) return;
+    setState(() {
+      _loadingWeekly = true;
+      _error = null;
+    });
+    try {
+      final list = await _repo.getWeeklySchedule(token: token, therapistId: therapistId);
+      if (!mounted) return;
+      setState(() => _weeklySlots = list);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (!mounted) return;
+      setState(() => _loadingWeekly = false);
+    }
   }
 
   Future<void> _loadSchedule() async {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final token = auth.token;
-    final therapistId = auth.userId;
-    if (token == null || token.isEmpty || therapistId == null || therapistId.isEmpty) return;
-
+    final token = _token();
+    final therapistId = _therapistId();
+    if (token == null || therapistId == null) return;
     setState(() {
       _loadingSchedule = true;
       _error = null;
@@ -67,11 +101,9 @@ class _TherapistAppointmentsScreenState extends State<TherapistAppointmentsScree
   }
 
   Future<void> _loadAppointments() async {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final token = auth.token;
-    final therapistId = auth.userId;
-    if (token == null || token.isEmpty || therapistId == null || therapistId.isEmpty) return;
-
+    final token = _token();
+    final therapistId = _therapistId();
+    if (token == null || therapistId == null) return;
     setState(() {
       _loadingAppointments = true;
       _error = null;
@@ -90,23 +122,15 @@ class _TherapistAppointmentsScreenState extends State<TherapistAppointmentsScree
   }
 
   Future<void> _toggleSlot(TherapistScheduleSlotModel slot, bool open) async {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final token = auth.token;
-    final therapistId = auth.userId;
-    if (token == null || token.isEmpty || therapistId == null || therapistId.isEmpty) return;
-
+    final token = _token();
+    final therapistId = _therapistId();
+    if (token == null || therapistId == null) return;
     setState(() {
       _error = null;
       _loadingSchedule = true;
     });
     try {
-      await _repo.toggleSlot(
-        token: token,
-        therapistId: therapistId,
-        slotDate: slot.slotDate,
-        startTime: slot.startTime,
-        open: open,
-      );
+      await _repo.toggleSlot(token: token, therapistId: therapistId, slotDate: slot.slotDate, startTime: slot.startTime, open: open);
       await _loadSchedule();
     } catch (e) {
       if (!mounted) return;
@@ -117,11 +141,36 @@ class _TherapistAppointmentsScreenState extends State<TherapistAppointmentsScree
     }
   }
 
-  Future<void> _updateStatus(AppointmentModel appointment, String status) async {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final token = auth.token;
-    if (token == null || token.isEmpty) return;
+  Future<void> _toggleWeeklySlot(TherapistWeeklyScheduleSlotModel slot, bool open) async {
+    final token = _token();
+    final therapistId = _therapistId();
+    if (token == null || therapistId == null) return;
+    setState(() {
+      _error = null;
+      _loadingWeekly = true;
+    });
+    try {
+      await _repo.toggleWeeklySlot(
+        token: token,
+        therapistId: therapistId,
+        dayOfWeek: slot.dayOfWeek,
+        startTime: slot.startTime,
+        open: open,
+      );
+      await _loadWeeklySchedule();
+      await _loadSchedule();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (!mounted) return;
+      setState(() => _loadingWeekly = false);
+    }
+  }
 
+  Future<void> _updateStatus(AppointmentModel appointment, String status) async {
+    final token = _token();
+    if (token == null) return;
     setState(() {
       _error = null;
       _loadingAppointments = true;
@@ -147,6 +196,50 @@ class _TherapistAppointmentsScreenState extends State<TherapistAppointmentsScree
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Đã copy link phòng họp. Mở link này trên trình duyệt để vào buổi hẹn.')),
     );
+  }
+
+  Future<void> _editNotes(AppointmentModel appointment) async {
+    final controller = TextEditingController(text: appointment.therapistNotes ?? '');
+    final notes = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Ghi chú sau buổi tư vấn'),
+        content: SizedBox(
+          width: 520,
+          child: TextField(
+            controller: controller,
+            maxLines: 8,
+            decoration: const InputDecoration(
+              hintText: 'Nội dung đã trao đổi, bài tập cần theo dõi, kế hoạch buổi sau...',
+              border: OutlineInputBorder(),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Đóng')),
+          ElevatedButton(onPressed: () => Navigator.pop(dialogContext, controller.text), child: const Text('Lưu ghi chú')),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (notes == null) return;
+
+    final token = _token();
+    if (token == null) return;
+    setState(() {
+      _error = null;
+      _loadingAppointments = true;
+    });
+    try {
+      await _repo.updateAppointmentNotes(token: token, appointmentId: appointment.id, notes: notes);
+      await _loadAppointments();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (!mounted) return;
+      setState(() => _loadingAppointments = false);
+    }
   }
 
   String _statusLabel(String status) {
@@ -188,13 +281,13 @@ class _TherapistAppointmentsScreenState extends State<TherapistAppointmentsScree
                   children: [
                     Text('Lịch hẹn Telehealth', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: AppColors.primary)),
                     SizedBox(height: 6),
-                    Text('Quản lý slot rảnh, lịch đã đặt và link phòng tư vấn.', style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
+                    Text('Thiết lập lịch tuần cố định, chỉnh ngoại lệ từng ngày và quản lý lịch đã đặt.', style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
                   ],
                 ),
               ),
               IconButton(
                 tooltip: 'Tải lại',
-                onPressed: _loadingSchedule || _loadingAppointments ? null : _loadAll,
+                onPressed: _loadingSchedule || _loadingAppointments || _loadingWeekly ? null : _loadAll,
                 icon: const Icon(Icons.refresh, size: 28),
               ),
             ],
@@ -229,11 +322,13 @@ class _TherapistAppointmentsScreenState extends State<TherapistAppointmentsScree
   }
 
   Widget _buildScheduleTab() {
-    return Column(
+    return ListView(
       children: [
+        _WeeklySchedulePanel(slots: _weeklySlots, loading: _loadingWeekly, onToggle: _toggleWeeklySlot),
+        const SizedBox(height: 16),
         Row(
           children: [
-            Text('Ngày ${_formatHumanDate(_selectedDate)}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+            Text('Ngoại lệ ngày ${_formatHumanDate(_selectedDate)}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
             const Spacer(),
             OutlinedButton.icon(
               onPressed: _loadingSchedule
@@ -254,19 +349,16 @@ class _TherapistAppointmentsScreenState extends State<TherapistAppointmentsScree
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        Expanded(
-          child: _loadingSchedule
-              ? const Center(child: CircularProgressIndicator())
-              : ListView.separated(
-                  itemCount: _slots.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) => _ScheduleSlotCard(
-                    slot: _slots[index],
-                    onToggle: (open) => _toggleSlot(_slots[index], open),
-                  ),
-                ),
-        ),
+        const SizedBox(height: 10),
+        if (_loadingSchedule)
+          const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()))
+        else
+          ..._slots.map(
+            (slot) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _ScheduleSlotCard(slot: slot, onToggle: (open) => _toggleSlot(slot, open)),
+            ),
+          ),
       ],
     );
   }
@@ -276,9 +368,7 @@ class _TherapistAppointmentsScreenState extends State<TherapistAppointmentsScree
       return const Center(child: CircularProgressIndicator());
     }
     if (_appointments.isEmpty) {
-      return Center(
-        child: Text('Chưa có lịch hẹn nào.', style: TextStyle(color: Colors.grey[600])),
-      );
+      return Center(child: Text('Chưa có lịch hẹn nào.', style: TextStyle(color: Colors.grey[600])));
     }
 
     return ListView.separated(
@@ -291,10 +381,81 @@ class _TherapistAppointmentsScreenState extends State<TherapistAppointmentsScree
           statusLabel: _statusLabel(appointment.status),
           statusColor: _statusColor(appointment.status),
           onCopyMeetingLink: () => _copyMeetingLink(appointment),
+          onEditNotes: () => _editNotes(appointment),
           onComplete: () => _updateStatus(appointment, 'COMPLETED'),
           onCancel: () => _updateStatus(appointment, 'CANCELLED'),
         );
       },
+    );
+  }
+}
+
+class _WeeklySchedulePanel extends StatelessWidget {
+  final List<TherapistWeeklyScheduleSlotModel> slots;
+  final bool loading;
+  final void Function(TherapistWeeklyScheduleSlotModel slot, bool open) onToggle;
+
+  const _WeeklySchedulePanel({required this.slots, required this.loading, required this.onToggle});
+
+  static const _dayLabels = {
+    'MONDAY': 'Thứ 2',
+    'TUESDAY': 'Thứ 3',
+    'WEDNESDAY': 'Thứ 4',
+    'THURSDAY': 'Thứ 5',
+    'FRIDAY': 'Thứ 6',
+    'SATURDAY': 'Thứ 7',
+    'SUNDAY': 'CN',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final grouped = <String, List<TherapistWeeklyScheduleSlotModel>>{};
+    for (final slot in slots) {
+      grouped.putIfAbsent(slot.dayOfWeek, () => []).add(slot);
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Lịch tuần cố định', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppColors.textPrimary)),
+          const SizedBox(height: 6),
+          const Text('Bật/tắt slot một lần để áp dụng lặp lại hằng tuần. Phần ngoại lệ theo ngày có thể ghi đè lịch này.', style: TextStyle(color: AppColors.textSecondary)),
+          const SizedBox(height: 12),
+          if (loading)
+            const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()))
+          else
+            ..._dayLabels.entries.map((entry) {
+              final daySlots = grouped[entry.key] ?? const [];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    SizedBox(width: 58, child: Text(entry.value, style: const TextStyle(fontWeight: FontWeight.bold))),
+                    ...daySlots.map((slot) {
+                      final label = slot.startTime.length >= 5 ? slot.startTime.substring(0, 5) : slot.startTime;
+                      return FilterChip(
+                        selected: slot.isOpen,
+                        label: Text(label),
+                        selectedColor: AppColors.success.withOpacity(0.18),
+                        onSelected: (selected) => onToggle(slot, selected),
+                      );
+                    }),
+                  ],
+                ),
+              );
+            }),
+        ],
+      ),
     );
   }
 }
@@ -320,10 +481,7 @@ class _ScheduleSlotCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            backgroundColor: color.withOpacity(0.12),
-            child: Icon(slot.isBooked ? Icons.event_available : Icons.access_time, color: color),
-          ),
+          CircleAvatar(backgroundColor: color.withOpacity(0.12), child: Icon(slot.isBooked ? Icons.event_available : Icons.access_time, color: color)),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -352,6 +510,7 @@ class _AppointmentCard extends StatelessWidget {
   final String statusLabel;
   final Color statusColor;
   final VoidCallback onCopyMeetingLink;
+  final VoidCallback onEditNotes;
   final VoidCallback onComplete;
   final VoidCallback onCancel;
 
@@ -360,6 +519,7 @@ class _AppointmentCard extends StatelessWidget {
     required this.statusLabel,
     required this.statusColor,
     required this.onCopyMeetingLink,
+    required this.onEditNotes,
     required this.onComplete,
     required this.onCancel,
   });
@@ -371,6 +531,7 @@ class _AppointmentCard extends StatelessWidget {
     final patientName = appointment.isAnonymous ? 'Bệnh nhân ẩn danh' : (appointment.patientDisplayName ?? 'Bệnh nhân');
     final hasMeetingLink = appointment.meetingLink != null && appointment.meetingLink!.isNotEmpty;
     final isBooked = appointment.status == 'BOOKED';
+    final canEditNotes = appointment.status != 'CANCELLED';
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -406,6 +567,15 @@ class _AppointmentCard extends StatelessWidget {
               ),
             ],
           ),
+          if (appointment.therapistNotes != null && appointment.therapistNotes!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.06), borderRadius: BorderRadius.circular(10)),
+              child: Text('Ghi chú: ${appointment.therapistNotes}', style: const TextStyle(color: AppColors.textPrimary)),
+            ),
+          ],
           const SizedBox(height: 14),
           Wrap(
             spacing: 10,
@@ -415,6 +585,11 @@ class _AppointmentCard extends StatelessWidget {
                 onPressed: hasMeetingLink && isBooked ? onCopyMeetingLink : null,
                 icon: const Icon(Icons.meeting_room_outlined, size: 18),
                 label: const Text('Vào phòng họp'),
+              ),
+              OutlinedButton.icon(
+                onPressed: canEditNotes ? onEditNotes : null,
+                icon: const Icon(Icons.note_alt_outlined, size: 18),
+                label: const Text('Ghi chú'),
               ),
               ElevatedButton.icon(
                 onPressed: isBooked ? onComplete : null,
@@ -435,4 +610,3 @@ class _AppointmentCard extends StatelessWidget {
     );
   }
 }
-

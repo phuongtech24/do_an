@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../../features/cbt_intervention/assign_quest_screen.dart';
 import '../../theme/app_colors.dart';
 
 class PatientDetailScreen extends StatefulWidget {
@@ -553,7 +554,17 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
               flex: 1,
               child: Column(
                 children: [
-                  _buildInterventionButton(Icons.send_rounded, 'GỬI THẺ ĐỐI PHÓ', Colors.orange, () {}),
+                  _buildInterventionButton(Icons.send_rounded, 'Gán bài tập CBT', Colors.orange, () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => AssignQuestScreen(
+                          patientId: widget.patient['id'].toString(),
+                          patientName: widget.patient['name'].toString(),
+                        ),
+                      ),
+                    );
+                  }),
                   const SizedBox(height: 12),
                   _buildInterventionButton(Icons.phone_callback_rounded, 'YÊU CẦU BOOSTER SESSION', AppColors.alert, () {}),
                 ],

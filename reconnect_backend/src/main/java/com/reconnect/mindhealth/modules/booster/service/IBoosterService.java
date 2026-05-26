@@ -8,7 +8,9 @@ import com.reconnect.mindhealth.modules.booster.dto.AppointmentDto;
 import com.reconnect.mindhealth.modules.booster.dto.AvailableSlotDto;
 import com.reconnect.mindhealth.modules.booster.dto.BookAppointmentRequestDto;
 import com.reconnect.mindhealth.modules.booster.dto.TherapistScheduleSlotDto;
+import com.reconnect.mindhealth.modules.booster.dto.TherapistWeeklyScheduleSlotDto;
 import com.reconnect.mindhealth.modules.booster.dto.ToggleSlotRequestDto;
+import com.reconnect.mindhealth.modules.booster.dto.ToggleWeeklySlotRequestDto;
 import com.reconnect.mindhealth.modules.booster.enums.AppointmentStatus;
 
 public interface IBoosterService {
@@ -22,8 +24,13 @@ public interface IBoosterService {
 
     TherapistScheduleSlotDto toggleSlot(ToggleSlotRequestDto request);
 
+    List<TherapistWeeklyScheduleSlotDto> getWeeklySchedule(UUID therapistId);
+
+    TherapistWeeklyScheduleSlotDto toggleWeeklySlot(ToggleWeeklySlotRequestDto request);
+
     List<AppointmentDto> getTherapistAppointments(UUID therapistId);
 
     AppointmentDto updateAppointmentStatus(UUID appointmentId, AppointmentStatus status);
-}
 
+    AppointmentDto updateAppointmentNotes(UUID appointmentId, String notes);
+}

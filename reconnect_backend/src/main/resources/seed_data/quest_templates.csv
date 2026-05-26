@@ -1,13 +1,25 @@
 title,description,category,difficulty
-"Đi dạo 10 phút","Ra ngoài đi dạo 10 phút để kích hoạt năng lượng. Nếu khó, chỉ cần đi quanh nhà 2-3 phút cũng được.",BEHAVIORAL,EASY
-"Dọn bàn làm việc 10 phút","Chọn một góc nhỏ và dọn dẹp đúng 10 phút. Dừng lại khi hết thời gian.",BEHAVIORAL,EASY
-"Gửi tin nhắn hỏi thăm","Gửi 1 tin nhắn ngắn hỏi thăm một người bạn/người thân.",SOCIAL,EASY
-"Thực hành hít thở 3 phút","Dành 3 phút hít vào 4 nhịp - giữ 2 nhịp - thở ra 6 nhịp.",EMOTIONAL,EASY
-"Viết 3 điều biết ơn","Viết ra 3 điều (dù nhỏ) mà bạn thấy biết ơn hôm nay.",COGNITIVE,EASY
-"Tự nói lời tử tế","Viết 1 câu động viên bản thân như bạn đang nói với một người bạn.",COGNITIVE,EASY
-"Thư giãn cơ 5 phút","Thả lỏng vai, cổ, tay. Co - giữ - thả từng nhóm cơ trong 5 phút.",EMOTIONAL,MEDIUM
+"Mở rèm và đón ánh sáng","Mở rèm cửa hoặc đứng gần cửa sổ 3 phút để cơ thể nhận tín hiệu bắt đầu ngày mới.",BEHAVIORAL,EASY
+"Uống một cốc nước","Uống một cốc nước ấm hoặc nước lọc. Ghi lại cảm giác cơ thể trước và sau khi uống.",BEHAVIORAL,EASY
+"Đi dạo 10 phút","Ra ngoài đi dạo 10 phút. Nếu khó, chỉ cần đi quanh nhà 2-3 phút cũng được.",BEHAVIORAL,EASY
+"Dọn một góc nhỏ","Chọn một góc bàn hoặc giường và dọn đúng 10 phút. Dừng lại khi hết thời gian.",BEHAVIORAL,EASY
+"Hít thở 3 phút","Hít vào 4 nhịp, giữ 2 nhịp, thở ra 6 nhịp trong 3 phút.",EMOTIONAL,EASY
+"Thả lỏng vai gáy","Co nhẹ vai, giữ 3 giây rồi thả lỏng. Lặp lại 8 lần và ghi cảm giác căng/giãn.",EMOTIONAL,EASY
+"Viết 3 điều biết ơn","Viết 3 điều nhỏ bạn thấy biết ơn hôm nay, không cần phải là điều lớn.",COGNITIVE,EASY
+"Câu nói tử tế với bản thân","Viết một câu động viên bản thân như đang nói với một người bạn thân.",COGNITIVE,EASY
+"Nhắn tin hỏi thăm","Gửi một tin nhắn ngắn hỏi thăm một người bạn hoặc người thân.",SOCIAL,EASY
+"Chào một người quen","Chào hoặc mỉm cười với một người quen trong ngày. Ghi lại mức lo lắng trước/sau.",SOCIAL,EASY
 "Đi bộ nhanh 15 phút","Đi bộ nhanh liên tục 15 phút, chú ý nhịp thở và nhịp chân.",BEHAVIORAL,MEDIUM
-"Kết nối 10 phút","Gọi điện hoặc nhắn tin trao đổi 10 phút với người bạn tin tưởng.",SOCIAL,MEDIUM
-"Thử làm một việc đã tránh né","Chọn 1 việc nhỏ bạn đang trì hoãn và làm 5-10 phút để bắt đầu.",BEHAVIORAL,MEDIUM
-"Thử thách suy nghĩ","Ghi 1 suy nghĩ tiêu cực, sau đó viết 1 bằng chứng ủng hộ và 1 bằng chứng phản biện.",COGNITIVE,HARD
-"Hoạt động có ý nghĩa","Lên kế hoạch 1 hoạt động có ý nghĩa (giúp đỡ ai đó, học 1 kỹ năng) và thực hiện 20 phút.",SOCIAL,HARD
+"Hoàn thành việc trì hoãn","Chọn một việc nhỏ đang trì hoãn và làm 10 phút để bắt đầu.",BEHAVIORAL,MEDIUM
+"Tắm hoặc vệ sinh cá nhân đầy đủ","Thực hiện đủ một chuỗi chăm sóc cá nhân: tắm, thay đồ sạch, chải tóc hoặc rửa mặt.",BEHAVIORAL,MEDIUM
+"Thư giãn cơ 5 phút","Co - giữ - thả từng nhóm cơ từ vai, tay, chân trong 5 phút.",EMOTIONAL,MEDIUM
+"Ghi nhật ký cảm xúc","Ghi một cảm xúc nổi bật hôm nay, tình huống kích hoạt và mức độ 0-10.",EMOTIONAL,MEDIUM
+"Bảng bằng chứng suy nghĩ","Ghi một suy nghĩ tiêu cực, một bằng chứng ủng hộ và một bằng chứng phản biện.",COGNITIVE,MEDIUM
+"Tìm suy nghĩ cân bằng","Từ suy nghĩ tiêu cực, viết lại thành một câu cân bằng hơn và thực tế hơn.",COGNITIVE,MEDIUM
+"Kết nối 10 phút","Gọi điện hoặc nhắn tin trao đổi 10 phút với một người bạn tin tưởng.",SOCIAL,MEDIUM
+"Ra quán hoặc cửa hàng gần nhà","Đi tới một cửa hàng/quán gần nhà, mua một món nhỏ và ghi lại mức lo lắng.",SOCIAL,MEDIUM
+"Hoạt động có ý nghĩa 20 phút","Lên kế hoạch một hoạt động có ý nghĩa như giúp ai đó, học kỹ năng, hoặc chăm cây trong 20 phút.",BEHAVIORAL,HARD
+"Thử thách tránh né","Chọn một tình huống đang né tránh ở mức vừa phải và tiếp cận từng bước an toàn.",BEHAVIORAL,HARD
+"Phơi nhiễm xã hội nhỏ","Đặt một câu hỏi đơn giản cho nhân viên cửa hàng hoặc người hỗ trợ. Ghi mức lo lắng trước/sau.",SOCIAL,HARD
+"Lá thư tự trắc ẩn","Viết một lá thư ngắn cho bản thân trong vai một người thấu hiểu và không phán xét.",EMOTIONAL,HARD
+"Thử nghiệm niềm tin","Chọn một niềm tin tiêu cực, dự đoán kết quả, làm một thử nghiệm nhỏ và ghi kết quả thực tế.",COGNITIVE,HARD
