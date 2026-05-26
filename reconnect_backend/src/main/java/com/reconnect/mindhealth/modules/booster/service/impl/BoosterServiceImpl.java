@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.reconnect.mindhealth.common.security.AuthContextService;
 import com.reconnect.mindhealth.modules.booster.dto.AppointmentDto;
 import com.reconnect.mindhealth.modules.booster.dto.AvailableSlotDto;
 import com.reconnect.mindhealth.modules.booster.dto.BookAppointmentRequestDto;
@@ -25,9 +26,12 @@ import com.reconnect.mindhealth.modules.booster.dto.ToggleSlotRequestDto;
 import com.reconnect.mindhealth.modules.booster.entity.Appointment;
 import com.reconnect.mindhealth.modules.booster.entity.TherapistScheduleSlot;
 import com.reconnect.mindhealth.modules.booster.enums.AppointmentPurpose;
+import com.reconnect.mindhealth.modules.booster.enums.AppointmentStatus;
 import com.reconnect.mindhealth.modules.booster.repository.AppointmentRepository;
 import com.reconnect.mindhealth.modules.booster.repository.TherapistScheduleSlotRepository;
 import com.reconnect.mindhealth.modules.booster.service.IBoosterService;
+import com.reconnect.mindhealth.modules.auth.entity.User;
+import com.reconnect.mindhealth.modules.auth.enums.Role;
 import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
 import com.reconnect.mindhealth.modules.clinical.entity.TherapistProfile;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
@@ -61,6 +65,9 @@ public class BoosterServiceImpl implements IBoosterService {
 
     @Autowired
     private TherapistProfileRepository therapistProfileRepository;
+
+    @Autowired
+    private AuthContextService authContextService;
 
     // ====================================================
     // Patient: Đặt lịch
@@ -250,5 +257,33 @@ public class BoosterServiceImpl implements IBoosterService {
         return appointmentRepository.findByTherapistProfile_IdOrderByStartAtDesc(therapistId)
                 .stream().map(AppointmentDto::new).collect(Collectors.toList());
     }
-}
 
+    @Override
+    public AppointmentDto updateAppointmentStatus(UUID appointmentId, AppointmentStatus status) {
+        if (appointmentId == null) throw new IllegalArgumentException("Thiếu appointmentId.");
+        if (status == null) throw new IllegalArgumentException("Thiếu status.");
+        if (status != AppointmentStatus.COMPLETED && status != AppointmentStatus.CANCELLED) {
+            throw new IllegalArgumentException("Chỉ hỗ trợ chuyển lịch hẹn sang COMPLETED hoặc CANCELLED.");
+        }
+
+        User current = authContextService.requireCurrentUser();
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy lịch hẹn: " + appointmentId));
+
+        boolean isAdmin = current.getRole() == Role.ADMIN;
+        boolean isAssignedTherapist = current.getRole() == Role.THERAPIST
+                && appointment.getTherapistProfile() != null
+                && appointment.getTherapistProfile().getId().equals(current.getId());
+        if (!isAdmin && !isAssignedTherapist) {
+            throw new SecurityException("Bạn không có quyền cập nhật lịch hẹn này.");
+        }
+
+        if (appointment.getStatus() == AppointmentStatus.COMPLETED && status != AppointmentStatus.COMPLETED) {
+            throw new IllegalStateException("Lịch hẹn đã hoàn thành, không thể đổi sang trạng thái khác.");
+        }
+
+        appointment.setStatus(status);
+        Appointment saved = appointmentRepository.save(appointment);
+        return new AppointmentDto(saved);
+    }
+}

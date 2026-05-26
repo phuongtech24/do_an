@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -32,4 +33,14 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
     List<Appointment> findTherapistAppointmentsInRange(@Param("therapistId") UUID therapistId,
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to);
+
+    @Modifying
+    @Query("""
+            UPDATE Appointment a
+            SET a.meetingLink = :meetingLink
+            WHERE a.therapistProfile.id = :therapistId
+              AND a.status = com.reconnect.mindhealth.modules.booster.enums.AppointmentStatus.BOOKED
+              AND (a.meetingLink IS NULL OR a.meetingLink = '')
+            """)
+    int backfillMissingMeetingLink(@Param("therapistId") UUID therapistId, @Param("meetingLink") String meetingLink);
 }

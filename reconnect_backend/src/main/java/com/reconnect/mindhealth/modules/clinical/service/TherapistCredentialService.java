@@ -123,6 +123,27 @@ public class TherapistCredentialService {
         return new FileSystemResource(resolveUnderUploadRoot(c.getStoragePath()));
     }
 
+    @Transactional
+    public void deleteMyCredential(UUID credentialId) {
+        TherapistProfile therapist = requireTherapistProfileForCurrentUser();
+        TherapistCredential c = therapistCredentialRepository.findById(credentialId)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy chứng chỉ: " + credentialId));
+        if (c.getTherapistProfile() == null || c.getTherapistProfile().getId() == null
+                || !c.getTherapistProfile().getId().equals(therapist.getId())) {
+            throw new SecurityException("Forbidden");
+        }
+
+        String storagePath = c.getStoragePath();
+        therapistCredentialRepository.delete(c);
+        try {
+            Files.deleteIfExists(resolveUnderUploadRoot(storagePath));
+        } catch (Exception e) {
+            log.warn("TherapistCredential physical delete failed: therapistId={}, credentialId={}, path={}, err={}",
+                    therapist.getId(), credentialId, storagePath, e.toString());
+        }
+        log.info("TherapistCredential deleted: therapistId={}, credentialId={}", therapist.getId(), credentialId);
+    }
+
     @Transactional(readOnly = true)
     public List<TherapistCredential> listCredentialsForAdmin(UUID therapistId) {
         requireAdmin();

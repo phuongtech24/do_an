@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -18,6 +19,7 @@ class TherapistAppointmentsScreen extends StatefulWidget {
 class _TherapistAppointmentsScreenState extends State<TherapistAppointmentsScreen> {
   final TherapistBoosterRepository _repo = TherapistBoosterRepository();
 
+  bool _loaded = false;
   bool _loadingSchedule = false;
   bool _loadingAppointments = false;
   String? _error;
@@ -29,11 +31,13 @@ class _TherapistAppointmentsScreenState extends State<TherapistAppointmentsScree
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (_loaded) return;
+    _loaded = true;
     _loadAll();
   }
 
-  String _formatDate(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
-  String _formatHumanDate(DateTime d) => DateFormat('dd/MM/yyyy').format(d);
+  String _formatDate(DateTime date) => DateFormat('yyyy-MM-dd').format(date);
+  String _formatHumanDate(DateTime date) => DateFormat('dd/MM/yyyy').format(date);
 
   Future<void> _loadAll() async {
     await Future.wait([_loadSchedule(), _loadAppointments()]);
@@ -50,11 +54,7 @@ class _TherapistAppointmentsScreenState extends State<TherapistAppointmentsScree
       _error = null;
     });
     try {
-      final list = await _repo.getSchedule(
-        token: token,
-        therapistId: therapistId,
-        date: _formatDate(_selectedDate),
-      );
+      final list = await _repo.getSchedule(token: token, therapistId: therapistId, date: _formatDate(_selectedDate));
       if (!mounted) return;
       setState(() => _slots = list);
     } catch (e) {
@@ -117,6 +117,62 @@ class _TherapistAppointmentsScreenState extends State<TherapistAppointmentsScree
     }
   }
 
+  Future<void> _updateStatus(AppointmentModel appointment, String status) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = auth.token;
+    if (token == null || token.isEmpty) return;
+
+    setState(() {
+      _error = null;
+      _loadingAppointments = true;
+    });
+    try {
+      await _repo.updateAppointmentStatus(token: token, appointmentId: appointment.id, status: status);
+      await _loadAppointments();
+      await _loadSchedule();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (!mounted) return;
+      setState(() => _loadingAppointments = false);
+    }
+  }
+
+  Future<void> _copyMeetingLink(AppointmentModel appointment) async {
+    final link = appointment.meetingLink;
+    if (link == null || link.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: link));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Đã copy link phòng họp. Mở link này trên trình duyệt để vào buổi hẹn.')),
+    );
+  }
+
+  String _statusLabel(String status) {
+    switch (status) {
+      case 'COMPLETED':
+        return 'Đã hoàn thành';
+      case 'CANCELLED':
+        return 'Đã hủy';
+      case 'BOOKED':
+      default:
+        return 'Đã đặt';
+    }
+  }
+
+  Color _statusColor(String status) {
+    switch (status) {
+      case 'COMPLETED':
+        return AppColors.success;
+      case 'CANCELLED':
+        return AppColors.alert;
+      case 'BOOKED':
+      default:
+        return AppColors.primary;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -124,20 +180,30 @@ class _TherapistAppointmentsScreenState extends State<TherapistAppointmentsScree
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Lịch hẹn (Telehealth)',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primary),
+          Row(
+            children: [
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Lịch hẹn Telehealth', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                    SizedBox(height: 6),
+                    Text('Quản lý slot rảnh, lịch đã đặt và link phòng tư vấn.', style: TextStyle(color: AppColors.textSecondary, fontSize: 15)),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Tải lại',
+                onPressed: _loadingSchedule || _loadingAppointments ? null : _loadAll,
+                icon: const Icon(Icons.refresh, size: 28),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'Bác sĩ mở/đóng các slot rảnh; bệnh nhân chỉ đặt được slot đang mở.',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 16),
-          ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           if (_error != null && _error!.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: Text(_error!, style: const TextStyle(color: Colors.red)),
+              child: Text(_error!, style: const TextStyle(color: AppColors.alert)),
             ),
           const TabBar(
             labelColor: AppColors.primary,
@@ -148,7 +214,7 @@ class _TherapistAppointmentsScreenState extends State<TherapistAppointmentsScree
               Tab(text: 'Lịch đã đặt'),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Expanded(
             child: TabBarView(
               children: [
@@ -167,7 +233,7 @@ class _TherapistAppointmentsScreenState extends State<TherapistAppointmentsScree
       children: [
         Row(
           children: [
-            Text('Ngày: ${_formatHumanDate(_selectedDate)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text('Ngày ${_formatHumanDate(_selectedDate)}', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
             const Spacer(),
             OutlinedButton.icon(
               onPressed: _loadingSchedule
@@ -186,73 +252,18 @@ class _TherapistAppointmentsScreenState extends State<TherapistAppointmentsScree
               icon: const Icon(Icons.calendar_today_outlined, size: 18),
               label: const Text('Chọn ngày'),
             ),
-            const SizedBox(width: 8),
-            IconButton(
-              tooltip: 'Tải lại',
-              onPressed: _loadingSchedule ? null : _loadSchedule,
-              icon: const Icon(Icons.refresh),
-            ),
           ],
         ),
         const SizedBox(height: 12),
         Expanded(
           child: _loadingSchedule
               ? const Center(child: CircularProgressIndicator())
-              : Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: Colors.grey[300]!),
-                  ),
-                  child: ListView.separated(
-                    itemCount: _slots.length,
-                    separatorBuilder: (context, index) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final slot = _slots[index];
-                      final timeLabel = slot.startTime.length >= 5 ? slot.startTime.substring(0, 5) : slot.startTime;
-                      final isBooked = slot.isBooked;
-                      final isOpen = slot.isOpen;
-
-                      Color chipColor;
-                      String chipText;
-                      if (isBooked) {
-                        chipColor = AppColors.alert;
-                        chipText = 'ĐÃ ĐẶT';
-                      } else if (isOpen) {
-                        chipColor = AppColors.success;
-                        chipText = 'MỞ';
-                      } else {
-                        chipColor = Colors.grey;
-                        chipText = 'ĐÓNG';
-                      }
-
-                      return ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                        leading: const Icon(Icons.access_time, color: AppColors.primary),
-                        title: Text('Khung giờ $timeLabel', style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: slot.patientNickname != null
-                            ? Text('Bệnh nhân: ${slot.patientNickname}')
-                            : const Text(''),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: chipColor.withOpacity(0.12),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: Text(chipText, style: TextStyle(color: chipColor, fontWeight: FontWeight.bold)),
-                            ),
-                            const SizedBox(width: 12),
-                            Switch(
-                              value: isOpen,
-                              onChanged: isBooked || _loadingSchedule ? null : (v) => _toggleSlot(slot, v),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+              : ListView.separated(
+                  itemCount: _slots.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) => _ScheduleSlotCard(
+                    slot: _slots[index],
+                    onToggle: (open) => _toggleSlot(_slots[index], open),
                   ),
                 ),
         ),
@@ -261,7 +272,7 @@ class _TherapistAppointmentsScreenState extends State<TherapistAppointmentsScree
   }
 
   Widget _buildAppointmentsTab() {
-    if (_loadingAppointments) {
+    if (_loadingAppointments && _appointments.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
     if (_appointments.isEmpty) {
@@ -270,59 +281,157 @@ class _TherapistAppointmentsScreenState extends State<TherapistAppointmentsScree
       );
     }
 
-    return Column(
-      children: [
-        Row(
-          children: [
-            const Spacer(),
-            IconButton(
-              tooltip: 'Tải lại',
-              onPressed: _loadingAppointments ? null : _loadAppointments,
-              icon: const Icon(Icons.refresh),
-            ),
-          ],
-        ),
-        Expanded(
-          child: Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: Colors.grey[300]!),
-            ),
-            child: ListView.separated(
-              itemCount: _appointments.length,
-              separatorBuilder: (context, index) => const Divider(height: 1),
-              itemBuilder: (context, index) {
-                final appt = _appointments[index];
-                final when = DateFormat('dd/MM/yyyy HH:mm').format(appt.startAt.toLocal());
-                final status = appt.status.isNotEmpty ? appt.status : 'UNKNOWN';
-                final title = appt.isAnonymous ? 'Bệnh nhân ẩn danh' : 'Bệnh nhân';
+    return ListView.separated(
+      itemCount: _appointments.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final appointment = _appointments[index];
+        return _AppointmentCard(
+          appointment: appointment,
+          statusLabel: _statusLabel(appointment.status),
+          statusColor: _statusColor(appointment.status),
+          onCopyMeetingLink: () => _copyMeetingLink(appointment),
+          onComplete: () => _updateStatus(appointment, 'COMPLETED'),
+          onCancel: () => _updateStatus(appointment, 'CANCELLED'),
+        );
+      },
+    );
+  }
+}
 
-                return ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  leading: CircleAvatar(
-                    backgroundColor: appt.isAnonymous ? AppColors.secondary.withOpacity(0.2) : AppColors.primary.withOpacity(0.2),
-                    child: Icon(appt.isAnonymous ? Icons.masks_rounded : Icons.person, color: appt.isAnonymous ? AppColors.secondary : AppColors.primary),
-                  ),
-                  title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text('$when • $status'),
-                  trailing: appt.meetingLink == null || appt.meetingLink!.isEmpty
-                      ? null
-                      : OutlinedButton.icon(
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Link meeting được cấu hình từ hồ sơ bác sĩ (meetingLink).')),
-                            );
-                          },
-                          icon: const Icon(Icons.link, size: 16),
-                          label: const Text('Link'),
-                        ),
-                );
-              },
+class _ScheduleSlotCard extends StatelessWidget {
+  final TherapistScheduleSlotModel slot;
+  final ValueChanged<bool> onToggle;
+
+  const _ScheduleSlotCard({required this.slot, required this.onToggle});
+
+  @override
+  Widget build(BuildContext context) {
+    final timeLabel = slot.startTime.length >= 5 ? slot.startTime.substring(0, 5) : slot.startTime;
+    final color = slot.isBooked ? AppColors.warning : (slot.isOpen ? AppColors.success : AppColors.textSecondary);
+    final label = slot.isBooked ? 'Đã đặt' : (slot.isOpen ? 'Mở' : 'Đóng');
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: color.withOpacity(0.12),
+            child: Icon(slot.isBooked ? Icons.event_available : Icons.access_time, color: color),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Khung giờ $timeLabel', style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                if (slot.patientNickname != null) Text('Bệnh nhân: ${slot.patientNickname}', style: const TextStyle(color: AppColors.textSecondary)),
+              ],
             ),
           ),
-        ),
-      ],
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(999)),
+            child: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+          ),
+          const SizedBox(width: 12),
+          Switch(value: slot.isOpen, onChanged: slot.isBooked ? null : onToggle),
+        ],
+      ),
+    );
+  }
+}
+
+class _AppointmentCard extends StatelessWidget {
+  final AppointmentModel appointment;
+  final String statusLabel;
+  final Color statusColor;
+  final VoidCallback onCopyMeetingLink;
+  final VoidCallback onComplete;
+  final VoidCallback onCancel;
+
+  const _AppointmentCard({
+    required this.appointment,
+    required this.statusLabel,
+    required this.statusColor,
+    required this.onCopyMeetingLink,
+    required this.onComplete,
+    required this.onCancel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final when = DateFormat('dd/MM/yyyy HH:mm').format(appointment.startAt.toLocal());
+    final end = DateFormat('HH:mm').format(appointment.endAt.toLocal());
+    final patientName = appointment.isAnonymous ? 'Bệnh nhân ẩn danh' : (appointment.patientDisplayName ?? 'Bệnh nhân');
+    final hasMeetingLink = appointment.meetingLink != null && appointment.meetingLink!.isNotEmpty;
+    final isBooked = appointment.status == 'BOOKED';
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: AppColors.primary.withOpacity(0.10),
+                child: Icon(appointment.isAnonymous ? Icons.masks_rounded : Icons.person, color: AppColors.primary),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(patientName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textPrimary)),
+                    const SizedBox(height: 4),
+                    Text('$when - $end', style: const TextStyle(color: AppColors.textSecondary)),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(color: statusColor.withOpacity(0.12), borderRadius: BorderRadius.circular(999)),
+                child: Text(statusLabel, style: TextStyle(color: statusColor, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              OutlinedButton.icon(
+                onPressed: hasMeetingLink && isBooked ? onCopyMeetingLink : null,
+                icon: const Icon(Icons.meeting_room_outlined, size: 18),
+                label: const Text('Vào phòng họp'),
+              ),
+              ElevatedButton.icon(
+                onPressed: isBooked ? onComplete : null,
+                icon: const Icon(Icons.check_circle_outline, size: 18),
+                label: const Text('Hoàn thành'),
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.success, foregroundColor: Colors.white),
+              ),
+              TextButton.icon(
+                onPressed: isBooked ? onCancel : null,
+                icon: const Icon(Icons.cancel_outlined, size: 18),
+                label: const Text('Hủy lịch'),
+                style: TextButton.styleFrom(foregroundColor: AppColors.alert),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

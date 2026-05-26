@@ -37,6 +37,9 @@ public class TherapistProfile extends BaseObject {
     @Column(name = "meeting_link")
     private String meetingLink;
 
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "approval_status")
     private ApprovalStatus approvalStatus = ApprovalStatus.PENDING;
@@ -88,6 +91,14 @@ public class TherapistProfile extends BaseObject {
 
     public void setMeetingLink(String meetingLink) {
         this.meetingLink = meetingLink;
+    }
+
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
     }
 
     public ApprovalStatus getApprovalStatus() {

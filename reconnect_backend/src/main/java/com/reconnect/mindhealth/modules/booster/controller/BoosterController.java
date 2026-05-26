@@ -8,6 +8,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,6 +22,7 @@ import com.reconnect.mindhealth.modules.booster.dto.AvailableSlotDto;
 import com.reconnect.mindhealth.modules.booster.dto.BookAppointmentRequestDto;
 import com.reconnect.mindhealth.modules.booster.dto.TherapistScheduleSlotDto;
 import com.reconnect.mindhealth.modules.booster.dto.ToggleSlotRequestDto;
+import com.reconnect.mindhealth.modules.booster.enums.AppointmentStatus;
 import com.reconnect.mindhealth.modules.booster.service.IBoosterService;
 import com.reconnect.mindhealth.modules.booster.service.ITaperingBoosterSchedulingService;
 
@@ -37,9 +40,6 @@ public class BoosterController {
         this.schedulingService = schedulingService;
     }
 
-    // ===== Patient =====
-
-    /** GET /api/booster/slots?patientId=&date=YYYY-MM-DD — xem slot còn trống */
     @GetMapping("/slots")
     public ResponseEntity<ApiResponse<List<AvailableSlotDto>>> getSlots(
             @RequestParam UUID patientId,
@@ -54,7 +54,6 @@ public class BoosterController {
         }
     }
 
-    /** POST /api/booster/appointments/book — đặt lịch */
     @PostMapping("/appointments/book")
     public ResponseEntity<ApiResponse<AppointmentDto>> book(@RequestBody BookAppointmentRequestDto request) {
         try {
@@ -70,7 +69,6 @@ public class BoosterController {
         }
     }
 
-    /** GET /api/booster/appointments/my?patientId= — xem lịch của bệnh nhân */
     @GetMapping("/appointments/my")
     public ResponseEntity<ApiResponse<List<AppointmentDto>>> myAppointments(@RequestParam UUID patientId) {
         try {
@@ -82,9 +80,19 @@ public class BoosterController {
         }
     }
 
-    // ===== Therapist =====
+    @PatchMapping("/appointments/{appointmentId}/status")
+    public ResponseEntity<ApiResponse<AppointmentDto>> updateAppointmentStatus(
+            @PathVariable UUID appointmentId,
+            @RequestParam AppointmentStatus status) {
+        try {
+            log.info("Update appointment status: appointmentId={}, status={}", appointmentId, status);
+            return ResponseEntity.ok(ApiResponse.success("OK", boosterService.updateAppointmentStatus(appointmentId, status)));
+        } catch (Exception e) {
+            log.warn("Update appointment status failed: appointmentId={}, status={}, err={}", appointmentId, status, e.toString());
+            return ResponseEntity.ok(ApiResponse.error("Lỗi khi cập nhật lịch hẹn: " + e.getMessage()));
+        }
+    }
 
-    /** GET /api/booster/schedule?therapistId=&date=YYYY-MM-DD — xem lịch của bác sĩ theo ngày */
     @GetMapping("/schedule")
     public ResponseEntity<ApiResponse<List<TherapistScheduleSlotDto>>> getTherapistSchedule(
             @RequestParam UUID therapistId,
@@ -99,7 +107,6 @@ public class BoosterController {
         }
     }
 
-    /** POST /api/booster/schedule/toggle — bác sĩ bật/tắt slot */
     @PostMapping("/schedule/toggle")
     public ResponseEntity<ApiResponse<TherapistScheduleSlotDto>> toggleSlot(@RequestBody ToggleSlotRequestDto request) {
         try {
@@ -120,7 +127,6 @@ public class BoosterController {
         }
     }
 
-    /** GET /api/booster/appointments/therapist?therapistId= — bác sĩ xem tất cả lịch hẹn của mình */
     @GetMapping("/appointments/therapist")
     public ResponseEntity<ApiResponse<List<AppointmentDto>>> therapistAppointments(@RequestParam UUID therapistId) {
         try {
@@ -132,7 +138,6 @@ public class BoosterController {
         }
     }
 
-    /** POST /api/booster/scheduling/run — trigger cron job thủ công */
     @PostMapping("/scheduling/run")
     public ResponseEntity<ApiResponse<Integer>> runScheduling() {
         try {
@@ -144,3 +149,4 @@ public class BoosterController {
         }
     }
 }
+

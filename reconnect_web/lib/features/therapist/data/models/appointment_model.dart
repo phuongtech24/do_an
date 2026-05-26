@@ -8,6 +8,8 @@ class AppointmentModel {
   final String purpose;
   final bool isAnonymous;
   final String? meetingLink;
+  final String? patientDisplayName;
+  final String? therapistDisplayName;
 
   AppointmentModel({
     required this.id,
@@ -19,6 +21,8 @@ class AppointmentModel {
     required this.purpose,
     required this.isAnonymous,
     required this.meetingLink,
+    required this.patientDisplayName,
+    required this.therapistDisplayName,
   });
 
   factory AppointmentModel.fromJson(Map<String, dynamic> json) {
@@ -32,7 +36,8 @@ class AppointmentModel {
       purpose: (json['purpose'] ?? '').toString(),
       isAnonymous: json['isAnonymous'] == true,
       meetingLink: (json['meetingLink'] ?? '').toString().isEmpty ? null : (json['meetingLink'] ?? '').toString(),
+      patientDisplayName: (json['patientDisplayName'] ?? '').toString().isEmpty ? null : (json['patientDisplayName'] ?? '').toString(),
+      therapistDisplayName: (json['therapistDisplayName'] ?? '').toString().isEmpty ? null : (json['therapistDisplayName'] ?? '').toString(),
     );
   }
 }
-

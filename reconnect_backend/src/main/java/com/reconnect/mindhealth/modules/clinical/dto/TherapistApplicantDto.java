@@ -12,6 +12,7 @@ public class TherapistApplicantDto {
     private String specialization;
     private String bio;
     private String meetingLink;
+    private String avatarUrl;
     private ApprovalStatus approvalStatus;
     private long credentialCount;
     private boolean active;
@@ -33,6 +34,7 @@ public class TherapistApplicantDto {
             this.specialization = profile.getSpecialization();
             this.bio = profile.getBio();
             this.meetingLink = profile.getMeetingLink();
+            this.avatarUrl = profile.getAvatarUrl();
             this.approvalStatus = profile.getApprovalStatus();
             this.credentialCount = credentialCount;
             if (profile.getUser() != null) {
@@ -94,6 +96,14 @@ public class TherapistApplicantDto {
 
     public void setMeetingLink(String meetingLink) {
         this.meetingLink = meetingLink;
+    }
+
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
     }
 
     public ApprovalStatus getApprovalStatus() {

@@ -5,9 +5,18 @@ Quy tắc: Định dạng theo chuẩn [Keep a Changelog](https://keepachangelog
 
 ## [Unreleased]
 ### Added
+- **Therapist Profile:** Thêm upload avatar `POST /api/therapist/profile/avatar` và quản lý chứng chỉ ngay trong hồ sơ; hỗ trợ xóa chứng chỉ của chính bác sĩ qua `DELETE /api/therapist/credentials/{credentialId}`.
+- **Therapist Profile:** Thêm API `GET/PUT /api/therapist/profile` để bác sĩ tự lưu hồ sơ và `meetingLink`; khi lưu link sẽ tự bổ sung cho các lịch `BOOKED` đang thiếu link.
+- **Telehealth:** Bổ sung API cập nhật trạng thái lịch hẹn `PATCH /api/booster/appointments/{appointmentId}/status?status=COMPLETED|CANCELLED`, chỉ cho admin hoặc bác sĩ phụ trách thao tác.
+- **Telehealth UI:** Patient App hiển thị lịch hẹn dạng card có trạng thái, giờ hẹn và nút copy link phòng tư vấn; Therapist Web có action vào phòng họp, hoàn thành và hủy lịch.
 - **Clinical (Backend):** Thêm API `GET /api/clinical/therapist-assignment-status?patientId=...` để UI patient gating “đã được gán bác sĩ chưa?”.
 - **Therapist Web:** Thêm màn “Lịch làm việc” (toggle 6 slot/ngày) + “Lịch đã đặt” (load từ backend) dùng `/api/booster/*`.
 - **Seed:** Bổ sung & sửa encoding UTF-8 cho `reconnect_backend/src/main/resources/seed_data/quest_templates.csv` để “Kho CBT” luôn có dữ liệu mẫu.
+
+### Changed
+- **Therapist Web:** Hồ sơ chuyên gia hiển thị avatar thật nếu có, thêm nút đổi ảnh và danh sách chứng chỉ với upload/tải xuống/xóa.
+- **Therapist Web:** Màn “Hồ sơ & Cài đặt Chuyên gia” chuyển từ mock sang load/lưu dữ liệu thật, validate meeting link phải bắt đầu bằng `http://` hoặc `https://`.
+- **Telehealth:** DTO lịch hẹn trả thêm `patientDisplayName`, `therapistDisplayName` và giữ `meetingLink` để patient/bác sĩ dùng trực tiếp trong MVP, không gửi email tự động.
 
 ### Fixed
 - **Telehealth:** Chuẩn hóa message tiếng Việt (UTF-8) trên backend Booster/Clinical/Auth, tránh lỗi mojibake khi hiển thị trên UI.

@@ -9,7 +9,7 @@ class TherapistBoosterRepository {
   Future<List<TherapistScheduleSlotModel>> getSchedule({
     required String token,
     required String therapistId,
-    required String date, // YYYY-MM-DD
+    required String date,
   }) async {
     final ApiResponse<List<TherapistScheduleSlotModel>> res = await _api.get<List<TherapistScheduleSlotModel>>(
       '/booster/schedule?therapistId=$therapistId&date=$date',
@@ -28,8 +28,8 @@ class TherapistBoosterRepository {
   Future<TherapistScheduleSlotModel> toggleSlot({
     required String token,
     required String therapistId,
-    required String slotDate, // YYYY-MM-DD
-    required String startTime, // HH:mm:ss
+    required String slotDate,
+    required String startTime,
     required bool open,
   }) async {
     final ApiResponse<TherapistScheduleSlotModel> res = await _api.post<TherapistScheduleSlotModel>(
@@ -66,4 +66,21 @@ class TherapistBoosterRepository {
     }
     return res.data!;
   }
+
+  Future<AppointmentModel> updateAppointmentStatus({
+    required String token,
+    required String appointmentId,
+    required String status,
+  }) async {
+    final ApiResponse<AppointmentModel> res = await _api.patch<AppointmentModel>(
+      '/booster/appointments/$appointmentId/status?status=$status',
+      headers: {'Authorization': 'Bearer $token'},
+      parseData: (raw) => raw == null ? null : AppointmentModel.fromJson(raw as Map<String, dynamic>),
+    );
+    if (res.status != 200 || res.data == null) {
+      throw Exception(res.message.isNotEmpty ? res.message : 'Không thể cập nhật lịch hẹn');
+    }
+    return res.data!;
+  }
 }
+

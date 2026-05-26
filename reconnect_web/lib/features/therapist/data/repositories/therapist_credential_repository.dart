@@ -81,4 +81,17 @@ class TherapistCredentialRepository {
     }
     return resp.bodyBytes;
   }
+
+  Future<void> deleteCredential({
+    required String token,
+    required String credentialId,
+  }) async {
+    final res = await _api.delete<Object?>(
+      '/therapist/credentials/$credentialId',
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (res.status != 200) {
+      throw Exception(res.message.isNotEmpty ? res.message : 'Cannot delete credential');
+    }
+  }
 }
