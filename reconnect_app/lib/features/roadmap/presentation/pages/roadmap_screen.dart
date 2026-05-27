@@ -28,6 +28,7 @@ class RoadmapScreen extends StatelessWidget {
               title: q.title,
               description: q.description,
               category: _toVietnameseCategory(q.category),
+              sourceLabel: q.sourceType == 'THERAPIST' ? 'Bác sĩ giao' : 'Tự động',
               categoryColor: _categoryColor(q.category),
               icon: _categoryIcon(q.category),
               isCompleted: q.status == 'DONE',
@@ -230,6 +231,24 @@ class RoadmapScreen extends StatelessWidget {
                             ),
                           ),
                           const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: quest.sourceLabel == 'Bác sĩ giao'
+                                  ? Colors.teal.withOpacity(0.12)
+                                  : Colors.grey.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              quest.sourceLabel,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: quest.sourceLabel == 'Bác sĩ giao' ? Colors.teal : Colors.grey[700],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
                           if (quest.isLocked)
                             const Icon(Icons.lock_outline, size: 16, color: Colors.grey),
                         ],
@@ -291,6 +310,7 @@ class _QuestItem {
     required this.title,
     required this.description,
     required this.category,
+    required this.sourceLabel,
     required this.categoryColor,
     required this.icon,
     required this.isCompleted,
@@ -301,6 +321,7 @@ class _QuestItem {
   final String title;
   final String description;
   final String category;
+  final String sourceLabel;
   final Color categoryColor;
   final IconData icon;
   final bool isCompleted;

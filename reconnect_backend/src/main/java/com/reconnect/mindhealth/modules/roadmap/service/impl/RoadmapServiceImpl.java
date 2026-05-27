@@ -30,6 +30,7 @@ import com.reconnect.mindhealth.modules.roadmap.dto.VerifyQuestProofResponseDto;
 import com.reconnect.mindhealth.modules.roadmap.entity.PatientQuest;
 import com.reconnect.mindhealth.modules.roadmap.entity.QuestTemplate;
 import com.reconnect.mindhealth.modules.roadmap.enums.QuestCategory;
+import com.reconnect.mindhealth.modules.roadmap.enums.QuestDifficulty;
 import com.reconnect.mindhealth.modules.roadmap.enums.QuestSourceType;
 import com.reconnect.mindhealth.modules.roadmap.enums.QuestStatus;
 import com.reconnect.mindhealth.modules.roadmap.repository.PatientQuestRepository;
@@ -118,17 +119,11 @@ public class RoadmapServiceImpl implements IRoadmapService {
             phq9Total = last.getTotalScore();
         }
 
-        // Simple deterministic daily selection:
-        // - Severe (>=15): prioritize BEHAVIORAL
-        // - Else: balance BEHAVIORAL + COGNITIVE
-        List<QuestCategory> desired = new ArrayList<>();
-        if (phq9Total >= 15) {
-            desired.add(QuestCategory.BEHAVIORAL);
-            desired.add(QuestCategory.BEHAVIORAL);
-        } else {
-            desired.add(QuestCategory.BEHAVIORAL);
-            desired.add(QuestCategory.COGNITIVE);
-        }
+        int riskScore = patientProfile.getCurrentRiskScore() != null ? patientProfile.getCurrentRiskScore() : 0;
+        boolean redFlag = Boolean.TRUE.equals(patientProfile.getIsRedFlagActive());
+        List<QuestCategory> desired = resolveDailyCategories(phq9Total, riskScore, redFlag);
+        QuestDifficulty targetDifficulty = resolveTargetDifficulty(phq9Total, riskScore, redFlag);
+        int rotationSalt = Math.abs(patientProfile.getId().hashCode()) + effectiveDate.getDayOfYear();
 
         List<PatientQuest> created = new ArrayList<>();
         int order = 1;
@@ -136,9 +131,12 @@ public class RoadmapServiceImpl implements IRoadmapService {
             if (created.size() >= DAILY_MAX_QUESTS) {
                 break;
             }
-            QuestTemplate picked = pickTemplateByCategory(allTemplates, c, order);
+            QuestTemplate picked = pickTemplateByCategoryAndDifficulty(allTemplates, c, targetDifficulty, rotationSalt + order);
             if (picked == null) {
-                picked = allTemplates.get(order % allTemplates.size());
+                picked = pickTemplateByCategory(allTemplates, c, rotationSalt + order);
+            }
+            if (picked == null) {
+                picked = allTemplates.get(Math.abs(rotationSalt + order) % allTemplates.size());
             }
 
             PatientQuest pq = new PatientQuest();
@@ -158,14 +156,60 @@ public class RoadmapServiceImpl implements IRoadmapService {
             order++;
         }
 
-        log.info("Assigned {} daily quests for patient {} on {}", created.size(), patientProfile.getId(), effectiveDate);
+        log.info("Assigned {} daily quests for patient {} on {} (phq9={}, risk={}, redFlag={}, difficulty={})",
+                created.size(), patientProfile.getId(), effectiveDate, phq9Total, riskScore, redFlag, targetDifficulty);
         return created;
+    }
+
+    private List<QuestCategory> resolveDailyCategories(int phq9Total, int riskScore, boolean redFlag) {
+        List<QuestCategory> desired = new ArrayList<>();
+        if (redFlag || riskScore >= 70) {
+            desired.add(QuestCategory.EMOTIONAL);
+            desired.add(QuestCategory.BEHAVIORAL);
+        } else if (phq9Total >= 15) {
+            desired.add(QuestCategory.BEHAVIORAL);
+            desired.add(QuestCategory.EMOTIONAL);
+        } else if (phq9Total >= 10) {
+            desired.add(QuestCategory.BEHAVIORAL);
+            desired.add(QuestCategory.COGNITIVE);
+        } else {
+            desired.add(QuestCategory.COGNITIVE);
+            desired.add(QuestCategory.SOCIAL);
+        }
+        return desired;
+    }
+
+    private QuestDifficulty resolveTargetDifficulty(int phq9Total, int riskScore, boolean redFlag) {
+        if (redFlag || riskScore >= 70 || phq9Total >= 15) {
+            return QuestDifficulty.EASY;
+        }
+        if (phq9Total >= 10 || riskScore >= 40) {
+            return QuestDifficulty.MEDIUM;
+        }
+        return QuestDifficulty.MEDIUM;
     }
 
     private QuestTemplate pickTemplateByCategory(List<QuestTemplate> all, QuestCategory category, int salt) {
         List<QuestTemplate> filtered = new ArrayList<>();
         for (QuestTemplate t : all) {
             if (t.getCategory() == category) {
+                filtered.add(t);
+            }
+        }
+        if (filtered.isEmpty()) {
+            return null;
+        }
+        return filtered.get(Math.abs(salt) % filtered.size());
+    }
+
+    private QuestTemplate pickTemplateByCategoryAndDifficulty(
+            List<QuestTemplate> all,
+            QuestCategory category,
+            QuestDifficulty difficulty,
+            int salt) {
+        List<QuestTemplate> filtered = new ArrayList<>();
+        for (QuestTemplate t : all) {
+            if (t.getCategory() == category && t.getDifficulty() == difficulty) {
                 filtered.add(t);
             }
         }

@@ -57,9 +57,10 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
         }
 
         String prompt = buildGuidedDiscoveryPrompt(request);
-        String raw = generateContent(prompt, 256, 0.4);
+        String raw = generateContent(prompt, 1024, 0.1, guidedDiscoveryResponseSchema());
         List<String> questions = parseQuestionsJson(raw);
         if (questions.isEmpty()) {
+            log.warn("Guided discovery parse empty, using fallback.");
             questions = List.of(
                     "Bạn có bằng chứng nào ủng hộ và bằng chứng nào phản bác suy nghĩ này?",
                     "Có cách giải thích nào khác (ít tiêu cực hơn) cho tình huống này không?");
@@ -161,7 +162,9 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
         return ""
                 + "Bạn là một nhà trị liệu CBT. Nhiệm vụ: tạo 1-2 câu hỏi Socratic ngắn gọn bằng tiếng Việt.\n"
                 + "Không tư vấn y khoa. Không nhắc đến chính sách. Không giải thích dài.\n"
-                + "Đầu ra BẮT BUỘC là JSON thuần, đúng schema: {\"questions\":[\"...\",\"...\"]}\n"
+                + "Trả về DUY NHẤT một JSON object hợp lệ. Ký tự đầu tiên phải là { và ký tự cuối cùng phải là }.\n"
+                + "Không markdown. Không code fence. Không ```json. Không text ngoài JSON.\n"
+                + "Mỗi câu hỏi tối đa 120 ký tự. Schema bắt buộc: {\"questions\":[\"câu hỏi 1\",\"câu hỏi 2\"]}\n"
                 + moodLine
                 + "Tình huống: " + r.getSituation() + "\n"
                 + "Suy nghĩ tự động: " + r.getAutomaticThought() + "\n"
@@ -197,6 +200,14 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
     }
 
     private String generateContent(String prompt, int maxOutputTokens, double temperature) {
+        return generateContent(prompt, maxOutputTokens, temperature, null);
+    }
+
+    private String generateContent(
+            String prompt,
+            int maxOutputTokens,
+            double temperature,
+            Map<String, Object> responseSchema) {
         try {
             AiProperties.Gemini gemini = aiProperties.getGemini();
             if (gemini.getApiKey() == null || gemini.getApiKey().isBlank()) {
@@ -210,11 +221,19 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
                     gemini.getModel(),
                     gemini.getApiKey());
 
+            Map<String, Object> generationConfig = responseSchema == null
+                    ? Map.of(
+                            "temperature", temperature,
+                            "maxOutputTokens", maxOutputTokens)
+                    : Map.of(
+                            "temperature", temperature,
+                            "maxOutputTokens", maxOutputTokens,
+                            "responseMimeType", "application/json",
+                            "responseSchema", responseSchema);
+
             Map<String, Object> body = Map.of(
                     "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))),
-                    "generationConfig", Map.of(
-                            "temperature", temperature,
-                            "maxOutputTokens", maxOutputTokens));
+                    "generationConfig", generationConfig);
 
             String json = objectMapper.writeValueAsString(body);
 
@@ -225,17 +244,39 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
                     .POST(HttpRequest.BodyPublishers.ofString(json))
                     .build();
 
+            log.info("Gemini call start model={}, apiVersion={}, maxOutputTokens={}",
+                    gemini.getModel(), gemini.getApiVersion(), maxOutputTokens);
+
             HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
             if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
                 log.warn("Gemini call failed status={} body={}", resp.statusCode(), safeSnippet(resp.body()));
                 return "";
             }
 
-            return extractTextFromGeminiResponse(resp.body());
+            log.info("Gemini raw response snippet={}", safeSnippet(resp.body(), 500));
+            String text = extractTextFromGeminiResponse(resp.body());
+            log.info("Gemini call success model={}, responseChars={}",
+                    gemini.getModel(), text != null ? text.length() : 0);
+            if (text == null || text.isBlank()) {
+                log.warn("Gemini response text empty, falling back.");
+                return "";
+            }
+            log.info("Gemini response snippet={}", safeSnippet(text, 500));
+            return text;
         } catch (Exception e) {
             log.warn("Gemini call failed, falling back. {}", e.getMessage());
             return "";
         }
+    }
+
+    private Map<String, Object> guidedDiscoveryResponseSchema() {
+        return Map.of(
+                "type", "OBJECT",
+                "properties", Map.of(
+                        "questions", Map.of(
+                                "type", "ARRAY",
+                                "items", Map.of("type", "STRING"))),
+                "required", List.of("questions"));
     }
 
     private String extractTextFromGeminiResponse(String rawJson) {
@@ -265,21 +306,25 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
             });
             Object q = parsed.get("questions");
             if (q instanceof List<?> list) {
-                List<String> out = new ArrayList<>();
-                for (Object item : list) {
-                    if (item != null) {
-                        String s = String.valueOf(item).trim();
-                        if (!s.isBlank()) {
-                            out.add(s);
-                        }
-                    }
-                }
-                return out;
+                return normalizeQuestions(list);
             }
         } catch (Exception e) {
             // ignore
         }
         return List.of();
+    }
+
+    private List<String> normalizeQuestions(List<?> list) {
+        List<String> out = new ArrayList<>();
+        for (Object item : list) {
+            if (item != null) {
+                String s = String.valueOf(item).trim();
+                if (!s.isBlank()) {
+                    out.add(s);
+                }
+            }
+        }
+        return out;
     }
 
     private JournalAiRiskResultDto parseRiskJson(String text) {
@@ -334,12 +379,16 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
     }
 
     private String safeSnippet(String s) {
+        return safeSnippet(s, 200);
+    }
+
+    private String safeSnippet(String s, int maxLength) {
         if (s == null) {
             return "";
         }
         String t = s.replaceAll("\\s+", " ").trim();
-        if (t.length() > 200) {
-            return t.substring(0, 200) + "...";
+        if (t.length() > maxLength) {
+            return t.substring(0, maxLength) + "...";
         }
         return t;
     }

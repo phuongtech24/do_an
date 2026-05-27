@@ -91,6 +91,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                 || questTemplateRepository.count() == 0;
 
         if (!needsSeed) {
+            safeSeed("phq9_questions", this::seedPhq9Questions);
             System.out.println("====== RECONNECT: SKIP DATABASE SEEDING (DATA ALREADY EXISTS) ======");
             return;
         }
@@ -290,29 +291,30 @@ public class DatabaseSeeder implements CommandLineRunner {
             System.out.println("PHQ-9 questions CSV file not found at classpath:seed_data/phq9_questions.csv");
             return;
         }
-        if (phq9QuestionRepository.count() == 0) {
-            System.out.println("Seeding PHQ-9 questions into database...");
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(questionsCsv.getInputStream(), StandardCharsets.UTF_8))) {
-                String line;
-                boolean isHeader = true;
-                while ((line = reader.readLine()) != null) {
-                    if (isHeader) {
-                        isHeader = false;
-                        continue;
-                    }
-                    String[] data = line.split(",", 2);
-                    if (data.length < 2) continue;
-
-                    Integer questionNumber = Integer.parseInt(data[0].trim());
-                    String text = data[1].trim().replace("\"", "");
-
-                    Phq9Question question = new Phq9Question(questionNumber, text);
-                    phq9QuestionRepository.save(question);
-                    System.out.println("Successfully seeded PHQ-9 question " + questionNumber + ": " + text);
+        System.out.println("Upserting PHQ-9 questions into database...");
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(questionsCsv.getInputStream(), StandardCharsets.UTF_8))) {
+            String line;
+            boolean isHeader = true;
+            while ((line = reader.readLine()) != null) {
+                if (isHeader) {
+                    isHeader = false;
+                    continue;
                 }
+                String[] data = line.split(",", 2);
+                if (data.length < 2) continue;
+
+                Integer questionNumber = Integer.parseInt(data[0].trim());
+                String text = data[1].trim().replace("\"", "");
+
+                Phq9Question question = phq9QuestionRepository.findByQuestionNumber(questionNumber);
+                if (question == null) {
+                    question = new Phq9Question(questionNumber, text);
+                } else {
+                    question.setText(text);
+                }
+                phq9QuestionRepository.save(question);
+                System.out.println("Successfully upserted PHQ-9 question " + questionNumber + ": " + text);
             }
-        } else {
-            System.out.println("PHQ-9 questions already exist in database.");
         }
     }
 

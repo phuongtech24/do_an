@@ -5,6 +5,7 @@ class PatientQuestModel {
   final String title;
   final String description;
   final String category; // EMOTIONAL/COGNITIVE/BEHAVIORAL/SOCIAL
+  final String sourceType; // SYSTEM/THERAPIST
   final String status; // LOCKED/AVAILABLE/DONE
   final int? masteryScore;
   final int? pleasureScore;
@@ -17,6 +18,7 @@ class PatientQuestModel {
     required this.title,
     required this.description,
     required this.category,
+    required this.sourceType,
     required this.status,
     this.masteryScore,
     this.pleasureScore,
@@ -31,6 +33,7 @@ class PatientQuestModel {
       title: json['title']?.toString() ?? '',
       description: json['description']?.toString() ?? '',
       category: json['category']?.toString() ?? 'COGNITIVE',
+      sourceType: json['sourceType']?.toString() ?? 'SYSTEM',
       status: json['status']?.toString() ?? 'LOCKED',
       masteryScore: (json['masteryScore'] as num?)?.toInt(),
       pleasureScore: (json['pleasureScore'] as num?)?.toInt(),
@@ -38,4 +41,3 @@ class PatientQuestModel {
     );
   }
 }
-

@@ -8,4 +8,5 @@ import com.reconnect.mindhealth.modules.assessment.entity.Phq9Question;
 
 @Repository
 public interface Phq9QuestionRepository extends JpaRepository<Phq9Question, UUID> {
+    Phq9Question findByQuestionNumber(Integer questionNumber);
 }

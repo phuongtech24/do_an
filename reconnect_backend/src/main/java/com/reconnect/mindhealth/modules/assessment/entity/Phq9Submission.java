@@ -29,6 +29,9 @@ public class Phq9Submission extends BaseObject {
     @Column(name = "q2_score")
     private Integer q2Score;
 
+    @Column(name = "functional_difficulty_score")
+    private Integer functionalDifficultyScore;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "submission_type")
     private Phq9Type submissionType;
@@ -50,11 +53,12 @@ public class Phq9Submission extends BaseObject {
     public Phq9Submission() {
     }
 
-    public Phq9Submission(Integer totalScore, Integer q9Score, Integer q2Score, Phq9Type submissionType,
+    public Phq9Submission(Integer totalScore, Integer q9Score, Integer q2Score, Integer functionalDifficultyScore, Phq9Type submissionType,
             LocalDateTime unlockedAt, String answersJson, SeverityLevel severityLevel, PatientProfile patientProfile) {
         this.totalScore = totalScore;
         this.q9Score = q9Score;
         this.q2Score = q2Score;
+        this.functionalDifficultyScore = functionalDifficultyScore;
         this.submissionType = submissionType;
         this.unlockedAt = unlockedAt;
         this.answersJson = answersJson;
@@ -84,6 +88,14 @@ public class Phq9Submission extends BaseObject {
 
     public void setQ2Score(Integer q2Score) {
         this.q2Score = q2Score;
+    }
+
+    public Integer getFunctionalDifficultyScore() {
+        return functionalDifficultyScore;
+    }
+
+    public void setFunctionalDifficultyScore(Integer functionalDifficultyScore) {
+        this.functionalDifficultyScore = functionalDifficultyScore;
     }
 
     public Phq9Type getSubmissionType() {

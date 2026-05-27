@@ -3,6 +3,7 @@ class Phq9SubmissionModel {
   final String patientId;
   final List<int> answers;
   final String submissionType; // BASELINE, PERIODIC, TRIGGERED
+  final int? functionalDifficultyScore;
   final int? totalScore;
   final String? severityLevel;
   final bool? graduatedNow;
@@ -13,6 +14,7 @@ class Phq9SubmissionModel {
     required this.patientId,
     required this.answers,
     this.submissionType = 'PERIODIC',
+    this.functionalDifficultyScore,
     this.totalScore,
     this.severityLevel,
     this.graduatedNow,
@@ -25,6 +27,7 @@ class Phq9SubmissionModel {
       patientId: json['patientId'] ?? '',
       answers: List<int>.from(json['answers'] ?? []),
       submissionType: json['submissionType'] ?? 'PERIODIC',
+      functionalDifficultyScore: json['functionalDifficultyScore'],
       totalScore: json['totalScore'],
       severityLevel: json['severityLevel'],
       graduatedNow: json['graduatedNow'] == true,
@@ -37,6 +40,7 @@ class Phq9SubmissionModel {
       'patientId': patientId,
       'answers': answers,
       'submissionType': submissionType,
+      if (functionalDifficultyScore != null) 'functionalDifficultyScore': functionalDifficultyScore,
     };
   }
 }

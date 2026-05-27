@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../shared/widgets/mindhealth_scaffold.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
-import '../providers/assessment_provider.dart';
 import '../../data/models/phq9_question_model.dart';
+import '../providers/assessment_provider.dart';
 
 class Phq9Screen extends StatefulWidget {
   const Phq9Screen({super.key});
@@ -15,13 +15,12 @@ class Phq9Screen extends StatefulWidget {
 }
 
 class _Phq9ScreenState extends State<Phq9Screen> {
-  // Lưu đáp án dưới dạng: Map<QuestionID, Score>
   final Map<String, int> _answers = {};
+  int? _functionalDifficultyScore;
 
   @override
   void initState() {
     super.initState();
-    // Tải bộ câu hỏi động từ Backend & Kiểm tra trạng thái cooldown của người bệnh
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final patientId = authProvider.loginResponse?.user.id ?? '';
@@ -42,7 +41,7 @@ class _Phq9ScreenState extends State<Phq9Screen> {
 
     if (patientId.isEmpty) {
       return MindHealthScaffold(
-        title: 'Đánh giá Lâm sàng (PHQ-9)',
+        title: 'Đánh giá lâm sàng (PHQ-9)',
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -65,7 +64,7 @@ class _Phq9ScreenState extends State<Phq9Screen> {
                 const SizedBox(height: 16),
                 FilledButton(
                   onPressed: () => context.go('/auth'),
-                  child: const Text('Đi tới Đăng nhập'),
+                  child: const Text('Đi tới đăng nhập'),
                 ),
               ],
             ),
@@ -75,10 +74,9 @@ class _Phq9ScreenState extends State<Phq9Screen> {
     }
 
     return MindHealthScaffold(
-      title: 'Đánh giá Lâm sàng (PHQ-9)',
+      title: 'Đánh giá lâm sàng (PHQ-9)',
       body: Consumer<AssessmentProvider>(
         builder: (context, provider, child) {
-          // 1. Trạng thái Đang tải dữ liệu (Loading)
           if (provider.status == AssessmentStatus.loading && provider.questionnaire == null) {
             return const Center(
               child: Column(
@@ -92,30 +90,30 @@ class _Phq9ScreenState extends State<Phq9Screen> {
             );
           }
 
-          // 2. Trạng thái lỗi (Error)
           if (provider.status == AssessmentStatus.error && provider.questionnaire == null) {
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, size: 60, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Không thể tải dữ liệu: ${provider.errorMessage}',
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (patientId.isNotEmpty) {
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, size: 60, color: Colors.red),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Không thể tải dữ liệu: ${provider.errorMessage}',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () {
                         final token = authProvider.loginResponse?.token;
                         provider.loadQuestionnaire(token: token);
                         provider.checkCooldown(patientId, token: token);
-                      }
-                    },
-                    child: const Text('Thử lại'),
-                  ),
-                ],
+                      },
+                      child: const Text('Thử lại'),
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -125,57 +123,17 @@ class _Phq9ScreenState extends State<Phq9Screen> {
             return const Center(child: Text('Không tìm thấy dữ liệu câu hỏi.'));
           }
 
-          final questions = questionnaire.questions;
-          final options = questionnaire.options;
-
-          // 3. Trạng thái Cooldown hoạt động (Locked - Đang trong thời gian khóa 14 ngày)
           if (provider.isCooldown) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.shade50,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.lock_clock_outlined, size: 80, color: Colors.amber),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Thời gian giãn cách (Cooldown)',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Hệ thống ghi nhận bạn đã làm bài đánh giá PHQ-9 trong vòng 14 ngày qua.\n\nTheo tiêu chuẩn lâm sàng CBT, bạn chỉ nên làm bài test định kỳ sau mỗi 2 tuần để đảm bảo tính chính xác trong chẩn đoán và theo dõi.',
-                      style: TextStyle(fontSize: 15, height: 1.5, color: Colors.black87),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 32),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: () => context.go('/home'),
-                        icon: const Icon(Icons.arrow_back),
-                        label: const Text('Quay lại trang chủ'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
+            return _CooldownView(onBackHome: () => context.go('/home'));
           }
 
+          final questions = questionnaire.questions;
+          final options = questionnaire.options;
           final totalScore = _calculateTotalScore(questions);
           final severityLabel = _getSeverityLabel(totalScore);
-          final isCompleted = _answers.length == questions.length;
+          final hasAnyProblem = _answers.values.any((score) => score > 0);
+          final isCompleted = _answers.length == questions.length &&
+              (!hasAnyProblem || _functionalDifficultyScore != null);
           final hasSuicidalRisk = _hasSuicidalRisk(questions);
 
           return Column(
@@ -183,35 +141,49 @@ class _Phq9ScreenState extends State<Phq9Screen> {
             children: [
               Text(
                 'Bộ câu hỏi PHQ-9',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Trong 2 tuần qua, bạn thường xuyên bị làm phiền bởi vấn đề nào sau đây? Chọn phương án phù hợp nhất với trạng thái của bạn.',
-                style: TextStyle(color: Colors.black54, height: 1.4),
+              Text(
+                questionnaire.instruction,
+                style: const TextStyle(color: Colors.black54, height: 1.4),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Chọn mức độ phù hợp nhất với bạn trong 2 tuần vừa qua.',
+                style: TextStyle(color: Colors.grey.shade700, height: 1.4),
               ),
               const SizedBox(height: 16),
               LinearProgressIndicator(
-                value: _answers.length / questions.length,
+                value: questions.isEmpty ? 0 : _answers.length / questions.length,
                 borderRadius: BorderRadius.circular(20),
                 minHeight: 8,
               ),
               const SizedBox(height: 12),
               Expanded(
                 child: ListView.separated(
-                  itemCount: questions.length,
+                  itemCount: questions.length + (hasAnyProblem ? 1 : 0),
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
-                    final q = questions[index];
+                    if (index == questions.length) {
+                      return _FunctionalDifficultyCard(
+                        question: questionnaire.functionalDifficultyQuestion,
+                        options: questionnaire.functionalDifficultyOptions,
+                        selectedValue: _functionalDifficultyScore,
+                        onChanged: (score) => setState(() => _functionalDifficultyScore = score),
+                      );
+                    }
+                    final question = questions[index];
                     return _QuestionCard(
-                      question: q,
-                      selectedValue: _answers[q.id],
+                      question: question,
+                      selectedValue: _answers[question.id],
                       options: options,
                       onChanged: (score) {
                         setState(() {
-                          _answers[q.id] = score;
+                          _answers[question.id] = score;
+                          if (!_answers.values.any((value) => value > 0)) {
+                            _functionalDifficultyScore = null;
+                          }
                         });
                       },
                     );
@@ -219,58 +191,8 @@ class _Phq9ScreenState extends State<Phq9Screen> {
                 ),
               ),
               const SizedBox(height: 12),
-              Card(
-                elevation: 0,
-                color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: Theme.of(context).colorScheme.primary.withOpacity(0.1)),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.insights_rounded, color: Colors.indigo),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Tổng điểm: $totalScore/27',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                            ),
-                            Text(
-                              'Mức độ: $severityLabel',
-                              style: const TextStyle(color: Colors.black87, fontSize: 14),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (hasSuicidalRisk)
-                Card(
-                  color: Colors.red.shade50,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: Colors.red.shade100),
-                  ),
-                  child: const ListTile(
-                    leading: Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
-                    title: Text(
-                      'Chú ý an toàn (Cảnh báo Lâm sàng)',
-                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
-                    ),
-                    subtitle: Text(
-                      'Bạn đã đánh dấu có ý nghĩ tự hại ở Câu số 9. Hệ thống khuyến nghị bạn nên liên hệ bác sĩ phụ trách hoặc người thân tin cậy ngay lập tức.',
-                      style: TextStyle(color: Colors.black87),
-                    ),
-                  ),
-                ),
+              _ScoreSummaryCard(totalScore: totalScore, severityLabel: severityLabel),
+              if (hasSuicidalRisk) const _SafetyWarningCard(),
               const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
@@ -289,12 +211,14 @@ class _Phq9ScreenState extends State<Phq9Screen> {
                 ),
               ),
               if (!isCompleted)
-                const Padding(
-                  padding: EdgeInsets.only(top: 8, bottom: 4),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8, bottom: 4),
                   child: Center(
                     child: Text(
-                      'Vui lòng trả lời đầy đủ tất cả các câu để nộp bài.',
-                      style: TextStyle(fontSize: 13, color: Colors.black54),
+                      hasAnyProblem
+                          ? 'Vui lòng trả lời thêm mức độ ảnh hưởng đến sinh hoạt.'
+                          : 'Vui lòng trả lời đầy đủ tất cả các câu để nộp bài.',
+                      style: const TextStyle(fontSize: 13, color: Colors.black54),
                     ),
                   ),
                 ),
@@ -305,61 +229,57 @@ class _Phq9ScreenState extends State<Phq9Screen> {
     );
   }
 
-  // Tính tổng điểm dựa trên các câu đã trả lời
   int _calculateTotalScore(List<Phq9QuestionModel> questions) {
     int sum = 0;
-    for (var q in questions) {
-      sum += _answers[q.id] ?? 0;
+    for (final question in questions) {
+      sum += _answers[question.id] ?? 0;
     }
     return sum;
   }
 
-  // Nhận diện mức độ triệu chứng theo lâm sàng
   String _getSeverityLabel(int score) {
     if (score <= 4) return 'Tối thiểu';
-    if (score <= 9) return 'Nhẹ (Mild)';
-    if (score <= 14) return 'Trung bình (Moderate)';
-    if (score <= 19) return 'Trung bình nặng (Moderately Severe)';
-    return 'Nặng (Severe)';
+    if (score <= 9) return 'Nhẹ';
+    if (score <= 14) return 'Trung bình';
+    if (score <= 19) return 'Trung bình nặng';
+    return 'Nặng';
   }
 
-  // Kiểm tra xem câu số 9 có câu trả lời có điểm > 0 hay không
   bool _hasSuicidalRisk(List<Phq9QuestionModel> questions) {
+    if (questions.isEmpty) return false;
     final q9 = questions.firstWhere(
-      (q) => q.questionNumber == 9,
+      (question) => question.questionNumber == 9,
       orElse: () => questions.last,
     );
     return (_answers[q9.id] ?? 0) > 0;
   }
 
-  // Đóng gói và nộp bài test lên Backend
   Future<void> _handleSubmit(
     AssessmentProvider provider,
     String patientId,
     List<Phq9QuestionModel> questions,
   ) async {
-    // 1. Sắp xếp danh sách câu hỏi theo đúng thứ tự 1 -> 9 trước khi lấy điểm
-    final sortedQuestions = List<Phq9QuestionModel>.from(questions);
-    sortedQuestions.sort((a, b) => a.questionNumber.compareTo(b.questionNumber));
+    final sortedQuestions = List<Phq9QuestionModel>.from(questions)
+      ..sort((a, b) => a.questionNumber.compareTo(b.questionNumber));
+    final answersList = sortedQuestions.map((question) => _answers[question.id] ?? 0).toList();
 
-    // 2. Trích xuất mảng điểm theo đúng thứ tự câu 1 đến câu 9
-    final List<int> answersList = sortedQuestions.map((q) => _answers[q.id] ?? 0).toList();
-
-    // 3. Gọi hàm nộp bài lên API
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final token = authProvider.loginResponse?.token;
-    // Backend sẽ tự ép kiểu BASELINE nếu bệnh nhân chưa từng có baseline.
-    final success = await provider.submitPhq9(patientId, answersList, token: token);
+    final success = await provider.submitPhq9(
+      patientId,
+      answersList,
+      token: token,
+      functionalDifficultyScore: _functionalDifficultyScore,
+    );
 
     if (success && mounted) {
       final score = provider.lastSubmission?.totalScore ?? _calculateTotalScore(questions);
       final severity = provider.lastSubmission?.severityLevel ?? _getSeverityLabel(score);
       final submissionType = provider.lastSubmission?.submissionType ?? 'PERIODIC';
       final nextRoute = submissionType == 'BASELINE' ? '/goal-setting' : '/home';
-      final nextLabel = submissionType == 'BASELINE' ? 'Thiết lập mục tiêu' : 'Về Trang chủ';
+      final nextLabel = submissionType == 'BASELINE' ? 'Thiết lập mục tiêu' : 'Về trang chủ';
 
-      final graduatedNow = provider.lastSubmission?.graduatedNow == true;
-      if (graduatedNow) {
+      if (provider.lastSubmission?.graduatedNow == true) {
         _showGraduationDialog(nextRoute, nextLabel);
         return;
       }
@@ -384,7 +304,7 @@ class _Phq9ScreenState extends State<Phq9Screen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Kết quả đánh giá'),
         content: Text(
-          'Tổng điểm của bạn là $score điểm (Mức độ: $severity).\n\nLộ trình bài tập nhận thức - hành vi (CBT Quests) của bạn đã được cập nhật tương ứng với mức độ này.',
+          'Tổng điểm của bạn là $score/27 (mức độ: $severity).\n\nLộ trình CBT sẽ được cập nhật theo chu kỳ đánh giá PHQ-9.',
           style: const TextStyle(height: 1.5),
         ),
         actions: [
@@ -414,7 +334,7 @@ class _Phq9ScreenState extends State<Phq9Screen> {
           ],
         ),
         content: Text(
-          'Chỉ số PHQ-9 của bạn đã giảm xuống mức an toàn ($score điểm - $severity).\n\nBạn có nhận thấy rằng tâm trạng cải thiện là nhờ sự nỗ lực thay đổi suy nghĩ và hành vi thời gian qua không? Hãy tiếp tục phát huy nhé!',
+          'Chỉ số PHQ-9 của bạn đang ở mức an toàn ($score/27 - $severity).\n\nHãy tiếp tục duy trì các hành vi và kỹ năng CBT đang giúp bạn tiến bộ.',
           style: const TextStyle(height: 1.5),
         ),
         actions: [
@@ -423,7 +343,6 @@ class _Phq9ScreenState extends State<Phq9Screen> {
               Navigator.pop(context);
               context.go(nextRoute);
             },
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF6C63FF)),
             child: Text(nextLabel),
           ),
         ],
@@ -441,11 +360,11 @@ class _Phq9ScreenState extends State<Phq9Screen> {
           children: [
             Icon(Icons.celebration, color: Colors.deepPurple, size: 26),
             SizedBox(width: 8),
-            Text('Bạn đã Tốt nghiệp!'),
+            Text('Bạn đã tốt nghiệp!'),
           ],
         ),
         content: const Text(
-          'Chúc mừng bạn đã đạt điều kiện Tốt nghiệp (2 chu kỳ PHQ-9 liên tiếp < 5).\n\nHệ thống sẽ chuyển sang giai đoạn duy trì (Tapering) để phòng ngừa tái phát.',
+          'Chúc mừng bạn đã đạt điều kiện tốt nghiệp: 2 chu kỳ PHQ-9 liên tiếp dưới 5 điểm.\n\nHệ thống sẽ chuyển sang giai đoạn duy trì để phòng ngừa tái phát.',
           style: TextStyle(height: 1.5),
         ),
         actions: [
@@ -454,10 +373,125 @@ class _Phq9ScreenState extends State<Phq9Screen> {
               Navigator.pop(context);
               context.go(nextRoute);
             },
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF6C63FF)),
             child: Text(nextLabel),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CooldownView extends StatelessWidget {
+  const _CooldownView({required this.onBackHome});
+
+  final VoidCallback onBackHome;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(color: Colors.amber.shade50, shape: BoxShape.circle),
+              child: const Icon(Icons.lock_clock_outlined, size: 80, color: Colors.amber),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Thời gian giãn cách',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Hệ thống ghi nhận bạn đã làm PHQ-9 trong vòng 14 ngày qua. Bài đánh giá định kỳ nên được thực hiện sau mỗi 2 tuần để theo dõi chính xác hơn.',
+              style: TextStyle(fontSize: 15, height: 1.5, color: Colors.black87),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: onBackHome,
+                icon: const Icon(Icons.arrow_back),
+                label: const Text('Quay lại trang chủ'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ScoreSummaryCard extends StatelessWidget {
+  const _ScoreSummaryCard({required this.totalScore, required this.severityLabel});
+
+  final int totalScore;
+  final String severityLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Theme.of(context).colorScheme.primary.withOpacity(0.1)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            const Icon(Icons.insights_rounded, color: Colors.indigo),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Tổng điểm: $totalScore/27',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  Text(
+                    'Mức độ: $severityLabel',
+                    style: const TextStyle(color: Colors.black87, fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SafetyWarningCard extends StatelessWidget {
+  const _SafetyWarningCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: Colors.red.shade50,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.red.shade100),
+      ),
+      child: const ListTile(
+        leading: Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+        title: Text(
+          'Chú ý an toàn',
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+        ),
+        subtitle: Text(
+          'Bạn đã đánh dấu có ý nghĩ tự hại ở câu số 9. Hệ thống sẽ bật cảnh báo để chuyên gia phụ trách hỗ trợ kịp thời.',
+          style: TextStyle(color: Colors.black87),
+        ),
       ),
     );
   }
@@ -494,39 +528,110 @@ class _QuestionCard extends StatelessWidget {
               style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, height: 1.4),
             ),
             const SizedBox(height: 12),
-            Column(
-              children: List.generate(options.length, (index) {
-                final opt = options[index];
-                final isSelected = selectedValue == opt.score;
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 6),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    color: isSelected ? Theme.of(context).colorScheme.primary.withOpacity(0.08) : Colors.transparent,
-                  ),
-                  child: RadioListTile<int>(
-                    title: Text(
-                      opt.text,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                        color: isSelected ? Theme.of(context).colorScheme.primary : Colors.black87,
-                      ),
-                    ),
-                    value: opt.score,
-                    groupValue: selectedValue,
-                    onChanged: (val) {
-                      if (val != null) onChanged(val);
-                    },
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-                    activeColor: Theme.of(context).colorScheme.primary,
-                  ),
-                );
-              }),
-            ),
+            for (final option in options)
+              _OptionTile(
+                score: option.score,
+                text: option.text,
+                selectedValue: selectedValue,
+                onChanged: onChanged,
+              ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _FunctionalDifficultyCard extends StatelessWidget {
+  const _FunctionalDifficultyCard({
+    required this.question,
+    required this.options,
+    required this.selectedValue,
+    required this.onChanged,
+  });
+
+  final String question;
+  final List<Phq9OptionModel> options;
+  final int? selectedValue;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      color: Colors.blueGrey.shade50,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.blueGrey.shade100),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Mức độ ảnh hưởng đến sinh hoạt',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              question,
+              style: const TextStyle(fontSize: 14, height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            for (final option in options)
+              _OptionTile(
+                score: option.score,
+                text: option.text,
+                selectedValue: selectedValue,
+                onChanged: onChanged,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OptionTile extends StatelessWidget {
+  const _OptionTile({
+    required this.score,
+    required this.text,
+    required this.selectedValue,
+    required this.onChanged,
+  });
+
+  final int score;
+  final String text;
+  final int? selectedValue;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final isSelected = selectedValue == score;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        color: isSelected ? Theme.of(context).colorScheme.primary.withOpacity(0.08) : Colors.transparent,
+      ),
+      child: RadioListTile<int>(
+        title: Text(
+          '$score - $text',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            color: isSelected ? Theme.of(context).colorScheme.primary : Colors.black87,
+          ),
+        ),
+        value: score,
+        groupValue: selectedValue,
+        onChanged: (value) {
+          if (value != null) onChanged(value);
+        },
+        controlAffinity: ListTileControlAffinity.leading,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+        activeColor: Theme.of(context).colorScheme.primary,
       ),
     );
   }

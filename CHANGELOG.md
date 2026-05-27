@@ -1,141 +1,149 @@
-# CHANGELOG (Nhật ký Thay đổi)
+# CHANGELOG (Nháº­t kÃ½ Thay Ä‘á»•i)
 
-Tất cả các thay đổi lớn về tính năng, sửa lỗi, và cấu trúc hệ thống của dự án ReConnect MindHealth sẽ được lưu trữ tại đây.
-Quy tắc: Định dạng theo chuẩn [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). AI phải tự động thêm vào đây sau mỗi lần hoàn thành một phase hoặc fix xong một issue.
+Táº¥t cáº£ cÃ¡c thay Ä‘á»•i lá»›n vá» tÃ­nh nÄƒng, sá»­a lá»—i, vÃ  cáº¥u trÃºc há»‡ thá»‘ng cá»§a dá»± Ã¡n ReConnect MindHealth sáº½ Ä‘Æ°á»£c lÆ°u trá»¯ táº¡i Ä‘Ã¢y.
+Quy táº¯c: Äá»‹nh dáº¡ng theo chuáº©n [Keep a Changelog](https://keepachangelog.com/en/1.0.0/). AI pháº£i tá»± Ä‘á»™ng thÃªm vÃ o Ä‘Ã¢y sau má»—i láº§n hoÃ n thÃ nh má»™t phase hoáº·c fix xong má»™t issue.
 
 ## [Unreleased]
 ### Added
-- **Telehealth:** Thêm ghi chú sau buổi tư vấn (`therapistNotes`) cho appointment và API `PATCH /api/booster/appointments/{appointmentId}/notes`; chỉ admin hoặc bác sĩ phụ trách được lưu.
-- **Telehealth:** Thêm lịch làm việc cố định theo tuần qua `therapist_weekly_schedule_slots`, API `GET /api/booster/weekly-schedule` và `POST /api/booster/weekly-schedule/toggle`; lịch theo ngày vẫn dùng để ghi đè ngoại lệ.
-- **CBT:** Thêm API therapist gán quest cá nhân hóa cho bệnh nhân (`GET /api/therapist/quest-templates`, `POST /api/therapist/patients/{patientId}/quests`) và màn web chọn/gán bài tập CBT từ kho thật.
-- **Docs:** Thêm `docs/GEMINI_SETUP.md` hướng dẫn lấy Gemini API key, bật/tắt `AI_ENABLED` và các luồng đang dùng Gemini.
-- **Therapist Profile:** Thêm upload avatar `POST /api/therapist/profile/avatar` và quản lý chứng chỉ ngay trong hồ sơ; hỗ trợ xóa chứng chỉ của chính bác sĩ qua `DELETE /api/therapist/credentials/{credentialId}`.
-- **Therapist Profile:** Thêm API `GET/PUT /api/therapist/profile` để bác sĩ tự lưu hồ sơ và `meetingLink`; khi lưu link sẽ tự bổ sung cho các lịch `BOOKED` đang thiếu link.
-- **Telehealth:** Bổ sung API cập nhật trạng thái lịch hẹn `PATCH /api/booster/appointments/{appointmentId}/status?status=COMPLETED|CANCELLED`, chỉ cho admin hoặc bác sĩ phụ trách thao tác.
-- **Telehealth UI:** Patient App hiển thị lịch hẹn dạng card có trạng thái, giờ hẹn và nút copy link phòng tư vấn; Therapist Web có action vào phòng họp, hoàn thành và hủy lịch.
-- **Clinical (Backend):** Thêm API `GET /api/clinical/therapist-assignment-status?patientId=...` để UI patient gating “đã được gán bác sĩ chưa?”.
-- **Therapist Web:** Thêm màn “Lịch làm việc” (toggle 6 slot/ngày) + “Lịch đã đặt” (load từ backend) dùng `/api/booster/*`.
-- **Seed:** Bổ sung & sửa encoding UTF-8 cho `reconnect_backend/src/main/resources/seed_data/quest_templates.csv` để “Kho CBT” luôn có dữ liệu mẫu.
+- **Assessment:** Chuẩn hóa PHQ-9 theo form gốc: API questionnaire trả `instruction`, scale 0-3, câu impairment/functioning, lựa chọn 1-4 và citation nguồn Kroenke/Spitzer/Williams; submission lưu thêm `functionalDifficultyScore` nullable.
+- **AI:** ThÃªm debug log cho Gemini runtime: log lÃºc báº¯t Ä‘áº§u gá»i model, lÃºc HTTP 2xx thÃ nh cÃ´ng, lÃºc response rá»—ng/parse guided-discovery rá»—ng Ä‘á»ƒ phÃ¢n biá»‡t gá»i Gemini tháº­t hay fallback.
+- **AI:** Siáº¿t prompt Guided Discovery tráº£ JSON thuáº§n vÃ  thÃªm `responseMimeType=application/json`; log snippet response ngáº¯n Ä‘á»ƒ debug parse fail mÃ  khÃ´ng lá»™ API key.
+- **AI:** ThÃªm JSON response schema riÃªng cho Guided Discovery, tÄƒng `maxOutputTokens` vÃ  giáº£m temperature Ä‘á»ƒ trÃ¡nh Gemini tráº£ markdown/code fence lÃ m parser fallback.
+- **AI:** TÄƒng token Guided Discovery lÃªn `1024` vÃ  log raw Gemini response snippet Ä‘á»ƒ debug trÆ°á»ng há»£p JSON bá»‹ cáº¯t giá»¯a chá»«ng.
+- **AI:** ThÃªm log startup an toÃ n `AI startup config: enabled=..., geminiModel=..., apiKeyPresent=...` Ä‘á»ƒ kiá»ƒm tra env Gemini mÃ  khÃ´ng lá»™ API key.
+- **Telehealth:** ThÃªm ghi chÃº sau buá»•i tÆ° váº¥n (`therapistNotes`) cho appointment vÃ  API `PATCH /api/booster/appointments/{appointmentId}/notes`; chá»‰ admin hoáº·c bÃ¡c sÄ© phá»¥ trÃ¡ch Ä‘Æ°á»£c lÆ°u.
+- **Telehealth:** ThÃªm lá»‹ch lÃ m viá»‡c cá»‘ Ä‘á»‹nh theo tuáº§n qua `therapist_weekly_schedule_slots`, API `GET /api/booster/weekly-schedule` vÃ  `POST /api/booster/weekly-schedule/toggle`; lá»‹ch theo ngÃ y váº«n dÃ¹ng Ä‘á»ƒ ghi Ä‘Ã¨ ngoáº¡i lá»‡.
+- **CBT:** ThÃªm API therapist gÃ¡n quest cÃ¡ nhÃ¢n hÃ³a cho bá»‡nh nhÃ¢n (`GET /api/therapist/quest-templates`, `POST /api/therapist/patients/{patientId}/quests`) vÃ  mÃ n web chá»n/gÃ¡n bÃ i táº­p CBT tá»« kho tháº­t.
+- **CBT/Roadmap:** NÃ¢ng cáº¥p auto-assignment theo rule cÃ¡ nhÃ¢n hÃ³a dá»±a trÃªn PHQ-9, risk score vÃ  red flag; patient app hiá»ƒn thá»‹ nhÃ£n `Tá»± Ä‘á»™ng` hoáº·c `BÃ¡c sÄ© giao`.
+- **Docs:** ThÃªm `docs/GEMINI_SETUP.md` hÆ°á»›ng dáº«n láº¥y Gemini API key, báº­t/táº¯t `AI_ENABLED` vÃ  cÃ¡c luá»“ng Ä‘ang dÃ¹ng Gemini.
+- **Therapist Profile:** ThÃªm upload avatar `POST /api/therapist/profile/avatar` vÃ  quáº£n lÃ½ chá»©ng chá»‰ ngay trong há»“ sÆ¡; há»— trá»£ xÃ³a chá»©ng chá»‰ cá»§a chÃ­nh bÃ¡c sÄ© qua `DELETE /api/therapist/credentials/{credentialId}`.
+- **Therapist Profile:** ThÃªm API `GET/PUT /api/therapist/profile` Ä‘á»ƒ bÃ¡c sÄ© tá»± lÆ°u há»“ sÆ¡ vÃ  `meetingLink`; khi lÆ°u link sáº½ tá»± bá»• sung cho cÃ¡c lá»‹ch `BOOKED` Ä‘ang thiáº¿u link.
+- **Telehealth:** Bá»• sung API cáº­p nháº­t tráº¡ng thÃ¡i lá»‹ch háº¹n `PATCH /api/booster/appointments/{appointmentId}/status?status=COMPLETED|CANCELLED`, chá»‰ cho admin hoáº·c bÃ¡c sÄ© phá»¥ trÃ¡ch thao tÃ¡c.
+- **Telehealth UI:** Patient App hiá»ƒn thá»‹ lá»‹ch háº¹n dáº¡ng card cÃ³ tráº¡ng thÃ¡i, giá» háº¹n vÃ  nÃºt copy link phÃ²ng tÆ° váº¥n; Therapist Web cÃ³ action vÃ o phÃ²ng há»p, hoÃ n thÃ nh vÃ  há»§y lá»‹ch.
+- **Clinical (Backend):** ThÃªm API `GET /api/clinical/therapist-assignment-status?patientId=...` Ä‘á»ƒ UI patient gating â€œÄ‘Ã£ Ä‘Æ°á»£c gÃ¡n bÃ¡c sÄ© chÆ°a?â€.
+- **Therapist Web:** ThÃªm mÃ n â€œLá»‹ch lÃ m viá»‡câ€ (toggle 6 slot/ngÃ y) + â€œLá»‹ch Ä‘Ã£ Ä‘áº·tâ€ (load tá»« backend) dÃ¹ng `/api/booster/*`.
+- **Seed:** Bá»• sung & sá»­a encoding UTF-8 cho `reconnect_backend/src/main/resources/seed_data/quest_templates.csv` Ä‘á»ƒ â€œKho CBTâ€ luÃ´n cÃ³ dá»¯ liá»‡u máº«u.
 
 ### Changed
-- **Therapist Web:** Hồ sơ chuyên gia hiển thị avatar thật nếu có, thêm nút đổi ảnh và danh sách chứng chỉ với upload/tải xuống/xóa.
-- **Therapist Web:** Màn “Hồ sơ & Cài đặt Chuyên gia” chuyển từ mock sang load/lưu dữ liệu thật, validate meeting link phải bắt đầu bằng `http://` hoặc `https://`.
-- **Telehealth:** DTO lịch hẹn trả thêm `patientDisplayName`, `therapistDisplayName` và giữ `meetingLink` để patient/bác sĩ dùng trực tiếp trong MVP, không gửi email tự động.
+- **Therapist Web:** Há»“ sÆ¡ chuyÃªn gia hiá»ƒn thá»‹ avatar tháº­t náº¿u cÃ³, thÃªm nÃºt Ä‘á»•i áº£nh vÃ  danh sÃ¡ch chá»©ng chá»‰ vá»›i upload/táº£i xuá»‘ng/xÃ³a.
+- **Therapist Web:** MÃ n â€œHá»“ sÆ¡ & CÃ i Ä‘áº·t ChuyÃªn giaâ€ chuyá»ƒn tá»« mock sang load/lÆ°u dá»¯ liá»‡u tháº­t, validate meeting link pháº£i báº¯t Ä‘áº§u báº±ng `http://` hoáº·c `https://`.
+- **Telehealth:** DTO lá»‹ch háº¹n tráº£ thÃªm `patientDisplayName`, `therapistDisplayName` vÃ  giá»¯ `meetingLink` Ä‘á»ƒ patient/bÃ¡c sÄ© dÃ¹ng trá»±c tiáº¿p trong MVP, khÃ´ng gá»­i email tá»± Ä‘á»™ng.
 
 ### Fixed
-- **Telehealth:** Chuẩn hóa message tiếng Việt (UTF-8) trên backend Booster/Clinical/Auth, tránh lỗi mojibake khi hiển thị trên UI.
-- **Patient App:** Sửa toàn bộ text bị mojibake ở flow Telehealth/Booking và Roadmap repository.
+- **Assessment:** Sửa seed PHQ-9 UTF-8 tiếng Việt và upsert lại 9 câu chuẩn khi backend khởi động để DB cũ không giữ dữ liệu mojibake.
+- **Telehealth:** Chuáº©n hÃ³a message tiáº¿ng Viá»‡t (UTF-8) trÃªn backend Booster/Clinical/Auth, trÃ¡nh lá»—i mojibake khi hiá»ƒn thá»‹ trÃªn UI.
+- **Patient App:** Sá»­a toÃ n bá»™ text bá»‹ mojibake á»Ÿ flow Telehealth/Booking vÃ  Roadmap repository.
 ### Fixed
-- **Web Admin CMS:** Khắc phục lỗi hiển thị của nút "Khoá tài khoản" (bấm khoá nhưng UI bật lại trạng thái cũ) do API Backend `UserDto` thiếu trường `isActive` khi trả về sau lệnh PATCH. Đã bổ sung `isActive` vào `UserDto` để đồng bộ chính xác trạng thái UI.
-- **Web Admin CMS:** Sửa triệt để lỗi font tiếng Việt (mojibake) hiển thị trên giao diện quản trị viên duyệt chuyên gia (`reconnect_web/lib/screens/admin/admin_verify_doctor_screen.dart`), chuyển đổi toàn bộ các chuỗi ký tự bị lỗi (như "Chưa đăng nhập", "Chứng chỉ", "Họ tên", "Đã tạo tài khoản...", "ĐÃ CẤP PHÉP", "TỪ CHỐI", "Đóng") về định dạng tiếng Việt chuẩn UTF-8. Bảo toàn 100% các tính năng chỉnh sửa hồ sơ và đặt lại mật khẩu bác sĩ được phát triển trước đó.
+- **Web Admin CMS:** Kháº¯c phá»¥c lá»—i hiá»ƒn thá»‹ cá»§a nÃºt "KhoÃ¡ tÃ i khoáº£n" (báº¥m khoÃ¡ nhÆ°ng UI báº­t láº¡i tráº¡ng thÃ¡i cÅ©) do API Backend `UserDto` thiáº¿u trÆ°á»ng `isActive` khi tráº£ vá» sau lá»‡nh PATCH. ÄÃ£ bá»• sung `isActive` vÃ o `UserDto` Ä‘á»ƒ Ä‘á»“ng bá»™ chÃ­nh xÃ¡c tráº¡ng thÃ¡i UI.
+- **Web Admin CMS:** Sá»­a triá»‡t Ä‘á»ƒ lá»—i font tiáº¿ng Viá»‡t (mojibake) hiá»ƒn thá»‹ trÃªn giao diá»‡n quáº£n trá»‹ viÃªn duyá»‡t chuyÃªn gia (`reconnect_web/lib/screens/admin/admin_verify_doctor_screen.dart`), chuyá»ƒn Ä‘á»•i toÃ n bá»™ cÃ¡c chuá»—i kÃ½ tá»± bá»‹ lá»—i (nhÆ° "ChÆ°a Ä‘Äƒng nháº­p", "Chá»©ng chá»‰", "Há» tÃªn", "ÄÃ£ táº¡o tÃ i khoáº£n...", "ÄÃƒ Cáº¤P PHÃ‰P", "Tá»ª CHá»I", "ÄÃ³ng") vá» Ä‘á»‹nh dáº¡ng tiáº¿ng Viá»‡t chuáº©n UTF-8. Báº£o toÃ n 100% cÃ¡c tÃ­nh nÄƒng chá»‰nh sá»­a há»“ sÆ¡ vÃ  Ä‘áº·t láº¡i máº­t kháº©u bÃ¡c sÄ© Ä‘Æ°á»£c phÃ¡t triá»ƒn trÆ°á»›c Ä‘Ã³.
 
 ### Added
-- **Docs:** Thêm “AI Context Pack” để giảm token nạp ngữ cảnh: `docs/AI_CONTEXT.md`, `docs/BRD_SUMMARY.md`, `docs/summaries/*`, kèm audit `docs/TOKEN_AUDIT.md` và script generate `scratch/audit_md_tokens.py`.
-- **DevTools:** Thêm Postman artifacts demo nhanh (admin/approval/login): `infra/postman/ReConnectMindHealth_AdminApprovalLogin.postman_collection.json` + env local `infra/postman/ReConnectMindHealth_Local.postman_environment.json`.
-- **DevTools:** Thêm Postman collection full để test end-to-end nhanh toàn bộ MVP: `infra/postman/ReConnectMindHealth_Full.postman_collection.json`.
-- **DevOps:** Thêm Docker deployment cho full stack (MySQL + Backend + Web CMS): `infra/docker-compose.yml`, `reconnect_backend/Dockerfile`, `reconnect_web/Dockerfile`, `docs/DEPLOY_DOCKER.md`.
-- **DevTools:** Cho phép cấu hình `API_BASE_URL` bằng `--dart-define` cho Flutter Web CMS và Flutter App (tránh hard-code localhost).
-- **Docs:** Thêm checklist test theo luồng giao diện để demo/bao ve: `docs/UI_TEST_RUNBOOK.md`.
-- **Seed:** Bổ sung sẵn tài khoản demo `admin@mindhealth.com`, `therapist1@mindhealth.com`, `patient1@mindhealth.com` + seed `therapist_profiles.csv` để đăng nhập CMS được ngay.
-- **Seed:** Seeder chuyển sang chế độ AUTO: chỉ seed khi database còn rỗng (các bảng cốt lõi chưa có dữ liệu), nếu đã có dữ liệu thì tự skip.
-- **Seed:** Seeder không còn crash khi trùng dữ liệu (skip theo `email/username`, không bọc 1 transaction toàn seeding).
-- **Config:** Backend port mặc định là `8081` (có thể override bằng `SERVER_PORT`) và đã đồng bộ Docker/Postman/docs.
-- **Web CMS (Admin):** Bỏ tab Analytics (Demo), đổi "Quản lý Users" thành "Hồ sơ Bệnh nhân" (gán bác sĩ + khóa/mở account), giữ "Kho CBT" và "Quản lý Bác sĩ (Approval)".
-- **Backend (Admin):** Thêm API `GET /api/admin/patients` trả DTO hồ sơ bệnh nhân; tách service tạo tài khoản therapist để fix lỗi `detached entity passed to persist`.
-- **AI (Phase 2):** Thêm API `POST /api/ai/guided-discovery` (Gemini) và bật chấm `aiRiskScore` server-side khi lưu Journal (cấu hình qua `AI_ENABLED`, `GEMINI_API_KEY`).
-- **AI (Thought Record):** Thêm API `POST /api/ai/cognitive-distortions` (gợi ý 1–3 lỗi tư duy) + Flutter auto-tick Step 4, có fallback khi AI bận.
-- **Flutter (Phase 2):** Màn Thought Record bước Guided Discovery gọi backend để lấy 1–2 câu hỏi Socratic (fallback câu hỏi mặc định khi AI bận).
- - **Web CMS (Phase 4):** Web login thật qua backend + Therapist dashboard lấy danh sách bệnh nhân từ API, có chế độ Emergency Alert (redFlagOnly) và badge đếm cờ đỏ.
-- **Phase 3 (AI Vision):** Thêm API `POST /api/roadmap/quests/{id}/proof/verify` (multipart) lưu ảnh minh chứng vào `/uploads/proofs/*`, gọi **Gemini Vision** để chấm `relevant/confidence/score/reason`, trả về `accepted` để Flutter quyết định hoàn thành quest.
-- **Phase 3 (Graduation Rule):** Implement rule “Tốt nghiệp” theo BRD: khi có **2 lần PHQ-9 PERIODIC liên tiếp < 5** thì backend set `patient_profiles.tapering_stage=WEEKLY`, đồng thời trả về `graduatedNow=true` trong response `POST /api/assessment/phq9` để Flutter hiển thị popup Tốt nghiệp.
-- **QA:** Thêm checklist test UI theo từng phase: `docs/TEST_SCENARIOS.md`.
-- **Phase 4 (Telehealth):** Thêm module Appointment (backend `booster`) với APIs: `GET /api/booster/slots`, `POST /api/booster/appointments/book`, `GET /api/booster/appointments/my`; Flutter wire UI booking + lịch sử đặt khám (Telehealth).
-- **Phase 5 (Admin CRUD):** Thêm APIs quản trị: `GET/PATCH /api/admin/users` (set active/role) và `GET/POST/PUT/DELETE /api/admin/quest-templates` để quản lý nội dung nhiệm vụ Roadmap.
-- **Phase 5 (Cron):** Thêm job `TaperingBoosterCronJob` chạy hằng ngày để cập nhật `tapering_stage` theo thời gian từ `graduated_at` và tạo appointment `TAPERING/BOOSTER_*` (có endpoint manual `POST /api/booster/scheduling/run`).
-- **Web Admin UI:** Wire Web CMS Admin screens để quản lý `Users` và `Quest Templates` qua APIs `/api/admin/*` (không còn mock danh sách quests).
-- **Admin Analytics + Approval:** Thêm backend APIs `/api/admin/analytics` và `/api/admin/therapists/*`, đồng thời wire Web Admin analytics + duyệt therapist theo dữ liệu thật.
+- **Docs:** ThÃªm â€œAI Context Packâ€ Ä‘á»ƒ giáº£m token náº¡p ngá»¯ cáº£nh: `docs/AI_CONTEXT.md`, `docs/BRD_SUMMARY.md`, `docs/summaries/*`, kÃ¨m audit `docs/TOKEN_AUDIT.md` vÃ  script generate `scratch/audit_md_tokens.py`.
+- **DevTools:** ThÃªm Postman artifacts demo nhanh (admin/approval/login): `infra/postman/ReConnectMindHealth_AdminApprovalLogin.postman_collection.json` + env local `infra/postman/ReConnectMindHealth_Local.postman_environment.json`.
+- **DevTools:** ThÃªm Postman collection full Ä‘á»ƒ test end-to-end nhanh toÃ n bá»™ MVP: `infra/postman/ReConnectMindHealth_Full.postman_collection.json`.
+- **DevOps:** ThÃªm Docker deployment cho full stack (MySQL + Backend + Web CMS): `infra/docker-compose.yml`, `reconnect_backend/Dockerfile`, `reconnect_web/Dockerfile`, `docs/DEPLOY_DOCKER.md`.
+- **DevTools:** Cho phÃ©p cáº¥u hÃ¬nh `API_BASE_URL` báº±ng `--dart-define` cho Flutter Web CMS vÃ  Flutter App (trÃ¡nh hard-code localhost).
+- **Docs:** ThÃªm checklist test theo luá»“ng giao diá»‡n Ä‘á»ƒ demo/bao ve: `docs/UI_TEST_RUNBOOK.md`.
+- **Seed:** Bá»• sung sáºµn tÃ i khoáº£n demo `admin@mindhealth.com`, `therapist1@mindhealth.com`, `patient1@mindhealth.com` + seed `therapist_profiles.csv` Ä‘á»ƒ Ä‘Äƒng nháº­p CMS Ä‘Æ°á»£c ngay.
+- **Seed:** Seeder chuyá»ƒn sang cháº¿ Ä‘á»™ AUTO: chá»‰ seed khi database cÃ²n rá»—ng (cÃ¡c báº£ng cá»‘t lÃµi chÆ°a cÃ³ dá»¯ liá»‡u), náº¿u Ä‘Ã£ cÃ³ dá»¯ liá»‡u thÃ¬ tá»± skip.
+- **Seed:** Seeder khÃ´ng cÃ²n crash khi trÃ¹ng dá»¯ liá»‡u (skip theo `email/username`, khÃ´ng bá»c 1 transaction toÃ n seeding).
+- **Config:** Backend port máº·c Ä‘á»‹nh lÃ  `8081` (cÃ³ thá»ƒ override báº±ng `SERVER_PORT`) vÃ  Ä‘Ã£ Ä‘á»“ng bá»™ Docker/Postman/docs.
+- **Web CMS (Admin):** Bá» tab Analytics (Demo), Ä‘á»•i "Quáº£n lÃ½ Users" thÃ nh "Há»“ sÆ¡ Bá»‡nh nhÃ¢n" (gÃ¡n bÃ¡c sÄ© + khÃ³a/má»Ÿ account), giá»¯ "Kho CBT" vÃ  "Quáº£n lÃ½ BÃ¡c sÄ© (Approval)".
+- **Backend (Admin):** ThÃªm API `GET /api/admin/patients` tráº£ DTO há»“ sÆ¡ bá»‡nh nhÃ¢n; tÃ¡ch service táº¡o tÃ i khoáº£n therapist Ä‘á»ƒ fix lá»—i `detached entity passed to persist`.
+- **AI (Phase 2):** ThÃªm API `POST /api/ai/guided-discovery` (Gemini) vÃ  báº­t cháº¥m `aiRiskScore` server-side khi lÆ°u Journal (cáº¥u hÃ¬nh qua `AI_ENABLED`, `GEMINI_API_KEY`).
+- **AI (Thought Record):** ThÃªm API `POST /api/ai/cognitive-distortions` (gá»£i Ã½ 1â€“3 lá»—i tÆ° duy) + Flutter auto-tick Step 4, cÃ³ fallback khi AI báº­n.
+- **Flutter (Phase 2):** MÃ n Thought Record bÆ°á»›c Guided Discovery gá»i backend Ä‘á»ƒ láº¥y 1â€“2 cÃ¢u há»i Socratic (fallback cÃ¢u há»i máº·c Ä‘á»‹nh khi AI báº­n).
+ - **Web CMS (Phase 4):** Web login tháº­t qua backend + Therapist dashboard láº¥y danh sÃ¡ch bá»‡nh nhÃ¢n tá»« API, cÃ³ cháº¿ Ä‘á»™ Emergency Alert (redFlagOnly) vÃ  badge Ä‘áº¿m cá» Ä‘á».
+- **Phase 3 (AI Vision):** ThÃªm API `POST /api/roadmap/quests/{id}/proof/verify` (multipart) lÆ°u áº£nh minh chá»©ng vÃ o `/uploads/proofs/*`, gá»i **Gemini Vision** Ä‘á»ƒ cháº¥m `relevant/confidence/score/reason`, tráº£ vá» `accepted` Ä‘á»ƒ Flutter quyáº¿t Ä‘á»‹nh hoÃ n thÃ nh quest.
+- **Phase 3 (Graduation Rule):** Implement rule â€œTá»‘t nghiá»‡pâ€ theo BRD: khi cÃ³ **2 láº§n PHQ-9 PERIODIC liÃªn tiáº¿p < 5** thÃ¬ backend set `patient_profiles.tapering_stage=WEEKLY`, Ä‘á»“ng thá»i tráº£ vá» `graduatedNow=true` trong response `POST /api/assessment/phq9` Ä‘á»ƒ Flutter hiá»ƒn thá»‹ popup Tá»‘t nghiá»‡p.
+- **QA:** ThÃªm checklist test UI theo tá»«ng phase: `docs/TEST_SCENARIOS.md`.
+- **Phase 4 (Telehealth):** ThÃªm module Appointment (backend `booster`) vá»›i APIs: `GET /api/booster/slots`, `POST /api/booster/appointments/book`, `GET /api/booster/appointments/my`; Flutter wire UI booking + lá»‹ch sá»­ Ä‘áº·t khÃ¡m (Telehealth).
+- **Phase 5 (Admin CRUD):** ThÃªm APIs quáº£n trá»‹: `GET/PATCH /api/admin/users` (set active/role) vÃ  `GET/POST/PUT/DELETE /api/admin/quest-templates` Ä‘á»ƒ quáº£n lÃ½ ná»™i dung nhiá»‡m vá»¥ Roadmap.
+- **Phase 5 (Cron):** ThÃªm job `TaperingBoosterCronJob` cháº¡y háº±ng ngÃ y Ä‘á»ƒ cáº­p nháº­t `tapering_stage` theo thá»i gian tá»« `graduated_at` vÃ  táº¡o appointment `TAPERING/BOOSTER_*` (cÃ³ endpoint manual `POST /api/booster/scheduling/run`).
+- **Web Admin UI:** Wire Web CMS Admin screens Ä‘á»ƒ quáº£n lÃ½ `Users` vÃ  `Quest Templates` qua APIs `/api/admin/*` (khÃ´ng cÃ²n mock danh sÃ¡ch quests).
+- **Admin Analytics + Approval:** ThÃªm backend APIs `/api/admin/analytics` vÃ  `/api/admin/therapists/*`, Ä‘á»“ng thá»i wire Web Admin analytics + duyá»‡t therapist theo dá»¯ liá»‡u tháº­t.
 ### Changed
-- **AI Risk:** Chuyển sang mô hình hybrid “rule-based trước” và **chỉ gọi Gemini khi nghi ngờ** (mặc định threshold 70) để giảm quota/cost; thêm env `AI_RISK_CALL_AI_ONLY_WHEN_SUSPICIOUS`, `AI_RISK_AI_CALL_THRESHOLD` + script test `scratch/test_journal_ai_rule_scoring.py`.
+- **AI Risk:** Chuyá»ƒn sang mÃ´ hÃ¬nh hybrid â€œrule-based trÆ°á»›câ€ vÃ  **chá»‰ gá»i Gemini khi nghi ngá»** (máº·c Ä‘á»‹nh threshold 70) Ä‘á»ƒ giáº£m quota/cost; thÃªm env `AI_RISK_CALL_AI_ONLY_WHEN_SUSPICIOUS`, `AI_RISK_AI_CALL_THRESHOLD` + script test `scratch/test_journal_ai_rule_scoring.py`.
 ### Changed
-- **Docs:** Tinh chỉnh `docs/BRD_SUMMARY.md` để bám sát các ngưỡng/con số BRD (Risk weights 40/40/20, mood branch 45%, trigger Risk ≥ 70, override Risk=100) nhưng vẫn tối ưu token.
-- **Docs:** Đồng bộ lại `PROGRESS_CHECKLIST.md` để khớp tiến độ thực tế theo `docs/plans/master-plan.md` + `CHANGELOG.md`.
+- **Docs:** Tinh chá»‰nh `docs/BRD_SUMMARY.md` Ä‘á»ƒ bÃ¡m sÃ¡t cÃ¡c ngÆ°á»¡ng/con sá»‘ BRD (Risk weights 40/40/20, mood branch 45%, trigger Risk â‰¥ 70, override Risk=100) nhÆ°ng váº«n tá»‘i Æ°u token.
+- **Docs:** Äá»“ng bá»™ láº¡i `PROGRESS_CHECKLIST.md` Ä‘á»ƒ khá»›p tiáº¿n Ä‘á»™ thá»±c táº¿ theo `docs/plans/master-plan.md` + `CHANGELOG.md`.
 ### Added
-- **Phase 4 (Backend APIs):** Thêm API Admin assign/reassign therapist `POST /api/admin/patients/{patientId}/assign-therapist` và API Therapist list patients `GET /api/therapist/patients?redFlagOnly=...` để phục vụ dashboard + emergency alert.
+- **Phase 4 (Backend APIs):** ThÃªm API Admin assign/reassign therapist `POST /api/admin/patients/{patientId}/assign-therapist` vÃ  API Therapist list patients `GET /api/therapist/patients?redFlagOnly=...` Ä‘á»ƒ phá»¥c vá»¥ dashboard + emergency alert.
 ### Changed
-- **Docs:** Đồng bộ ngưỡng rẽ nhánh Mood Check-in theo BRD: `Mood < 45%` → Thought Record, `Mood ≥ 45%` → Credit List (sửa `docs/APP_SPECIFICATION_ReConnect.md` từ 50% về 45%).
+- **Docs:** Äá»“ng bá»™ ngÆ°á»¡ng ráº½ nhÃ¡nh Mood Check-in theo BRD: `Mood < 45%` â†’ Thought Record, `Mood â‰¥ 45%` â†’ Credit List (sá»­a `docs/APP_SPECIFICATION_ReConnect.md` tá»« 50% vá» 45%).
 ### Fixed
-- **Flutter Journal:** Parse JSON robust hơn cho `createDate`/điểm số (handle cả trường hợp backend trả timestamp number), tránh crash khi tải danh sách nhật ký.
-- **Authentication:** Chặn therapist chưa được duyệt (`approval_status != ACTIVE`) không được login; đồng thời chặn user bị khóa (`is_active=false`) khi login.
+- **Flutter Journal:** Parse JSON robust hÆ¡n cho `createDate`/Ä‘iá»ƒm sá»‘ (handle cáº£ trÆ°á»ng há»£p backend tráº£ timestamp number), trÃ¡nh crash khi táº£i danh sÃ¡ch nháº­t kÃ½.
+- **Authentication:** Cháº·n therapist chÆ°a Ä‘Æ°á»£c duyá»‡t (`approval_status != ACTIVE`) khÃ´ng Ä‘Æ°á»£c login; Ä‘á»“ng thá»i cháº·n user bá»‹ khÃ³a (`is_active=false`) khi login.
 ### Changed
-- **Docs:** Cập nhật `PROGRESS_CHECKLIST.md` để phản ánh đúng tiến độ Module Journal (Entity + APIs đã hoàn thành, còn thiếu Gemini NLP + ai_risk_score).
+- **Docs:** Cáº­p nháº­t `PROGRESS_CHECKLIST.md` Ä‘á»ƒ pháº£n Ã¡nh Ä‘Ãºng tiáº¿n Ä‘á»™ Module Journal (Entity + APIs Ä‘Ã£ hoÃ n thÃ nh, cÃ²n thiáº¿u Gemini NLP + ai_risk_score).
 ### Added
-- **Automation:** Thêm script smoke-test Journal list API: `scratch/test_journal_list_api.py` (login → lấy danh sách journals).
+- **Automation:** ThÃªm script smoke-test Journal list API: `scratch/test_journal_list_api.py` (login â†’ láº¥y danh sÃ¡ch journals).
 ### Added
-- **Assessment:** Enforce Baseline PHQ-9 đúng nghiệp vụ (Baseline chỉ 1 lần; nếu chưa có baseline thì backend tự ghi `submissionType=BASELINE`, set `unlockedAt=+14 ngày`).
-- **Clinical:** Thêm API Goal Setting `POST /api/clinical/goals` lưu `patient_profiles.goals_json` (validate 3–5 goals).
-- **Flutter Onboarding:** Goal Setting screen gọi API lưu goals trước khi qua Psychoeducation (Provider/Repository riêng).
+- **Assessment:** Enforce Baseline PHQ-9 Ä‘Ãºng nghiá»‡p vá»¥ (Baseline chá»‰ 1 láº§n; náº¿u chÆ°a cÃ³ baseline thÃ¬ backend tá»± ghi `submissionType=BASELINE`, set `unlockedAt=+14 ngÃ y`).
+- **Clinical:** ThÃªm API Goal Setting `POST /api/clinical/goals` lÆ°u `patient_profiles.goals_json` (validate 3â€“5 goals).
+- **Flutter Onboarding:** Goal Setting screen gá»i API lÆ°u goals trÆ°á»›c khi qua Psychoeducation (Provider/Repository riÃªng).
 ### Added
-- **Clinical:** Thêm API `GET /api/clinical/goals?patientId=...` để app load lại goals đã lưu (phục vụ hiển thị/cho sửa).
+- **Clinical:** ThÃªm API `GET /api/clinical/goals?patientId=...` Ä‘á»ƒ app load láº¡i goals Ä‘Ã£ lÆ°u (phá»¥c vá»¥ hiá»ƒn thá»‹/cho sá»­a).
 ### Changed
-- **Flutter Onboarding:** Sau khi nộp PHQ-9 nếu là `BASELINE` thì điều hướng sang `Goal Setting` (thay vì về Home). Nếu goals đã có thì màn `Goal Setting` chuyển sang chế độ xem (khóa chỉnh sửa) và cho quay về Home.
+- **Flutter Onboarding:** Sau khi ná»™p PHQ-9 náº¿u lÃ  `BASELINE` thÃ¬ Ä‘iá»u hÆ°á»›ng sang `Goal Setting` (thay vÃ¬ vá» Home). Náº¿u goals Ä‘Ã£ cÃ³ thÃ¬ mÃ n `Goal Setting` chuyá»ƒn sang cháº¿ Ä‘á»™ xem (khÃ³a chá»‰nh sá»­a) vÃ  cho quay vá» Home.
 ### Fixed
-- **Flutter PHQ-9:** Khi mở trực tiếp `/phq9` mà chưa đăng nhập (patientId rỗng), hiển thị màn nhắc đăng nhập thay vì báo “Không tìm thấy dữ liệu câu hỏi.”
+- **Flutter PHQ-9:** Khi má»Ÿ trá»±c tiáº¿p `/phq9` mÃ  chÆ°a Ä‘Äƒng nháº­p (patientId rá»—ng), hiá»ƒn thá»‹ mÃ n nháº¯c Ä‘Äƒng nháº­p thay vÃ¬ bÃ¡o â€œKhÃ´ng tÃ¬m tháº¥y dá»¯ liá»‡u cÃ¢u há»i.â€
 ### Added
-- **Docs:** Thêm test account local vào `SETUP_GUIDE.md`.
+- **Docs:** ThÃªm test account local vÃ o `SETUP_GUIDE.md`.
 ### Added
-- **Roadmap (Backend):** Thêm Module Roadmap (QuestTemplate/PatientQuest), seed `quest_templates.csv`, API `GET /api/roadmap/daily` (tối đa 2 quest/ngày, mở khóa 06:00) và `POST /api/roadmap/quests/{id}/complete` (lưu Mastery/Pleasure).
-- **Roadmap (Flutter):** Roadmap UI lấy dữ liệu thật từ backend + hoàn thành quest từ `QuestDetailScreen`.
-- **Automation:** Thêm script smoke-test Roadmap: `scratch/test_roadmap_daily_api.py`.
+- **Roadmap (Backend):** ThÃªm Module Roadmap (QuestTemplate/PatientQuest), seed `quest_templates.csv`, API `GET /api/roadmap/daily` (tá»‘i Ä‘a 2 quest/ngÃ y, má»Ÿ khÃ³a 06:00) vÃ  `POST /api/roadmap/quests/{id}/complete` (lÆ°u Mastery/Pleasure).
+- **Roadmap (Flutter):** Roadmap UI láº¥y dá»¯ liá»‡u tháº­t tá»« backend + hoÃ n thÃ nh quest tá»« `QuestDetailScreen`.
+- **Automation:** ThÃªm script smoke-test Roadmap: `scratch/test_roadmap_daily_api.py`.
 ### Added
-- **Clinical:** Thêm onboarding gating APIs: `GET /api/clinical/onboarding-status` và `POST /api/clinical/psychoeducation/complete` (lưu cờ hoàn thành psychoeducation trên `patient_profiles`).
-- **Flutter Onboarding:** Psychoeducation màn cuối gọi API complete; Patient shell tự redirect về bước onboarding còn thiếu.
-- **Automation:** Thêm script smoke-test onboarding: `scratch/test_onboarding_status_api.py`.
+- **Clinical:** ThÃªm onboarding gating APIs: `GET /api/clinical/onboarding-status` vÃ  `POST /api/clinical/psychoeducation/complete` (lÆ°u cá» hoÃ n thÃ nh psychoeducation trÃªn `patient_profiles`).
+- **Flutter Onboarding:** Psychoeducation mÃ n cuá»‘i gá»i API complete; Patient shell tá»± redirect vá» bÆ°á»›c onboarding cÃ²n thiáº¿u.
+- **Automation:** ThÃªm script smoke-test onboarding: `scratch/test_onboarding_status_api.py`.
 ### Added
-- **Risk Index (Cron):** Bật `@EnableScheduling`, thêm Cron Job chạy 00:00 mỗi ngày (Asia/Bangkok) tính Risk Index theo BRD (PHQ-9 + AI + Mood + Override Rule) và lưu `patient_profiles.current_risk_score` + `is_red_flag_active`.
-- **Risk Index (API/Automation):** Thêm API `POST /api/risk/run-now` và `POST /api/risk/run-one?patientId=...` + script `scratch/test_risk_index_api.py` để test không cần chờ 00:00.
+- **Risk Index (Cron):** Báº­t `@EnableScheduling`, thÃªm Cron Job cháº¡y 00:00 má»—i ngÃ y (Asia/Bangkok) tÃ­nh Risk Index theo BRD (PHQ-9 + AI + Mood + Override Rule) vÃ  lÆ°u `patient_profiles.current_risk_score` + `is_red_flag_active`.
+- **Risk Index (API/Automation):** ThÃªm API `POST /api/risk/run-now` vÃ  `POST /api/risk/run-one?patientId=...` + script `scratch/test_risk_index_api.py` Ä‘á»ƒ test khÃ´ng cáº§n chá» 00:00.
 ### Fixed
-- **Assessment:** Sửa `q2_score` lưu đúng theo PHQ-9 câu #2 (0-3) thay vì cộng câu 1+2.
+- **Assessment:** Sá»­a `q2_score` lÆ°u Ä‘Ãºng theo PHQ-9 cÃ¢u #2 (0-3) thay vÃ¬ cá»™ng cÃ¢u 1+2.
 
 ## [1.0.2] - 2026-05-12
 ### Added
-- **Journal Module (CBT Journal):** Thiết lập trọn gói kiến trúc cho Module Nhật ký tự do bao gồm:
+- **Journal Module (CBT Journal):** Thiáº¿t láº­p trá»n gÃ³i kiáº¿n trÃºc cho Module Nháº­t kÃ½ tá»± do bao gá»“m:
   - **Backend:**
-    - Khởi tạo thực thể `Journal.java` kế thừa `BaseObject` liên kết 1-N với `PatientProfile` và tự động mapping tạo bảng `journals` trong MySQL.
-    - Xây dựng lớp tiện ích mã hóa y tế `EncryptionUtil.java` sử dụng thuật toán **AES-128 CBC** bảo mật tuyệt đối các thông tin nhạy cảm (PHI) của bệnh nhân.
-    - Triển khai cơ chế đóng gói linh hoạt (JSON Serialization) các trường của Thought Record (`situation`, `automaticThought`, `emotion`, `emotionScore`, `adaptiveResponse`, `reRatedScore`) và Credit List (`content`) thành JSON, mã hóa, giải mã ngược lại sang DTO phẳng `JournalDto.java` cho App Flutter hiển thị dễ dàng.
-    - Cung cấp các Endpoint RESTful: `POST /api/journal/thought-records` (Lưu nhật ký), `GET /api/journal/thought-records` (Lấy danh sách nhật ký), `GET /api/journal/thought-records/{id}` (Xem chi tiết nhật ký kèm kiểm tra phân quyền an toàn).
-    - Viết tập lệnh kiểm thử tự động `test_journal_module.py` tại thư mục scratch kiểm tra thành công 100% tất cả các APIs và xác thực dữ liệu được mã hóa dạng ciphertext dưới cơ sở dữ liệu MySQL.
+    - Khá»Ÿi táº¡o thá»±c thá»ƒ `Journal.java` káº¿ thá»«a `BaseObject` liÃªn káº¿t 1-N vá»›i `PatientProfile` vÃ  tá»± Ä‘á»™ng mapping táº¡o báº£ng `journals` trong MySQL.
+    - XÃ¢y dá»±ng lá»›p tiá»‡n Ã­ch mÃ£ hÃ³a y táº¿ `EncryptionUtil.java` sá»­ dá»¥ng thuáº­t toÃ¡n **AES-128 CBC** báº£o máº­t tuyá»‡t Ä‘á»‘i cÃ¡c thÃ´ng tin nháº¡y cáº£m (PHI) cá»§a bá»‡nh nhÃ¢n.
+    - Triá»ƒn khai cÆ¡ cháº¿ Ä‘Ã³ng gÃ³i linh hoáº¡t (JSON Serialization) cÃ¡c trÆ°á»ng cá»§a Thought Record (`situation`, `automaticThought`, `emotion`, `emotionScore`, `adaptiveResponse`, `reRatedScore`) vÃ  Credit List (`content`) thÃ nh JSON, mÃ£ hÃ³a, giáº£i mÃ£ ngÆ°á»£c láº¡i sang DTO pháº³ng `JournalDto.java` cho App Flutter hiá»ƒn thá»‹ dá»… dÃ ng.
+    - Cung cáº¥p cÃ¡c Endpoint RESTful: `POST /api/journal/thought-records` (LÆ°u nháº­t kÃ½), `GET /api/journal/thought-records` (Láº¥y danh sÃ¡ch nháº­t kÃ½), `GET /api/journal/thought-records/{id}` (Xem chi tiáº¿t nháº­t kÃ½ kÃ¨m kiá»ƒm tra phÃ¢n quyá»n an toÃ n).
+    - Viáº¿t táº­p lá»‡nh kiá»ƒm thá»­ tá»± Ä‘á»™ng `test_journal_module.py` táº¡i thÆ° má»¥c scratch kiá»ƒm tra thÃ nh cÃ´ng 100% táº¥t cáº£ cÃ¡c APIs vÃ  xÃ¡c thá»±c dá»¯ liá»‡u Ä‘Æ°á»£c mÃ£ hÃ³a dáº¡ng ciphertext dÆ°á»›i cÆ¡ sá»Ÿ dá»¯ liá»‡u MySQL.
   - **Frontend (Flutter):**
-    - Thiết lập mô hình dữ liệu y tế `JournalModel.dart` hỗ trợ tuần tự hóa JSON hai chiều khớp tuyệt đối với DTO ở Backend.
-    - Xây dựng lớp kho lưu trữ kết nối `JournalRepository.dart` bằng thư viện `http` kế thừa đồng bộ cơ chế Token JWT bảo mật.
-    - Triển khai state management `JournalProvider.dart` quản lý phản hồi, tự động cập nhật danh sách nhật ký cục bộ ngay sau khi người dùng gửi thành công.
-    - Tích hợp `JournalProvider` toàn cục vào `MultiProvider` tại `app.dart`.
-    - Kết nối luồng lưu dữ liệu y tế thực tế tại `ThoughtRecordScreen` thay thế cho dữ liệu tĩnh trước đó, hỗ trợ tự động gửi 6 bước nhận thức lên DB khi nhấn nút hoàn tất.
-    - Thiết kế lại toàn bộ màn hình `journal_ai_screen.dart` thành một Timeline lịch sử sống động, tự động phân tách giao diện trực quan cho Nhật ký 6 bước (màu vàng ấm) và Thẻ ghi nhận nỗ lực (màu xanh mát), đồng thời phát triển các hộp thoại (Details Dialog) hiển thị cực kỳ sang xịn mịn.
+    - Thiáº¿t láº­p mÃ´ hÃ¬nh dá»¯ liá»‡u y táº¿ `JournalModel.dart` há»— trá»£ tuáº§n tá»± hÃ³a JSON hai chiá»u khá»›p tuyá»‡t Ä‘á»‘i vá»›i DTO á»Ÿ Backend.
+    - XÃ¢y dá»±ng lá»›p kho lÆ°u trá»¯ káº¿t ná»‘i `JournalRepository.dart` báº±ng thÆ° viá»‡n `http` káº¿ thá»«a Ä‘á»“ng bá»™ cÆ¡ cháº¿ Token JWT báº£o máº­t.
+    - Triá»ƒn khai state management `JournalProvider.dart` quáº£n lÃ½ pháº£n há»“i, tá»± Ä‘á»™ng cáº­p nháº­t danh sÃ¡ch nháº­t kÃ½ cá»¥c bá»™ ngay sau khi ngÆ°á»i dÃ¹ng gá»­i thÃ nh cÃ´ng.
+    - TÃ­ch há»£p `JournalProvider` toÃ n cá»¥c vÃ o `MultiProvider` táº¡i `app.dart`.
+    - Káº¿t ná»‘i luá»“ng lÆ°u dá»¯ liá»‡u y táº¿ thá»±c táº¿ táº¡i `ThoughtRecordScreen` thay tháº¿ cho dá»¯ liá»‡u tÄ©nh trÆ°á»›c Ä‘Ã³, há»— trá»£ tá»± Ä‘á»™ng gá»­i 6 bÆ°á»›c nháº­n thá»©c lÃªn DB khi nháº¥n nÃºt hoÃ n táº¥t.
+    - Thiáº¿t káº¿ láº¡i toÃ n bá»™ mÃ n hÃ¬nh `journal_ai_screen.dart` thÃ nh má»™t Timeline lá»‹ch sá»­ sá»‘ng Ä‘á»™ng, tá»± Ä‘á»™ng phÃ¢n tÃ¡ch giao diá»‡n trá»±c quan cho Nháº­t kÃ½ 6 bÆ°á»›c (mÃ u vÃ ng áº¥m) vÃ  Tháº» ghi nháº­n ná»— lá»±c (mÃ u xanh mÃ¡t), Ä‘á»“ng thá»i phÃ¡t triá»ƒn cÃ¡c há»™p thoáº¡i (Details Dialog) hiá»ƒn thá»‹ cá»±c ká»³ sang xá»‹n má»‹n.
 
 ## [1.0.1] - 2026-05-10
 ### Added
-- Khởi tạo hệ thống tài liệu Solo Builder (`AGENTS.md`, `brief.md`, `BRD.md`, `master-plan.md`).
+- Khá»Ÿi táº¡o há»‡ thá»‘ng tÃ i liá»‡u Solo Builder (`AGENTS.md`, `brief.md`, `BRD.md`, `master-plan.md`).
 
 ### Fixed
-- **Authentication:** Khắc phục lỗi đăng nhập ẩn danh không tự động tạo `PatientProfile` khiến chức năng submit Mood bị lỗi `EntityNotFoundException` ở Backend.
-- **Database Seeder:** Khắc phục lỗi `DatabaseSeeder` lưu profile sai UUID do Hibernate `@GeneratedValue` tự động đè UUID từ file CSV. Đã thêm logic mapping qua `csvIdToEmailMap` và bổ sung `@Transactional` để khắc phục lỗi Detached Entity triệt để.
-- **Assessment:** Chức năng `Daily Mood Check-in` đã hoạt động thành công từ Flutter App và được nâng cấp lên cơ chế **Upsert** (Cập nhật tự động nếu đã có bản ghi Mood trong ngày, ngăn ngừa sinh bản ghi trùng lặp gây lãng phí dung lượng database).
+- **Authentication:** Kháº¯c phá»¥c lá»—i Ä‘Äƒng nháº­p áº©n danh khÃ´ng tá»± Ä‘á»™ng táº¡o `PatientProfile` khiáº¿n chá»©c nÄƒng submit Mood bá»‹ lá»—i `EntityNotFoundException` á»Ÿ Backend.
+- **Database Seeder:** Kháº¯c phá»¥c lá»—i `DatabaseSeeder` lÆ°u profile sai UUID do Hibernate `@GeneratedValue` tá»± Ä‘á»™ng Ä‘Ã¨ UUID tá»« file CSV. ÄÃ£ thÃªm logic mapping qua `csvIdToEmailMap` vÃ  bá»• sung `@Transactional` Ä‘á»ƒ kháº¯c phá»¥c lá»—i Detached Entity triá»‡t Ä‘á»ƒ.
+- **Assessment:** Chá»©c nÄƒng `Daily Mood Check-in` Ä‘Ã£ hoáº¡t Ä‘á»™ng thÃ nh cÃ´ng tá»« Flutter App vÃ  Ä‘Æ°á»£c nÃ¢ng cáº¥p lÃªn cÆ¡ cháº¿ **Upsert** (Cáº­p nháº­t tá»± Ä‘á»™ng náº¿u Ä‘Ã£ cÃ³ báº£n ghi Mood trong ngÃ y, ngÄƒn ngá»«a sinh báº£n ghi trÃ¹ng láº·p gÃ¢y lÃ£ng phÃ­ dung lÆ°á»£ng database).
 
-## [1.0.0] - Trước 2026-05-10
+## [1.0.0] - TrÆ°á»›c 2026-05-10
 ### Added
-- Khởi tạo Spring Boot Backend (Auth, Assessment, Security JWT).
-- Khởi tạo Flutter Mobile App (Provider architecture, Dio API client).
-- Tích hợp Database MySQL và cấu hình Seeder cơ bản.
+- Khá»Ÿi táº¡o Spring Boot Backend (Auth, Assessment, Security JWT).
+- Khá»Ÿi táº¡o Flutter Mobile App (Provider architecture, Dio API client).
+- TÃ­ch há»£p Database MySQL vÃ  cáº¥u hÃ¬nh Seeder cÆ¡ báº£n.
 ## [1.0.3] - 2026-05-22
 ### Added
-- **Clinical (Backend):** Thêm entity `TherapistCredential` + lưu file vào `uploads/therapist-credentials/<therapistId>/...` và API upload/list/download cho therapist & admin.
-- **Clinical (Backend):** Thêm `TherapistAccessGuardService` để chặn các API chuyên môn của therapist khi chưa `ACTIVE` (PENDING chỉ được upload chứng chỉ).
-- **CMS (Web):** Thêm màn therapist upload chứng chỉ + Admin xem/tải chứng chỉ trong màn “Quản lý Bác sĩ (Approval)”, và chặn duyệt `ACTIVE` nếu chưa có chứng chỉ.
-- **Seeder (Backend):** Seed theo từng bước, lỗi 1 bảng không làm dừng seed các bảng khác; seed profiles dùng `getReferenceById` để tránh detached.
-- **Admin CMS:** Bổ sung quản lý tài khoản bác sĩ: khóa/mở (`/api/admin/users/{id}/active`), chỉnh sửa profile + reset mật khẩu (`/api/admin/therapists/{id}` / `reset-password`).
-- **Clinical (Backend/Web/App):** Admin gán bác sĩ thủ công cho bệnh nhân + giới hạn caseload 20; app patient bỏ luồng chọn bác sĩ, booking chỉ theo therapist đã gán.
+- **Clinical (Backend):** ThÃªm entity `TherapistCredential` + lÆ°u file vÃ o `uploads/therapist-credentials/<therapistId>/...` vÃ  API upload/list/download cho therapist & admin.
+- **Clinical (Backend):** ThÃªm `TherapistAccessGuardService` Ä‘á»ƒ cháº·n cÃ¡c API chuyÃªn mÃ´n cá»§a therapist khi chÆ°a `ACTIVE` (PENDING chá»‰ Ä‘Æ°á»£c upload chá»©ng chá»‰).
+- **CMS (Web):** ThÃªm mÃ n therapist upload chá»©ng chá»‰ + Admin xem/táº£i chá»©ng chá»‰ trong mÃ n â€œQuáº£n lÃ½ BÃ¡c sÄ© (Approval)â€, vÃ  cháº·n duyá»‡t `ACTIVE` náº¿u chÆ°a cÃ³ chá»©ng chá»‰.
+- **Seeder (Backend):** Seed theo tá»«ng bÆ°á»›c, lá»—i 1 báº£ng khÃ´ng lÃ m dá»«ng seed cÃ¡c báº£ng khÃ¡c; seed profiles dÃ¹ng `getReferenceById` Ä‘á»ƒ trÃ¡nh detached.
+- **Admin CMS:** Bá»• sung quáº£n lÃ½ tÃ i khoáº£n bÃ¡c sÄ©: khÃ³a/má»Ÿ (`/api/admin/users/{id}/active`), chá»‰nh sá»­a profile + reset máº­t kháº©u (`/api/admin/therapists/{id}` / `reset-password`).
+- **Clinical (Backend/Web/App):** Admin gÃ¡n bÃ¡c sÄ© thá»§ cÃ´ng cho bá»‡nh nhÃ¢n + giá»›i háº¡n caseload 20; app patient bá» luá»“ng chá»n bÃ¡c sÄ©, booking chá»‰ theo therapist Ä‘Ã£ gÃ¡n.
 ### Changed
-- **Auth (Backend):** Therapist `PENDING` được login để upload chứng chỉ (chỉ chặn login khi `REJECTED` hoặc `is_active=false`).
+- **Auth (Backend):** Therapist `PENDING` Ä‘Æ°á»£c login Ä‘á»ƒ upload chá»©ng chá»‰ (chá»‰ cháº·n login khi `REJECTED` hoáº·c `is_active=false`).
 ### Docs
-- Cập nhật `docs/UI_TEST_RUNBOOK.md` theo luồng “Upload chứng chỉ -> Admin duyệt -> ACTIVE”.
+- Cáº­p nháº­t `docs/UI_TEST_RUNBOOK.md` theo luá»“ng â€œUpload chá»©ng chá»‰ -> Admin duyá»‡t -> ACTIVEâ€.

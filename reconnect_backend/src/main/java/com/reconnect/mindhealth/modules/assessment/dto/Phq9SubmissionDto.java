@@ -17,6 +17,7 @@ public class Phq9SubmissionDto extends BaseObjectDto {
     private Integer totalScore;
     private Integer q9Score;
     private Integer q2Score;
+    private Integer functionalDifficultyScore;
     private Phq9Type submissionType;
     private LocalDateTime unlockedAt;
     private List<Integer> answers;
@@ -36,6 +37,7 @@ public class Phq9SubmissionDto extends BaseObjectDto {
             this.setTotalScore(entity.getTotalScore());
             this.setQ9Score(entity.getQ9Score());
             this.setQ2Score(entity.getQ2Score());
+            this.setFunctionalDifficultyScore(entity.getFunctionalDifficultyScore());
             this.setSubmissionType(entity.getSubmissionType());
             this.setUnlockedAt(entity.getUnlockedAt());
             if (entity.getAnswersJson() != null) {
@@ -101,6 +103,14 @@ public class Phq9SubmissionDto extends BaseObjectDto {
 
     public void setQ2Score(Integer q2Score) {
         this.q2Score = q2Score;
+    }
+
+    public Integer getFunctionalDifficultyScore() {
+        return functionalDifficultyScore;
+    }
+
+    public void setFunctionalDifficultyScore(Integer functionalDifficultyScore) {
+        this.functionalDifficultyScore = functionalDifficultyScore;
     }
 
     public Phq9Type getSubmissionType() {

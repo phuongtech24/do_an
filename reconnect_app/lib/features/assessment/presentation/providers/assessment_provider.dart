@@ -63,7 +63,13 @@ class AssessmentProvider extends ChangeNotifier {
   // ======================================================
   // NỘP KẾT QUẢ BÀI TEST PHQ-9
   // ======================================================
-  Future<bool> submitPhq9(String patientId, List<int> answers, {String? token, String submissionType = 'PERIODIC'}) async {
+  Future<bool> submitPhq9(
+    String patientId,
+    List<int> answers, {
+    String? token,
+    String submissionType = 'PERIODIC',
+    int? functionalDifficultyScore,
+  }) async {
     _status = AssessmentStatus.loading;
     _errorMessage = '';
     notifyListeners();
@@ -73,6 +79,7 @@ class AssessmentProvider extends ChangeNotifier {
         patientId: patientId,
         answers: answers,
         submissionType: submissionType,
+        functionalDifficultyScore: functionalDifficultyScore,
       );
       _lastSubmission = await _repository.submitPhq9(submission, token: token);
       _isCooldown = true; // Tự động khóa nút làm bài test

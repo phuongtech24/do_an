@@ -57,22 +57,28 @@ public class AssessmentServiceImpl implements IAssessmentService {
         PatientProfile patientProfile = this.patientProfileRepository.findById(dto.getPatientId())
                 .orElseThrow(() -> {
                     log.error("AssessmentService: Patient profile not found for ID: {}", dto.getPatientId());
-                    return new EntityNotFoundException("Bệnh nhân không tồn tại với ID: " + dto.getPatientId());
+                    return new EntityNotFoundException("B?nh nh?n kh?ng t?n t?i v?i ID: " + dto.getPatientId());
                 });
         
         List<Integer> answers = dto.getAnswers();
         if (answers == null || answers.size() != 9) {
             log.error("AssessmentService: Invalid number of answers. Expected 9, got {}", answers == null ? "null" : answers.size());
-            throw new IllegalArgumentException("Bài test PHQ-9 bắt buộc phải có đúng 9 câu trả lời.");
+            throw new IllegalArgumentException("B?i test PHQ-9 b?t bu?c ph?i c? ??ng 9 c?u tr? l?i.");
         }
         for (Integer score : answers) {
             if (score == null || score < 0 || score > 3) {
                 log.error("AssessmentService: Answer score out of bounds: {}", score);
-                throw new IllegalArgumentException("Điểm của từng câu trả lời phải nằm trong khoảng từ 0 đến 3.");
+                throw new IllegalArgumentException("?i?m c?a t?ng c?u tr? l?i ph?i n?m trong kho?ng t? 0 ??n 3.");
             }
         }
 
-        // 2. Tính toán điểm lâm sàng
+        // 2. T?nh to?n ?i?m l?m s?ng
+        Integer functionalDifficultyScore = dto.getFunctionalDifficultyScore();
+        if (functionalDifficultyScore != null && (functionalDifficultyScore < 1 || functionalDifficultyScore > 4)) {
+            log.error("AssessmentService: Functional difficulty score out of bounds: {}", functionalDifficultyScore);
+            throw new IllegalArgumentException("?i?m m?c ?? ?nh h??ng ch?c n?ng ph?i n?m trong kho?ng t? 1 ??n 4.");
+        }
+
         int totalScore = 0;
         for (Integer score : answers) {
             totalScore += score;
@@ -81,7 +87,7 @@ public class AssessmentServiceImpl implements IAssessmentService {
         int q2Score = answers.get(1);
         int q9Score = answers.get(8);
 
-        // 3. Phân loại mức độ trầm cảm
+        // 3. Ph?n lo?i m?c ?? tr?m c?m
         SeverityLevel severityLevel;
         if (totalScore <= 4) {
             severityLevel = SeverityLevel.MINIMAL;
@@ -107,10 +113,10 @@ public class AssessmentServiceImpl implements IAssessmentService {
         } else if (effectiveSubmissionType == null) {
             effectiveSubmissionType = Phq9Type.PERIODIC;
         } else if (effectiveSubmissionType == Phq9Type.BASELINE) {
-            throw new IllegalArgumentException("Bài test Baseline PHQ-9 chỉ được thực hiện duy nhất 1 lần (ngày đầu).");
+            throw new IllegalArgumentException("B?i test Baseline PHQ-9 ch? ???c th?c hi?n duy nh?t 1 l?n (ng?y ??u).");
         }
 
-        // 4. Kích hoạt Cảnh báo đỏ (Red Flag) nếu phát hiện nguy cơ tự hại ở câu số 9
+        // 4. K?ch ho?t C?nh b?o ?? (Red Flag) n?u ph?t hi?n nguy c? t? h?i ? c?u s? 9
         if (q9Score > 0) {
             log.warn("AssessmentService: RED FLAG CRITICAL WARNING triggered for patient ID: {}. Suicidal ideation score (Q9) is positive: {}", 
                     patientProfile.getId(), q9Score);
@@ -120,25 +126,26 @@ public class AssessmentServiceImpl implements IAssessmentService {
         patientProfile.setLastPhq9Date(LocalDateTime.now());
         patientProfileRepository.save(patientProfile);
 
-        // 5. Lưu bài test PHQ-9 mới
+        // 5. L?u b?i test PHQ-9 m?i
         Phq9Submission submission = new Phq9Submission();
         submission.setPatientProfile(patientProfile);
         submission.setTotalScore(totalScore);
         submission.setQ2Score(q2Score);
         submission.setQ9Score(q9Score);
+        submission.setFunctionalDifficultyScore(functionalDifficultyScore);
         submission.setSubmissionType(effectiveSubmissionType);
         submission.setSeverityLevel(severityLevel);
         submission.setUnlockedAt(effectiveSubmissionType == Phq9Type.TRIGGERED ? LocalDateTime.now()
                 : LocalDateTime.now().plusDays(14));
 
-        // Nén danh sách câu trả lời List<Integer> thành mảng String JSON
+        // N?n danh s?ch c?u tr? l?i List<Integer> th?nh m?ng String JSON
         ObjectMapper mapper = new ObjectMapper();
         try {
             String jsonString = mapper.writeValueAsString(answers);
             submission.setAnswersJson(jsonString);
         } catch (Exception e) {
             log.error("AssessmentService: Failed to serialize answers list to JSON string", e);
-            throw new IllegalArgumentException("Không thể nén danh sách câu trả lời thành JSON String", e);
+            throw new IllegalArgumentException("Kh?ng th? n?n danh s?ch c?u tr? l?i th?nh JSON String", e);
         }
 
         Phq9Submission savedSubmission = phq9Repository.save(submission);
@@ -184,7 +191,7 @@ public class AssessmentServiceImpl implements IAssessmentService {
         PatientProfile patientProfile = this.patientProfileRepository.findById(patientId)
                 .orElseThrow(() -> {
                     log.error("AssessmentService: Patient profile not found for ID: {}", patientId);
-                    return new EntityNotFoundException("Bệnh nhân không tồn tại với ID: " + patientId);
+                    return new EntityNotFoundException("B?nh nh?n kh?ng t?n t?i v?i ID: " + patientId);
                 });
         
         if (patientProfile.getLastPhq9Date() == null) {
@@ -192,7 +199,7 @@ public class AssessmentServiceImpl implements IAssessmentService {
             return false;
         }
         
-        // Trả về true nếu lần làm gần nhất trong vòng 14 ngày
+        // Tr? v? true n?u l?n l?m g?n nh?t trong v?ng 14 ng?y
         LocalDateTime cooldownLimit = LocalDateTime.now().minusDays(14);
         boolean isCooldownActive = patientProfile.getLastPhq9Date().isAfter(cooldownLimit);
         
@@ -210,7 +217,7 @@ public class AssessmentServiceImpl implements IAssessmentService {
         PatientProfile patientProfile = this.patientProfileRepository.findById(dto.getPatientId())
                 .orElseThrow(() -> {
                     log.error("AssessmentService: Patient profile not found for ID: {}", dto.getPatientId());
-                    return new EntityNotFoundException("Bệnh nhân không tồn tại với ID: " + dto.getPatientId());
+                    return new EntityNotFoundException("B?nh nh?n kh?ng t?n t?i v?i ID: " + dto.getPatientId());
                 });
 
         // 1. Find today's mood record if exists
@@ -269,14 +276,12 @@ public class AssessmentServiceImpl implements IAssessmentService {
 
         try {
             List<Phq9Question> questions = phq9QuestionRepository.findAll();
-            
-            // Sắp xếp tăng dần theo question_number để thứ tự luôn chuẩn từ 1 đến 9
             questions.sort(java.util.Comparator.comparing(Phq9Question::getQuestionNumber));
-            
+
             for (Phq9Question q : questions) {
                 Map<String, Object> question = new java.util.HashMap<>();
-                question.put("id", q.getId()); // UUID chính chủ
-                question.put("questionNumber", q.getQuestionNumber()); // Số thứ tự câu hỏi (1-9)
+                question.put("id", q.getId());
+                question.put("questionNumber", q.getQuestionNumber());
                 question.put("text", q.getText());
                 questionsList.add(question);
             }
@@ -284,18 +289,17 @@ public class AssessmentServiceImpl implements IAssessmentService {
             log.error("AssessmentService: Error fetching PHQ-9 questions from database", e);
         }
 
-        // Dự phòng (Fallback) nếu Database chưa được seed hoặc có lỗi kết nối
         if (questionsList.isEmpty()) {
             log.info("AssessmentService: Database is empty. Using static fallback PHQ-9 questions.");
             String[] fallbackTexts = {
-                "Ít hứng thú hoặc không có niềm vui khi thực hiện các hoạt động hàng ngày.",
-                "Cảm thấy tinh thần đi xuống, trầm cảm, hoặc tuyệt vọng.",
-                "Khó ngủ, ngủ chập chờn, hoặc ngủ quá nhiều.",
-                "Cảm thấy mệt mỏi hoặc không có năng lượng.",
-                "Ăn không ngon miệng hoặc ăn quá nhiều.",
-                "Cảm thấy thất vọng về bản thân - hoặc thấy mình là người thất bại, làm gia đình thất vọng.",
-                "Gặp khó khăn khi tập trung vào việc gì đó, chẳng hạn như đọc báo hoặc xem tivi.",
-                "Di chuyển hoặc nói quá chậm khiến người khác chú ý. Hoặc ngược lại - bồn chồn, đứng ngồi không yên nhiều hơn bình thường.",
+                "Ít hứng thú hoặc không có niềm vui khi làm việc gì.",
+                "Cảm thấy buồn bã, chán nản hoặc tuyệt vọng.",
+                "Khó ngủ, ngủ không yên giấc hoặc ngủ quá nhiều.",
+                "Cảm thấy mệt mỏi hoặc có ít năng lượng.",
+                "Ăn kém ngon miệng hoặc ăn quá nhiều.",
+                "Cảm thấy tệ về bản thân — hoặc nghĩ rằng mình là người thất bại, làm bản thân hoặc gia đình thất vọng.",
+                "Khó tập trung vào việc gì đó, chẳng hạn như đọc báo hoặc xem tivi.",
+                "Di chuyển hoặc nói chậm đến mức người khác có thể nhận thấy; hoặc ngược lại, bồn chồn, đứng ngồi không yên nhiều hơn bình thường.",
                 "Có suy nghĩ rằng mình nên chết đi hoặc muốn tự làm tổn thương bản thân bằng cách nào đó."
             };
             for (int i = 0; i < fallbackTexts.length; i++) {
@@ -307,13 +311,12 @@ public class AssessmentServiceImpl implements IAssessmentService {
             }
         }
 
-        // Danh sách các tùy chọn chấm điểm tĩnh của PHQ-9
         List<Map<String, Object>> optionsList = new java.util.ArrayList<>();
         String[] optionTexts = {
-            "Không ngày nào",
+            "Không hề",
             "Vài ngày",
-            "Hơn nửa số ngày",
-            "Gần như hằng ngày"
+            "Hơn một nửa số ngày",
+            "Gần như mỗi ngày"
         };
         for (int i = 0; i < optionTexts.length; i++) {
             Map<String, Object> option = new java.util.HashMap<>();
@@ -322,45 +325,64 @@ public class AssessmentServiceImpl implements IAssessmentService {
             optionsList.add(option);
         }
 
+        List<Map<String, Object>> functionalDifficultyOptions = new java.util.ArrayList<>();
+        String[] functionalTexts = {
+            "Không khó khăn chút nào",
+            "Hơi khó khăn",
+            "Rất khó khăn",
+            "Cực kỳ khó khăn"
+        };
+        for (int i = 0; i < functionalTexts.length; i++) {
+            Map<String, Object> option = new java.util.HashMap<>();
+            option.put("score", i + 1);
+            option.put("text", functionalTexts[i]);
+            functionalDifficultyOptions.add(option);
+        }
+
         Map<String, Object> questionnaire = new java.util.HashMap<>();
+        questionnaire.put("instruction", "Trong 2 tuần qua, bạn bị làm phiền bởi các vấn đề sau thường xuyên như thế nào?");
         questionnaire.put("questions", questionsList);
         questionnaire.put("options", optionsList);
+        questionnaire.put("functionalDifficultyQuestion",
+                "Nếu bạn đánh dấu có bất kỳ vấn đề nào, các vấn đề này gây khó khăn thế nào cho công việc, việc nhà hoặc việc hòa hợp với người khác?");
+        questionnaire.put("functionalDifficultyOptions", functionalDifficultyOptions);
+        questionnaire.put("sourceCitation",
+                "Kroenke K, Spitzer RL, Williams JB. The PHQ-9: validity of a brief depression severity measure. J Gen Intern Med. 2001 Sep;16(9):606-13. Developed by Drs. Robert L. Spitzer, Janet B.W. Williams, Kurt Kroenke and colleagues, with an educational grant from Pfizer Inc. No permission required to reproduce, translate, display or distribute.");
 
         log.info("AssessmentService: Loaded {} questions and {} options from database.", questionsList.size(), optionsList.size());
         return questionnaire;
     }
-
     @Override
     public Phq9QuestionDto savePhq9Question(Phq9QuestionDto dto) {
         log.info("AssessmentService: Received save PHQ-9 question request. ID: {}", dto.getId());
 
-        // Validation kiểm tra hợp lệ của dữ liệu đầu vào
+        // Validation ki?m tra h?p l? c?a d? li?u ??u v?o
         if (dto.getQuestionNumber() == null) {
             log.error("AssessmentService: Validation failed - questionNumber is empty.");
-            throw new IllegalArgumentException("Số thứ tự câu hỏi (questionNumber) không được phép rỗng.");
+            throw new IllegalArgumentException("S? th? t? c?u h?i (questionNumber) kh?ng ???c ph?p r?ng.");
         }
         if (dto.getText() == null || dto.getText().trim().isEmpty()) {
             log.error("AssessmentService: Validation failed - question text is empty.");
-            throw new IllegalArgumentException("Nội dung câu hỏi (text) không được phép rỗng.");
+            throw new IllegalArgumentException("N?i dung c?u h?i (text) kh?ng ???c ph?p r?ng.");
         }
 
         Phq9Question question;
         if (dto.getId() != null) {
-            // Sửa đổi (Update) câu hỏi đang tồn tại
+            // S?a ??i (Update) c?u h?i ?ang t?n t?i
             question = phq9QuestionRepository.findById(dto.getId())
                     .orElseThrow(() -> {
                         log.error("AssessmentService: Question not found with ID: {}", dto.getId());
-                        return new EntityNotFoundException("Không tìm thấy câu hỏi với ID: " + dto.getId());
+                        return new EntityNotFoundException("Kh?ng t?m th?y c?u h?i v?i ID: " + dto.getId());
                     });
             log.info("AssessmentService: Updating existing question. Old number: {}, New number: {}", 
                     question.getQuestionNumber(), dto.getQuestionNumber());
         } else {
-            // Thêm mới (Create) câu hỏi
+            // Th?m m?i (Create) c?u h?i
             question = new Phq9Question();
             log.info("AssessmentService: Creating new PHQ-9 question with number: {}", dto.getQuestionNumber());
         }
 
-        // Đồng bộ dữ liệu từ DTO sang Entity
+        // ??ng b? d? li?u t? DTO sang Entity
         question.setQuestionNumber(dto.getQuestionNumber());
         question.setText(dto.getText().trim());
 
