@@ -22,6 +22,16 @@ class UserDto {
       isAnonymous: json['isAnonymous'] ?? false,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'email': email,
+      'username': username,
+      'role': role,
+      'isAnonymous': isAnonymous,
+    };
+  }
 }
 
 class LoginResponse {
@@ -35,5 +45,12 @@ class LoginResponse {
       user: UserDto.fromJson(json['user']),
       token: json['token'] ?? '',
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'user': user.toJson(),
+      'token': token,
+    };
   }
 }

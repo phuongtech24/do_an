@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+
+import '../../../auth/presentation/providers/auth_provider.dart';
 
 import '../../../../shared/widgets/mindhealth_scaffold.dart';
 
@@ -39,7 +42,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 12),
           FilledButton.tonal(
-            onPressed: () => context.go('/auth'),
+            onPressed: () {
+              Provider.of<AuthProvider>(context, listen: false).logout();
+              context.go('/auth');
+            },
             child: const Text('Dang xuat an toan'),
           ),
           const SizedBox(height: 8),
@@ -52,4 +58,3 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 }
-

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/assessment/presentation/pages/phq9_screen.dart';
 import '../../features/assessment/presentation/pages/progress_screen.dart';
 import '../../features/auth/presentation/pages/anonymous_auth_screen.dart';
+import '../../features/auth/presentation/pages/auth_gate_screen.dart';
 import '../../features/auth/presentation/pages/profile_setup_screen.dart';
 import '../../features/auth/presentation/pages/standard_signup_screen.dart';
 import '../../features/home/presentation/pages/patient_home_screen.dart';
@@ -31,8 +32,13 @@ class AppRouter {
 
   static final GoRouter router = GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/auth',
+    initialLocation: '/',
     routes: [
+      GoRoute(
+        path: '/',
+        name: 'auth-gate',
+        builder: (context, state) => const AuthGateScreen(),
+      ),
       GoRoute(
         path: '/auth',
         name: 'auth',

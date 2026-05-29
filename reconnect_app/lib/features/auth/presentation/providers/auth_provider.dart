@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:reconnect_app/features/auth/data/models/login_request.dart';
 import 'package:reconnect_app/features/auth/data/models/login_response.dart';
 import 'package:reconnect_app/features/auth/data/repositories/auth_repository.dart';
+import 'package:reconnect_app/features/auth/data/repositories/auth_session_storage.dart';
 
-enum AuthStatus { idle, loading, success, error }
+enum AuthStatus { idle, loading, restoring, success, error }
 
 class AuthProvider extends ChangeNotifier {
   final AuthRepository _repository = AuthRepository();
+  final AuthSessionStorage _sessionStorage = AuthSessionStorage();
 
   AuthStatus _status = AuthStatus.idle;
   String _errorMessage = '';
@@ -19,6 +21,22 @@ class AuthProvider extends ChangeNotifier {
   String? get token => _loginResponse?.token;
   bool get isLoggedIn => _loginResponse != null;
 
+  Future<void> restoreSession() async {
+    _status = AuthStatus.restoring;
+    _errorMessage = '';
+    notifyListeners();
+
+    try {
+      _loginResponse = await _sessionStorage.readSession();
+      _status = _loginResponse == null ? AuthStatus.idle : AuthStatus.success;
+    } catch (e) {
+      _loginResponse = null;
+      _status = AuthStatus.idle;
+      _errorMessage = '';
+    }
+    notifyListeners();
+  }
+
   // ========================================
   // ĐĂNG NHẬP
   // ========================================
@@ -30,6 +48,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       final request = LoginRequest(email: email, password: password);
       _loginResponse = await _repository.login(request);
+      await _sessionStorage.saveSession(_loginResponse!);
       _status = AuthStatus.success;
     } catch (e) {
       _status = AuthStatus.error;
@@ -77,6 +96,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       final response = await _repository.loginAnonymous(deviceId);
       _loginResponse = response; 
+      await _sessionStorage.saveSession(response);
       _status = AuthStatus.success;
       notifyListeners();
       return true;
@@ -93,6 +113,7 @@ class AuthProvider extends ChangeNotifier {
   // ========================================
   void logout() {
     _loginResponse = null;
+    _sessionStorage.clearSession();
     _status = AuthStatus.idle;
     notifyListeners();
   }
