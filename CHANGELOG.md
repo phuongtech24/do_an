@@ -5,6 +5,7 @@ Quy táº¯c: Äá»‹nh dáº¡ng theo chuáº©n [Keep a Changelog](https:/
 
 ## [Unreleased]
 ### Added
+- **Patient App Telehealth:** Thêm `url_launcher` để nút “Vào phòng tư vấn” mở trực tiếp meeting link bằng trình duyệt/app ngoài; nếu mở thất bại sẽ fallback copy link vào clipboard.
 - **CBT/Roadmap:** Thêm cron `RoadmapDailyQuestCronJob` chạy 06:05 hằng ngày để tự giao bài CBT `SYSTEM`, kèm endpoint admin `POST /api/admin/roadmap/daily-quests/run?date=YYYY-MM-DD` để test/reseed nhanh.
 - **CBT/Roadmap:** Chuẩn hóa rule giao bài chính theo PHQ-9 chu kỳ 14 ngày: PHQ-9 >= 15 ưu tiên `BEHAVIORAL` và xen `COGNITIVE EASY`; PHQ-9 < 15 xen kẽ `BEHAVIORAL/COGNITIVE`, không dùng risk/mood để đổi phác đồ.
 - **Risk Safety:** Thêm endpoint `GET /api/roadmap/safety-overlay?patientId=...` và banner Roadmap trên Patient App khi `risk >= 70` hoặc red flag, hướng bệnh nhân sang Telehealth mà không tạo thêm quest.

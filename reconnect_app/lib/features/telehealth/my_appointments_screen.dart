@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../theme/app_colors.dart';
 import '../auth/presentation/providers/auth_provider.dart';
@@ -32,14 +33,22 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     _loaded = true;
   }
 
-  Future<void> _copyMeetingLink(AppointmentModel appointment) async {
+  Future<void> _openMeetingLink(AppointmentModel appointment) async {
     final link = appointment.meetingLink;
     if (link == null || link.isEmpty) return;
+
+    final uri = Uri.tryParse(link);
+    if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (opened) {
+        return;
+      }
+    }
 
     await Clipboard.setData(ClipboardData(text: link));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Đã copy link phòng tư vấn. Mở link này trên trình duyệt để vào buổi hẹn.')),
+      const SnackBar(content: Text('Không mở được link tự động. Đã copy link phòng tư vấn để bạn dán vào trình duyệt.')),
     );
   }
 
@@ -108,7 +117,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                   appointment: appointment,
                   statusLabel: _statusLabel(appointment.status),
                   statusColor: _statusColor(appointment.status),
-                  onCopyMeetingLink: () => _copyMeetingLink(appointment),
+                  onOpenMeetingLink: () => _openMeetingLink(appointment),
                 );
               },
             ),
@@ -123,13 +132,13 @@ class _AppointmentCard extends StatelessWidget {
   final AppointmentModel appointment;
   final String statusLabel;
   final Color statusColor;
-  final VoidCallback onCopyMeetingLink;
+  final VoidCallback onOpenMeetingLink;
 
   const _AppointmentCard({
     required this.appointment,
     required this.statusLabel,
     required this.statusColor,
-    required this.onCopyMeetingLink,
+    required this.onOpenMeetingLink,
   });
 
   @override
@@ -197,7 +206,7 @@ class _AppointmentCard extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: canJoin ? onCopyMeetingLink : null,
+                onPressed: canJoin ? onOpenMeetingLink : null,
                 icon: const Icon(Icons.meeting_room_outlined),
                 label: const Text('Vào phòng tư vấn'),
               ),
@@ -208,4 +217,3 @@ class _AppointmentCard extends StatelessWidget {
     );
   }
 }
-
