@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+
+import '../../core/auth/auth_provider.dart';
 import '../../features/cbt_intervention/assign_quest_screen.dart';
+import '../../features/therapist/data/models/therapist_quest_progress_model.dart';
+import '../../features/therapist/data/repositories/therapist_patient_repository.dart';
 import '../../theme/app_colors.dart';
 
 class PatientDetailScreen extends StatefulWidget {
@@ -13,6 +19,11 @@ class PatientDetailScreen extends StatefulWidget {
 }
 
 class _PatientDetailScreenState extends State<PatientDetailScreen> {
+  final TherapistPatientRepository _therapistPatientRepository = TherapistPatientRepository();
+  TherapistQuestProgressModel? _questProgress;
+  bool _questProgressLoading = false;
+  String? _questProgressError;
+
   final List<Map<String, dynamic>> _cbtTemplates = [
     {'level': 1, 'title': 'Uống 1 cốc nước ấm sáng sớm', 'color': Colors.blue},
     {'level': 1, 'title': 'Mở rèm cửa 5 phút', 'color': Colors.blue},
@@ -21,6 +32,36 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     {'level': 3, 'title': 'Mua đồ ở Konbini', 'color': Colors.purple},
     {'level': 3, 'title': 'Nói "Cảm ơn" với người lạ', 'color': Colors.purple},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadQuestProgress());
+  }
+
+  Future<void> _loadQuestProgress() async {
+    final token = Provider.of<AuthProvider>(context, listen: false).token;
+    final patientId = widget.patient['id']?.toString() ?? '';
+    if (token == null || token.isEmpty || patientId.isEmpty) return;
+    setState(() {
+      _questProgressLoading = true;
+      _questProgressError = null;
+    });
+    try {
+      final progress = await _therapistPatientRepository.getQuestProgress(
+        token: token,
+        patientId: patientId,
+      );
+      if (!mounted) return;
+      setState(() => _questProgress = progress);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _questProgressError = e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (!mounted) return;
+      setState(() => _questProgressLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -177,60 +218,240 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
           // Vertical Divider
           Container(width: 1, color: Colors.grey[200]),
           
-          // Right Zone: AI Roadmap Monitor (Read-only)
+          // Right Zone: CBT Progress Monitor
           Expanded(
             flex: 1,
             child: Container(
               color: Colors.white,
               padding: const EdgeInsets.all(32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Tiến độ Lộ trình AI (AI Roadmap)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)),
-                  const SizedBox(height: 8),
-                  const Text('Bác sĩ giám sát tiến độ tự động do AI sinh ra.', style: TextStyle(color: AppColors.textSecondary)),
-                  const SizedBox(height: 24),
-                  
-                  Expanded(
-                    child: ListView(
-                      children: [
-                        _buildHomeworkCard(
-                          'Ghi nhận việc tốt',
-                          'DONE',
-                          mastery: 8,
-                          pleasure: 6,
-                          time: 'Hôm nay, 07:30',
-                        ),
-                        _buildHomeworkCard(
-                          'Tập hít thở sâu',
-                          'DONE',
-                          mastery: 9,
-                          pleasure: 8,
-                          time: 'Hôm nay, 08:00',
-                        ),
-                        _buildHomeworkCard(
-                          'Dọn dẹp góc học tập (10p)',
-                          'TODO',
-                          mastery: 0,
-                          pleasure: 0,
-                          time: 'Dự kiến: Chiều nay',
-                        ),
-                      ],
-                    ),
-                  ),
-                  
-                  const Divider(height: 48),
-                  const Text(
-                    'Lưu ý: Hệ thống AI tự động giao bài tập dựa trên chỉ số rủi ro của bệnh nhân mỗi ngày.',
-                    style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.grey),
-                  ),
-                ],
-              ),
+              child: _buildQuestProgressPanel(),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildQuestProgressPanel() {
+    final progress = _questProgress;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Tiến độ CBT',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primary),
+              ),
+            ),
+            IconButton(
+              tooltip: 'Tải lại',
+              onPressed: _questProgressLoading ? null : _loadQuestProgress,
+              icon: const Icon(Icons.refresh),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Theo dõi bài hệ thống giao và bài bác sĩ giao cho bệnh nhân.',
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
+        const SizedBox(height: 20),
+        if (_questProgressLoading && progress == null)
+          const Expanded(child: Center(child: CircularProgressIndicator()))
+        else if (_questProgressError != null)
+          Expanded(
+            child: Center(
+              child: Text(_questProgressError!, style: const TextStyle(color: AppColors.alert)),
+            ),
+          )
+        else if (progress == null)
+          const Expanded(child: Center(child: Text('Chưa có dữ liệu tiến độ CBT.')))
+        else
+          Expanded(
+            child: ListView(
+              children: [
+                _buildProgressSummary(progress),
+                const SizedBox(height: 16),
+                _buildScoreSummary(progress),
+                const SizedBox(height: 24),
+                const Text('Bài gần đây', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 12),
+                if (progress.recentQuests.isEmpty)
+                  const Text('Chưa có bài tập CBT nào.', style: TextStyle(color: AppColors.textSecondary))
+                else
+                  ...progress.recentQuests.map(_buildQuestProgressCard),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildProgressSummary(TherapistQuestProgressModel progress) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(child: _buildProgressMetric('Tổng bài', '${progress.totalAssigned}', Icons.assignment_outlined, AppColors.primary)),
+            const SizedBox(width: 12),
+            Expanded(child: _buildProgressMetric('Hoàn thành', '${progress.completed}', Icons.check_circle_outline, AppColors.success)),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(child: _buildProgressMetric('Tỷ lệ', '${progress.completionRate.toStringAsFixed(0)}%', Icons.trending_up, Colors.orange)),
+            const SizedBox(width: 12),
+            Expanded(child: _buildProgressMetric('Bác sĩ giao', '${progress.therapistAssigned}', Icons.medical_services_outlined, Colors.purple)),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _buildProgressMetric('Hệ thống giao', '${progress.systemAssigned}', Icons.auto_awesome, Colors.teal),
+      ],
+    );
+  }
+
+  Widget _buildProgressMetric(String label, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.14)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(value, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.bold)),
+                Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScoreSummary(TherapistQuestProgressModel progress) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Điểm tự đánh giá trung bình', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: _buildScoreChip('Mastery', progress.averageMastery)),
+              const SizedBox(width: 8),
+              Expanded(child: _buildScoreChip('Pleasure', progress.averagePleasure)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScoreChip(String label, double? value) {
+    final text = value == null ? 'Chưa có' : '${value.toStringAsFixed(1)}/10';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text('$label: $text', textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold)),
+    );
+  }
+
+  Widget _buildQuestProgressCard(TherapistQuestProgressItemModel quest) {
+    final done = quest.status == 'DONE';
+    final sourceText = quest.sourceType == 'THERAPIST' ? 'Bác sĩ' : 'Hệ thống';
+    final assignedText = _formatDateTime(quest.assignedAt);
+    final completedText = _formatDateTime(quest.completedAt);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(done ? Icons.check_circle : Icons.radio_button_unchecked, color: done ? AppColors.success : Colors.orange),
+              const SizedBox(width: 10),
+              Expanded(child: Text(quest.title, style: const TextStyle(fontWeight: FontWeight.bold))),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _buildSmallBadge(_statusText(quest.status), done ? AppColors.success : Colors.orange),
+              _buildSmallBadge(sourceText, quest.sourceType == 'THERAPIST' ? Colors.purple : Colors.teal),
+              if (quest.category.isNotEmpty) _buildSmallBadge(quest.category, AppColors.primary),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text('Giao: $assignedText', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          if (quest.completedAt != null)
+            Text('Hoàn thành: $completedText', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          if (quest.masteryScore != null || quest.pleasureScore != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Mastery: ${quest.masteryScore?.toString() ?? "-"} / Pleasure: ${quest.pleasureScore?.toString() ?? "-"}',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSmallBadge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(text, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
+    );
+  }
+
+  String _statusText(String status) {
+    switch (status) {
+      case 'DONE':
+        return 'Đã hoàn thành';
+      case 'AVAILABLE':
+        return 'Đang mở';
+      case 'LOCKED':
+        return 'Đang khóa';
+      default:
+        return status;
+    }
+  }
+
+  String _formatDateTime(DateTime? value) {
+    if (value == null) return '-';
+    return DateFormat('dd/MM/yyyy HH:mm').format(value);
   }
 
   Widget _buildAssessmentTab() {
@@ -554,8 +775,8 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
               flex: 1,
               child: Column(
                 children: [
-                  _buildInterventionButton(Icons.send_rounded, 'Gán bài tập CBT', Colors.orange, () {
-                    Navigator.push(
+                  _buildInterventionButton(Icons.send_rounded, 'Gán bài tập CBT', Colors.orange, () async {
+                    await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => AssignQuestScreen(
@@ -564,6 +785,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                         ),
                       ),
                     );
+                    if (mounted) {
+                      _loadQuestProgress();
+                    }
                   }),
                   const SizedBox(height: 12),
                   _buildInterventionButton(Icons.phone_callback_rounded, 'YÊU CẦU BOOSTER SESSION', AppColors.alert, () {}),

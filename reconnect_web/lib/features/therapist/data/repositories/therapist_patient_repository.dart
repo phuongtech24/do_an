@@ -1,6 +1,7 @@
 import '../../../../core/network/api_client.dart';
 import '../../../admin/data/models/quest_template_model.dart';
 import '../models/therapist_patient_list_item.dart';
+import '../models/therapist_quest_progress_model.dart';
 
 class TherapistPatientRepository {
   final ApiClient _api = ApiClient();
@@ -51,5 +52,20 @@ class TherapistPatientRepository {
     if (res.status != 200) {
       throw Exception(res.message.isNotEmpty ? res.message : 'Cannot assign CBT quest');
     }
+  }
+
+  Future<TherapistQuestProgressModel> getQuestProgress({
+    required String token,
+    required String patientId,
+  }) async {
+    final res = await _api.get<TherapistQuestProgressModel>(
+      '/therapist/patients/$patientId/quest-progress',
+      headers: {'Authorization': 'Bearer $token'},
+      parseData: (raw) => raw is Map<String, dynamic> ? TherapistQuestProgressModel.fromJson(raw) : null,
+    );
+    if (res.status != 200 || res.data == null) {
+      throw Exception(res.message.isNotEmpty ? res.message : 'Cannot load CBT progress');
+    }
+    return res.data!;
   }
 }

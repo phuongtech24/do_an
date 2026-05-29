@@ -25,4 +25,6 @@ public interface PatientQuestRepository extends JpaRepository<PatientQuest, UUID
             @Param("sourceType") QuestSourceType sourceType,
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to);
+
+    List<PatientQuest> findByPatientProfile_IdOrderByAssignedAtDesc(UUID patientId);
 }
