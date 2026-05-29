@@ -23,16 +23,16 @@ class RoadmapScreen extends StatelessWidget {
     }
 
     final quests = roadmapProvider.dailyQuests
-        .map((q) => _QuestItem(
-              id: q.id,
-              title: q.title,
-              description: q.description,
-              category: _toVietnameseCategory(q.category),
-              sourceLabel: q.sourceType == 'THERAPIST' ? 'Bác sĩ giao' : 'Tự động',
-              categoryColor: _categoryColor(q.category),
-              icon: _categoryIcon(q.category),
-              isCompleted: q.status == 'DONE',
-              isLocked: q.status == 'LOCKED',
+        .map((quest) => _QuestItem(
+              id: quest.id,
+              title: quest.title,
+              description: quest.description,
+              category: _toVietnameseCategory(quest.category),
+              sourceLabel: quest.sourceType == 'THERAPIST' ? 'Bác sĩ giao' : 'Tự động',
+              categoryColor: _categoryColor(quest.category),
+              icon: _categoryIcon(quest.category),
+              isCompleted: quest.status == 'DONE',
+              isLocked: quest.status == 'LOCKED',
             ))
         .toList();
 
@@ -41,48 +41,15 @@ class RoadmapScreen extends StatelessWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Clinical justification banner
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFE3F2FD), Color(0xFFBBDEFB)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.blue.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                )
-              ],
+          if (roadmapProvider.safetyOverlay.active) ...[
+            _SafetyOverlayBanner(
+              message: roadmapProvider.safetyOverlay.message,
+              riskScore: roadmapProvider.safetyOverlay.riskScore,
             ),
-            child: Row(
-              children: [
-                const Icon(Icons.info_outline, color: Colors.blue),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        'Nguyên tắc: "Thà quá dễ còn hơn quá khó"',
-                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue, fontSize: 14),
-                      ),
-                      Text(
-                        'CBT khuyến nghị bắt đầu bằng những việc siêu nhỏ (5-10 phút) để tránh cảm giác quá tải và củng cố niềm tin vào bản thân.',
-                        style: TextStyle(color: Colors.black87, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+            const SizedBox(height: 16),
+          ],
+          const _RoadmapPrincipleBanner(),
           const SizedBox(height: 24),
-
           Expanded(
             child: Builder(
               builder: (context) {
@@ -142,7 +109,6 @@ class RoadmapScreen extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Timeline indicator
           SizedBox(
             width: 48,
             child: Column(
@@ -154,7 +120,9 @@ class RoadmapScreen extends StatelessWidget {
                     shape: BoxShape.circle,
                     color: quest.isCompleted
                         ? quest.categoryColor
-                        : quest.isLocked ? Colors.grey[300] : Colors.white,
+                        : quest.isLocked
+                            ? Colors.grey[300]
+                            : Colors.white,
                     border: Border.all(
                       color: quest.isLocked ? Colors.grey[400]! : quest.categoryColor,
                       width: 2,
@@ -183,12 +151,11 @@ class RoadmapScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          // Content Card
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.only(bottom: 24.0),
+              padding: const EdgeInsets.only(bottom: 24),
               child: Opacity(
-                opacity: quest.isLocked ? 0.6 : 1.0,
+                opacity: quest.isLocked ? 0.6 : 1,
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -200,7 +167,7 @@ class RoadmapScreen extends StatelessWidget {
                         color: quest.isLocked ? Colors.transparent : quest.categoryColor.withOpacity(0.1),
                         blurRadius: 15,
                         offset: const Offset(0, 5),
-                      )
+                      ),
                     ],
                   ),
                   child: Column(
@@ -208,49 +175,11 @@ class RoadmapScreen extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: quest.categoryColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(quest.icon, size: 14, color: quest.categoryColor),
-                                const SizedBox(width: 4),
-                                Text(
-                                  quest.category,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: quest.categoryColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                          _CategoryChip(quest: quest),
                           const Spacer(),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: quest.sourceLabel == 'Bác sĩ giao'
-                                  ? Colors.teal.withOpacity(0.12)
-                                  : Colors.grey.withOpacity(0.12),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              quest.sourceLabel,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: quest.sourceLabel == 'Bác sĩ giao' ? Colors.teal : Colors.grey[700],
-                              ),
-                            ),
-                          ),
+                          _SourceChip(quest: quest),
                           const SizedBox(width: 8),
-                          if (quest.isLocked)
-                            const Icon(Icons.lock_outline, size: 16, color: Colors.grey),
+                          if (quest.isLocked) const Icon(Icons.lock_outline, size: 16, color: Colors.grey),
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -283,9 +212,7 @@ class RoadmapScreen extends StatelessWidget {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: quest.categoryColor,
                               foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             ),
                             icon: const Icon(Icons.photo_camera_outlined, size: 18),
@@ -299,6 +226,161 @@ class RoadmapScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SafetyOverlayBanner extends StatelessWidget {
+  const _SafetyOverlayBanner({required this.message, required this.riskScore});
+
+  final String message;
+  final int riskScore;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF4E5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFFB74D)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.health_and_safety_outlined, color: Color(0xFFE65100)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Cần hỗ trợ thêm${riskScore > 0 ? ' • Risk $riskScore' : ''}',
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFE65100)),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  message.isNotEmpty
+                      ? message
+                      : 'Bạn đang có dấu hiệu cần hỗ trợ thêm. Hãy đặt lịch với chuyên gia.',
+                  style: const TextStyle(fontSize: 13),
+                ),
+                const SizedBox(height: 10),
+                FilledButton.icon(
+                  onPressed: () => context.go('/telehealth'),
+                  icon: const Icon(Icons.video_call_outlined, size: 18),
+                  label: const Text('Đặt lịch tư vấn'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RoadmapPrincipleBanner extends StatelessWidget {
+  const _RoadmapPrincipleBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFE3F2FD), Color(0xFFBBDEFB)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.info_outline, color: Colors.blue),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Nguyên tắc: "Thà quá dễ còn hơn quá khó"',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue, fontSize: 14),
+                ),
+                Text(
+                  'CBT khuyến nghị bắt đầu bằng những việc nhỏ (5-10 phút) để tránh quá tải và củng cố niềm tin vào bản thân.',
+                  style: TextStyle(color: Colors.black87, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryChip extends StatelessWidget {
+  const _CategoryChip({required this.quest});
+
+  final _QuestItem quest;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: quest.categoryColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(quest.icon, size: 14, color: quest.categoryColor),
+          const SizedBox(width: 4),
+          Text(
+            quest.category,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: quest.categoryColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SourceChip extends StatelessWidget {
+  const _SourceChip({required this.quest});
+
+  final _QuestItem quest;
+
+  @override
+  Widget build(BuildContext context) {
+    final isTherapistQuest = quest.sourceLabel == 'Bác sĩ giao';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: isTherapistQuest ? Colors.teal.withOpacity(0.12) : Colors.grey.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        quest.sourceLabel,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: isTherapistQuest ? Colors.teal : Colors.grey[700],
+        ),
       ),
     );
   }

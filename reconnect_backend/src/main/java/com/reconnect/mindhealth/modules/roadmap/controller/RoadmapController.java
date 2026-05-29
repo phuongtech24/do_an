@@ -5,9 +5,9 @@ import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -17,6 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.reconnect.mindhealth.common.dto.ApiResponse;
 import com.reconnect.mindhealth.modules.roadmap.dto.CompleteQuestRequest;
 import com.reconnect.mindhealth.modules.roadmap.dto.PatientQuestDto;
+import com.reconnect.mindhealth.modules.roadmap.dto.RoadmapSafetyOverlayDto;
 import com.reconnect.mindhealth.modules.roadmap.dto.VerifyQuestProofResponseDto;
 import com.reconnect.mindhealth.modules.roadmap.service.IRoadmapService;
 
@@ -34,6 +35,16 @@ public class RoadmapController {
             return ResponseEntity.ok(ApiResponse.success("Lấy danh sách nhiệm vụ hôm nay thành công!", list));
         } catch (Exception e) {
             return ResponseEntity.ok(ApiResponse.error("Lỗi khi tải nhiệm vụ: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/safety-overlay")
+    public ResponseEntity<ApiResponse<RoadmapSafetyOverlayDto>> getSafetyOverlay(@RequestParam UUID patientId) {
+        try {
+            RoadmapSafetyOverlayDto overlay = roadmapService.getSafetyOverlay(patientId);
+            return ResponseEntity.ok(ApiResponse.success("OK", overlay));
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.error("Lỗi khi tải cảnh báo an toàn: " + e.getMessage()));
         }
     }
 

@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 
 import '../../../../core/constants/api_constants.dart';
 import '../models/patient_quest_model.dart';
+import '../models/roadmap_safety_overlay_model.dart';
 import '../models/verify_quest_proof_result.dart';
 
 class RoadmapRepository {
@@ -35,6 +36,29 @@ class RoadmapRepository {
         return list.map((e) => PatientQuestModel.fromJson(e as Map<String, dynamic>)).toList();
       } else {
         throw Exception(json['message'] ?? 'Không thể tải nhiệm vụ hôm nay');
+      }
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  Future<RoadmapSafetyOverlayModel> getSafetyOverlay(String patientId, {String? token}) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiConstants.roadmapSafetyOverlay}?patientId=$patientId'),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      _handleHttpError(response, 'tải cảnh báo an toàn');
+
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      if (json['status'] == 200 && json['data'] != null) {
+        return RoadmapSafetyOverlayModel.fromJson(json['data'] as Map<String, dynamic>);
+      } else {
+        throw Exception(json['message'] ?? 'Không thể tải cảnh báo an toàn');
       }
     } catch (e) {
       throw Exception(e.toString().replaceAll('Exception: ', ''));
@@ -110,4 +134,3 @@ class RoadmapRepository {
     }
   }
 }
-

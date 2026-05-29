@@ -5,6 +5,9 @@ Quy táº¯c: Äá»‹nh dáº¡ng theo chuáº©n [Keep a Changelog](https:/
 
 ## [Unreleased]
 ### Added
+- **CBT/Roadmap:** Thêm cron `RoadmapDailyQuestCronJob` chạy 06:05 hằng ngày để tự giao bài CBT `SYSTEM`, kèm endpoint admin `POST /api/admin/roadmap/daily-quests/run?date=YYYY-MM-DD` để test/reseed nhanh.
+- **CBT/Roadmap:** Chuẩn hóa rule giao bài chính theo PHQ-9 chu kỳ 14 ngày: PHQ-9 >= 15 ưu tiên `BEHAVIORAL` và xen `COGNITIVE EASY`; PHQ-9 < 15 xen kẽ `BEHAVIORAL/COGNITIVE`, không dùng risk/mood để đổi phác đồ.
+- **Risk Safety:** Thêm endpoint `GET /api/roadmap/safety-overlay?patientId=...` và banner Roadmap trên Patient App khi `risk >= 70` hoặc red flag, hướng bệnh nhân sang Telehealth mà không tạo thêm quest.
 - **Assessment:** Chuẩn hóa PHQ-9 theo form gốc: API questionnaire trả `instruction`, scale 0-3, câu impairment/functioning, lựa chọn 1-4 và citation nguồn Kroenke/Spitzer/Williams; submission lưu thêm `functionalDifficultyScore` nullable.
 - **AI:** ThÃªm debug log cho Gemini runtime: log lÃºc báº¯t Ä‘áº§u gá»i model, lÃºc HTTP 2xx thÃ nh cÃ´ng, lÃºc response rá»—ng/parse guided-discovery rá»—ng Ä‘á»ƒ phÃ¢n biá»‡t gá»i Gemini tháº­t hay fallback.
 - **AI:** Siáº¿t prompt Guided Discovery tráº£ JSON thuáº§n vÃ  thÃªm `responseMimeType=application/json`; log snippet response ngáº¯n Ä‘á»ƒ debug parse fail mÃ  khÃ´ng lá»™ API key.

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 
 import '../../data/models/patient_quest_model.dart';
+import '../../data/models/roadmap_safety_overlay_model.dart';
 import '../../data/models/verify_quest_proof_result.dart';
 import '../../data/repositories/roadmap_repository.dart';
 
@@ -13,10 +14,12 @@ class RoadmapProvider extends ChangeNotifier {
   RoadmapStatus _status = RoadmapStatus.idle;
   String _errorMessage = '';
   List<PatientQuestModel> _dailyQuests = [];
+  RoadmapSafetyOverlayModel _safetyOverlay = RoadmapSafetyOverlayModel.inactive;
 
   RoadmapStatus get status => _status;
   String get errorMessage => _errorMessage;
   List<PatientQuestModel> get dailyQuests => _dailyQuests;
+  RoadmapSafetyOverlayModel get safetyOverlay => _safetyOverlay;
 
   Future<void> loadDailyQuests(String patientId, {String? token}) async {
     _status = RoadmapStatus.loading;
@@ -24,7 +27,10 @@ class RoadmapProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _dailyQuests = await _repository.getDailyQuests(patientId, token: token);
+      final questsFuture = _repository.getDailyQuests(patientId, token: token);
+      final overlayFuture = _repository.getSafetyOverlay(patientId, token: token);
+      _dailyQuests = await questsFuture;
+      _safetyOverlay = await overlayFuture;
       _status = RoadmapStatus.success;
     } catch (e) {
       _status = RoadmapStatus.error;

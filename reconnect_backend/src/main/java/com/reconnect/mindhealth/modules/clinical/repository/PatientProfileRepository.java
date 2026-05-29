@@ -11,6 +11,7 @@ import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
 public interface PatientProfileRepository extends JpaRepository<PatientProfile, UUID> {
     PatientProfile findByNickName(String nickName);
     java.util.List<PatientProfile> findByIsActiveTrue();
+    java.util.List<PatientProfile> findByIsActiveTrueAndGraduatedAtIsNull();
     long countByIsActiveTrue();
     long countByIsRedFlagActiveTrue();
     long countByGraduatedAtIsNotNull();
