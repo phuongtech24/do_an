@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../features/cbt_intervention/assign_quest_screen.dart';
 import '../../features/therapist/data/models/therapist_quest_progress_model.dart';
+import '../../features/therapist/data/models/therapist_risk_analytics_model.dart';
 import '../../features/therapist/data/repositories/therapist_patient_repository.dart';
 import '../../theme/app_colors.dart';
 
@@ -23,6 +24,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
   TherapistQuestProgressModel? _questProgress;
   bool _questProgressLoading = false;
   String? _questProgressError;
+  TherapistRiskAnalyticsModel? _riskAnalytics;
+  bool _riskAnalyticsLoading = false;
+  String? _riskAnalyticsError;
 
   final List<Map<String, dynamic>> _cbtTemplates = [
     {'level': 1, 'title': 'Uống 1 cốc nước ấm sáng sớm', 'color': Colors.blue},
@@ -36,7 +40,10 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadQuestProgress());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadQuestProgress();
+      _loadRiskAnalytics();
+    });
   }
 
   Future<void> _loadQuestProgress() async {
@@ -230,6 +237,31 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _loadRiskAnalytics() async {
+    final token = Provider.of<AuthProvider>(context, listen: false).token;
+    final patientId = widget.patient['id']?.toString() ?? '';
+    if (token == null || token.isEmpty || patientId.isEmpty) return;
+    setState(() {
+      _riskAnalyticsLoading = true;
+      _riskAnalyticsError = null;
+    });
+    try {
+      final analytics = await _therapistPatientRepository.getRiskAnalytics(
+        token: token,
+        patientId: patientId,
+        days: 14,
+      );
+      if (!mounted) return;
+      setState(() => _riskAnalytics = analytics);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _riskAnalyticsError = e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (!mounted) return;
+      setState(() => _riskAnalyticsLoading = false);
+    }
   }
 
   Widget _buildQuestProgressPanel() {
@@ -885,85 +917,188 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
   }
 
   Widget _buildSentimentChart() {
+    final analytics = _riskAnalytics;
+    if (_riskAnalyticsLoading && analytics == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_riskAnalyticsError != null) {
+      return Center(child: Text(_riskAnalyticsError!, style: const TextStyle(color: AppColors.alert)));
+    }
+    if (analytics == null || analytics.points.isEmpty) {
+      final currentRisk = widget.patient['riskScore'] as int? ?? 0;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Giam sat rui ro 14 ngay', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.alert)),
+          const SizedBox(height: 16),
+          _buildRiskMetric('Risk hien tai', '$currentRisk', Icons.monitor_heart_outlined, currentRisk >= 70 ? AppColors.alert : AppColors.primary),
+          const SizedBox(height: 16),
+          const Text('Chua co DailyRiskLog de ve bieu do. Hay chay cron/manual risk scoring de sinh lich su risk theo ngay.', style: TextStyle(color: AppColors.textSecondary)),
+        ],
+      );
+    }
+
+    final points = analytics.points;
+    final riskSpots = _riskSpots(points, (point) => point.riskScore);
+    final phqSpots = _riskSpots(points, (point) => point.scorePhq9);
+    final aiSpots = _riskSpots(points, (point) => point.scoreAi);
+    final moodSpots = _riskSpots(points, (point) => point.scoreMood);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Giám sát Rủi ro Ngắn hạn (14 ngày qua)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.alert)),
-        const SizedBox(height: 16),
+        Row(
+          children: [
+            const Expanded(child: Text('Giam sat rui ro 14 ngay', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.alert))),
+            IconButton(
+              tooltip: 'Tai lai analytics',
+              onPressed: _riskAnalyticsLoading ? null : _loadRiskAnalytics,
+              icon: const Icon(Icons.refresh, size: 18),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(child: _buildRiskMetric('Moi nhat', '${analytics.latestRiskScore ?? 0}', Icons.monitor_heart_outlined, (analytics.latestRiskScore ?? 0) >= 70 ? AppColors.alert : AppColors.primary)),
+            const SizedBox(width: 12),
+            Expanded(child: _buildRiskMetric('Trung binh', analytics.averageRiskScore?.toStringAsFixed(1) ?? '-', Icons.show_chart, Colors.orange)),
+            const SizedBox(width: 12),
+            Expanded(child: _buildRiskMetric('Co do', '${analytics.redFlagDays} ngay', Icons.flag_outlined, AppColors.alert)),
+            const SizedBox(width: 12),
+            Expanded(child: _buildRiskMetric('Xu huong', _riskTrendText(analytics.trend), Icons.trending_up, _riskTrendColor(analytics.trend))),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
+          children: [
+            _buildRiskLegend('Risk', AppColors.alert),
+            _buildRiskLegend('PHQ-9', AppColors.primary),
+            _buildRiskLegend('AI', Colors.purple),
+            _buildRiskLegend('Mood', Colors.teal),
+          ],
+        ),
+        const SizedBox(height: 8),
         Expanded(
           child: LineChart(
             LineChartData(
               gridData: FlGridData(show: true, drawVerticalLine: false, horizontalInterval: 20),
               titlesData: FlTitlesData(
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              getTitlesWidget: (value, meta) {
-                const days = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-                if (value.toInt() >= 0 && value.toInt() < days.length) {
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(days[value.toInt()], style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                  );
-                }
-                return const Text('');
-              },
+                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    interval: points.length <= 7 ? 1 : 2,
+                    getTitlesWidget: (value, meta) {
+                      final index = value.toInt();
+                      if (index < 0 || index >= points.length) return const Text('');
+                      final date = points[index].riskDate;
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Text(date == null ? '' : DateFormat('dd/MM').format(date), style: const TextStyle(color: AppColors.textSecondary, fontSize: 10)),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              borderData: FlBorderData(show: false),
+              minX: 0,
+              maxX: (points.length - 1).toDouble(),
+              minY: 0,
+              maxY: 100,
+              lineBarsData: [
+                _riskLine(riskSpots, AppColors.alert, width: 4, area: true),
+                _riskLine(phqSpots, AppColors.primary),
+                _riskLine(aiSpots, Colors.purple),
+                _riskLine(moodSpots, Colors.teal),
+              ],
             ),
           ),
         ),
-        borderData: FlBorderData(show: false),
-        minX: 0,
-        maxX: 6,
-        minY: 0,
-        maxY: 100,
-        lineBarsData: [
-          LineChartBarData(
-            spots: const [
-              FlSpot(0, 60),
-              FlSpot(1, 65),
-              FlSpot(2, 55),
-              FlSpot(3, 40),
-              FlSpot(4, 30),
-              FlSpot(5, 25),
-              FlSpot(6, 20),
-            ],
-            isCurved: true,
-            color: AppColors.alert,
-            barWidth: 4,
-            isStrokeCapRound: true,
-            dotData: const FlDotData(show: true),
-            belowBarData: BarAreaData(
-              show: true,
-              color: AppColors.alert.withOpacity(0.1),
-            ),
-          ),
-          LineChartBarData(
-            spots: const [
-              FlSpot(0, 80),
-              FlSpot(1, 75),
-              FlSpot(2, 70),
-              FlSpot(3, 60),
-              FlSpot(4, 55),
-              FlSpot(5, 50),
-              FlSpot(6, 45),
-            ],
-            isCurved: true,
-            color: AppColors.primary,
-            barWidth: 4,
-            isStrokeCapRound: true,
-            dotData: const FlDotData(show: true),
-            belowBarData: BarAreaData(
-              show: true,
-              color: AppColors.primary.withOpacity(0.1),
+      ],
+    );
+  }
+
+  Widget _buildRiskMetric(String label, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.14)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(value, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 16)),
+                Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+              ],
             ),
           ),
         ],
       ),
-    ),
-    ),
-    ],
     );
   }
+
+  Widget _buildRiskLegend(String label, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        const SizedBox(width: 4),
+        Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+      ],
+    );
+  }
+
+  List<FlSpot> _riskSpots(List<TherapistRiskPointModel> points, int Function(TherapistRiskPointModel point) selector) {
+    return List.generate(points.length, (index) => FlSpot(index.toDouble(), selector(points[index]).toDouble()));
+  }
+
+  LineChartBarData _riskLine(List<FlSpot> spots, Color color, {double width = 2.5, bool area = false}) {
+    return LineChartBarData(
+      spots: spots,
+      isCurved: true,
+      color: color,
+      barWidth: width,
+      isStrokeCapRound: true,
+      dotData: const FlDotData(show: true),
+      belowBarData: BarAreaData(show: area, color: color.withValues(alpha: 0.08)),
+    );
+  }
+
+  String _riskTrendText(String trend) {
+    switch (trend) {
+      case 'UP':
+        return 'Tang';
+      case 'DOWN':
+        return 'Giam';
+      case 'STABLE':
+        return 'On dinh';
+      default:
+        return 'Chua du';
+    }
+  }
+
+  Color _riskTrendColor(String trend) {
+    switch (trend) {
+      case 'UP':
+        return AppColors.alert;
+      case 'DOWN':
+        return AppColors.success;
+      case 'STABLE':
+        return Colors.orange;
+      default:
+        return AppColors.textSecondary;
+    }
+  }
+
 }
