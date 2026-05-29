@@ -23,6 +23,8 @@ import com.reconnect.mindhealth.modules.clinical.enums.Status;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
 import com.reconnect.mindhealth.modules.journal.repository.JournalRepository;
 import com.reconnect.mindhealth.modules.risk.dto.RiskCalculationResultDto;
+import com.reconnect.mindhealth.modules.risk.entity.DailyRiskLog;
+import com.reconnect.mindhealth.modules.risk.repository.DailyRiskLogRepository;
 import com.reconnect.mindhealth.modules.risk.service.IRiskScoringService;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -47,6 +49,9 @@ public class RiskScoringServiceImpl implements IRiskScoringService {
     @Autowired
     private UserMoodRepository userMoodRepository;
 
+    @Autowired
+    private DailyRiskLogRepository dailyRiskLogRepository;
+
     @Override
     public RiskCalculationResultDto calculateAndPersist(UUID patientId) {
         if (patientId == null) {
@@ -63,7 +68,8 @@ public class RiskScoringServiceImpl implements IRiskScoringService {
             patient.setIsRedFlagActive(true);
             patient.setStatus(Status.WARNING);
         }
-        patientProfileRepository.save(patient);
+        PatientProfile savedPatient = patientProfileRepository.save(patient);
+        persistDailyRiskLog(savedPatient, result);
 
         return result;
     }
@@ -81,6 +87,24 @@ public class RiskScoringServiceImpl implements IRiskScoringService {
             }
         }
         return count;
+    }
+
+    private void persistDailyRiskLog(PatientProfile patient, RiskCalculationResultDto result) {
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Bangkok"));
+        DailyRiskLog log = dailyRiskLogRepository
+                .findByPatientProfile_IdAndRiskDate(patient.getId(), today)
+                .orElseGet(DailyRiskLog::new);
+
+        log.setPatientProfile(patient);
+        log.setRiskDate(today);
+        log.setRiskScore(result.getRiskIndex());
+        log.setScorePhq9(result.getScorePhq9());
+        log.setScoreAi(result.getScoreAi());
+        log.setScoreMood(result.getScoreMood());
+        log.setOverrideTriggered(result.isOverrideTriggered());
+        log.setRedFlagActive(Boolean.TRUE.equals(patient.getIsRedFlagActive()));
+        log.setCalculatedAt(LocalDateTime.now());
+        dailyRiskLogRepository.save(log);
     }
 
     private RiskCalculationResultDto calculateRisk(UUID patientId) {
@@ -157,4 +181,3 @@ public class RiskScoringServiceImpl implements IRiskScoringService {
         return 0;
     }
 }
-
