@@ -38,7 +38,7 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final token = auth.token;
     if (token == null || token.isEmpty) {
-      setState(() => _error = 'ChÆ°a Ä‘Äƒng nháº­p.');
+      setState(() => _error = 'Chưa đăng nhập.');
       return;
     }
     setState(() {
@@ -138,11 +138,11 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Há»§y')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('LÆ°u', style: TextStyle(color: Colors.white)),
+            child: const Text('Lưu', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -187,7 +187,7 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
               children: const [
                 Text('Quản lý hồ sơ bệnh nhân', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                 SizedBox(height: 8),
-                Text('Dá»¯ liá»‡u láº¥y tá»« backend (/api/admin/patients).', style: TextStyle(color: AppColors.textSecondary)),
+                Text('Dữ liệu lấy từ backend (/api/admin/patients).', style: TextStyle(color: AppColors.textSecondary)),
               ],
             ),
             Row(
@@ -260,7 +260,7 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      '${it.email ?? ''} â€¢ risk: $risk â€¢ redFlag: $red',
+                                      '${it.email ?? ''} • risk: $risk • redFlag: $red',
                                       style: const TextStyle(color: Colors.black54),
                                     ),
                                     const SizedBox(height: 4),

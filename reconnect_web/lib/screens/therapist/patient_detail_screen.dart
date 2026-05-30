@@ -929,11 +929,11 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Giam sat rui ro 14 ngay', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.alert)),
+          const Text('Giám sát rủi ro 14 ngày', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.alert)),
           const SizedBox(height: 16),
-          _buildRiskMetric('Risk hien tai', '$currentRisk', Icons.monitor_heart_outlined, currentRisk >= 70 ? AppColors.alert : AppColors.primary),
+          _buildRiskMetric('Risk hiện tại', '$currentRisk', Icons.monitor_heart_outlined, currentRisk >= 70 ? AppColors.alert : AppColors.primary),
           const SizedBox(height: 16),
-          const Text('Chua co DailyRiskLog de ve bieu do. Hay chay cron/manual risk scoring de sinh lich su risk theo ngay.', style: TextStyle(color: AppColors.textSecondary)),
+          const Text('Chưa có DailyRiskLog để vẽ biểu đồ. Hãy chạy cron/manual risk scoring để sinh lịch sử risk theo ngày.', style: TextStyle(color: AppColors.textSecondary)),
         ],
       );
     }
@@ -949,9 +949,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
       children: [
         Row(
           children: [
-            const Expanded(child: Text('Giam sat rui ro 14 ngay', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.alert))),
+            const Expanded(child: Text('Giám sát rủi ro 14 ngày', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.alert))),
             IconButton(
-              tooltip: 'Tai lai analytics',
+              tooltip: 'Tải lại analytics',
               onPressed: _riskAnalyticsLoading ? null : _loadRiskAnalytics,
               icon: const Icon(Icons.refresh, size: 18),
             ),
@@ -960,13 +960,13 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
         const SizedBox(height: 12),
         Row(
           children: [
-            Expanded(child: _buildRiskMetric('Moi nhat', '${analytics.latestRiskScore ?? 0}', Icons.monitor_heart_outlined, (analytics.latestRiskScore ?? 0) >= 70 ? AppColors.alert : AppColors.primary)),
+            Expanded(child: _buildRiskMetric('Mới nhất', '${analytics.latestRiskScore ?? 0}', Icons.monitor_heart_outlined, (analytics.latestRiskScore ?? 0) >= 70 ? AppColors.alert : AppColors.primary)),
             const SizedBox(width: 12),
-            Expanded(child: _buildRiskMetric('Trung binh', analytics.averageRiskScore?.toStringAsFixed(1) ?? '-', Icons.show_chart, Colors.orange)),
+            Expanded(child: _buildRiskMetric('Trung bình', analytics.averageRiskScore?.toStringAsFixed(1) ?? '-', Icons.show_chart, Colors.orange)),
             const SizedBox(width: 12),
-            Expanded(child: _buildRiskMetric('Co do', '${analytics.redFlagDays} ngay', Icons.flag_outlined, AppColors.alert)),
+            Expanded(child: _buildRiskMetric('Cờ đỏ', '${analytics.redFlagDays} ngày', Icons.flag_outlined, AppColors.alert)),
             const SizedBox(width: 12),
-            Expanded(child: _buildRiskMetric('Xu huong', _riskTrendText(analytics.trend), Icons.trending_up, _riskTrendColor(analytics.trend))),
+            Expanded(child: _buildRiskMetric('Xu hướng', _riskTrendText(analytics.trend), Icons.trending_up, _riskTrendColor(analytics.trend))),
           ],
         ),
         const SizedBox(height: 12),
@@ -1078,13 +1078,13 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
   String _riskTrendText(String trend) {
     switch (trend) {
       case 'UP':
-        return 'Tang';
+        return 'Tăng';
       case 'DOWN':
-        return 'Giam';
+        return 'Giảm';
       case 'STABLE':
-        return 'On dinh';
+        return 'Ổn định';
       default:
-        return 'Chua du';
+        return 'Chưa đủ';
     }
   }
 
