@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,6 +18,8 @@ import com.reconnect.mindhealth.modules.admin.dto.AdminDemoControlResultDto;
 import com.reconnect.mindhealth.modules.admin.service.AdminDemoControlService;
 import com.reconnect.mindhealth.modules.auth.entity.User;
 import com.reconnect.mindhealth.modules.auth.enums.Role;
+import com.reconnect.mindhealth.modules.roadmap.dto.RoadmapPreviewDto;
+import com.reconnect.mindhealth.modules.roadmap.service.RoadmapDailyAssignmentService;
 
 @RestController
 @RequestMapping("/api/admin/demo")
@@ -24,12 +27,15 @@ public class AdminDemoControlController {
 
     private final AuthContextService authContextService;
     private final AdminDemoControlService adminDemoControlService;
+    private final RoadmapDailyAssignmentService roadmapDailyAssignmentService;
 
     public AdminDemoControlController(
             AuthContextService authContextService,
-            AdminDemoControlService adminDemoControlService) {
+            AdminDemoControlService adminDemoControlService,
+            RoadmapDailyAssignmentService roadmapDailyAssignmentService) {
         this.authContextService = authContextService;
         this.adminDemoControlService = adminDemoControlService;
+        this.roadmapDailyAssignmentService = roadmapDailyAssignmentService;
     }
 
     @PostMapping("/patients/{patientId}/unlock-phq9")
@@ -99,6 +105,23 @@ public class AdminDemoControlController {
             User admin = requireAdmin();
             return ResponseEntity.ok(ApiResponse.success("OK",
                     adminDemoControlService.resetGraduation(patientId, admin.getId())));
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/patients/{patientId}/roadmap-preview")
+    public ResponseEntity<ApiResponse<RoadmapPreviewDto>> previewRoadmap(
+            @PathVariable UUID patientId,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(defaultValue = "14") int days,
+            @RequestParam(required = false) Integer phq9Score) {
+        try {
+            requireAdmin();
+            RoadmapPreviewDto preview = roadmapDailyAssignmentService.previewDailySystemQuestPlan(
+                    patientId, startDate, days, phq9Score);
+            return ResponseEntity.ok(ApiResponse.success("OK", preview));
         } catch (Exception e) {
             return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
         }

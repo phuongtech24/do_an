@@ -8,6 +8,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,12 +23,16 @@ import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileReposi
 import com.reconnect.mindhealth.modules.roadmap.dto.DailyQuestAssignmentSummaryDto;
 import com.reconnect.mindhealth.modules.roadmap.entity.PatientQuest;
 import com.reconnect.mindhealth.modules.roadmap.entity.QuestTemplate;
+import com.reconnect.mindhealth.modules.roadmap.dto.RoadmapPreviewDto;
+import com.reconnect.mindhealth.modules.roadmap.dto.RoadmapPreviewItemDto;
 import com.reconnect.mindhealth.modules.roadmap.enums.QuestCategory;
 import com.reconnect.mindhealth.modules.roadmap.enums.QuestDifficulty;
 import com.reconnect.mindhealth.modules.roadmap.enums.QuestSourceType;
 import com.reconnect.mindhealth.modules.roadmap.enums.QuestStatus;
 import com.reconnect.mindhealth.modules.roadmap.repository.PatientQuestRepository;
 import com.reconnect.mindhealth.modules.roadmap.repository.QuestTemplateRepository;
+
+import jakarta.persistence.EntityNotFoundException;
 
 @Service
 public class RoadmapDailyAssignmentService {
@@ -98,6 +103,49 @@ public class RoadmapDailyAssignmentService {
         return assignDailySystemQuests(patientProfile, effectiveDate);
     }
 
+    public RoadmapPreviewDto previewDailySystemQuestPlan(UUID patientId, LocalDate startDate, Integer days, Integer phq9Score) {
+        PatientProfile patient = patientProfileRepository.findById(patientId)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy hồ sơ bệnh nhân: " + patientId));
+        LocalDate effectiveStart = startDate != null ? startDate : LocalDate.now(APP_ZONE);
+        int effectiveDays = days != null ? Math.max(1, Math.min(days, 28)) : 14;
+        int effectivePhq9 = phq9Score != null ? Math.max(0, Math.min(phq9Score, 27)) : resolveLatestPhq9Score(patient);
+
+        RoadmapPreviewDto preview = new RoadmapPreviewDto();
+        preview.setPatientId(patient.getId());
+        preview.setStartDate(effectiveStart);
+        preview.setDays(effectiveDays);
+        preview.setPhq9Score(effectivePhq9);
+
+        List<RoadmapPreviewItemDto> items = new ArrayList<>();
+        int behavioralCount = 0;
+        int cognitiveCount = 0;
+        for (int day = 0; day < effectiveDays; day++) {
+            LocalDate date = effectiveStart.plusDays(day);
+            int cycleDayIndex = Math.floorMod(day, 14);
+            for (int order = 1; order <= DAILY_MAX_QUESTS; order++) {
+                QuestSelection selection = selectQuest(effectivePhq9, cycleDayIndex, order);
+                if (selection.category() == QuestCategory.BEHAVIORAL) {
+                    behavioralCount++;
+                } else if (selection.category() == QuestCategory.COGNITIVE) {
+                    cognitiveCount++;
+                }
+                items.add(new RoadmapPreviewItemDto(
+                        date,
+                        cycleDayIndex,
+                        order,
+                        selection.category(),
+                        selection.difficulty(),
+                        QuestSourceType.SYSTEM));
+            }
+        }
+
+        preview.setItems(items);
+        preview.setTotalSlots(items.size());
+        preview.setBehavioralCount(behavioralCount);
+        preview.setCognitiveCount(cognitiveCount);
+        return preview;
+    }
+
     private List<PatientQuest> assignDailySystemQuests(PatientProfile patientProfile, LocalDate effectiveDate) {
         List<QuestTemplate> allTemplates = questTemplateRepository.findAll();
         if (allTemplates.isEmpty()) {
@@ -142,6 +190,11 @@ public class RoadmapDailyAssignmentService {
         log.info("Assigned daily system quests patientId={}, date={}, created={}, phq9={}, cycleDay={}",
                 patientProfile.getId(), effectiveDate, created.size(), phq9Total, cycleDayIndex);
         return created;
+    }
+
+    private int resolveLatestPhq9Score(PatientProfile patientProfile) {
+        Phq9Submission latestPhq9 = phq9Repository.findTopByPatientProfile_IdOrderByCreateDateDesc(patientProfile.getId());
+        return latestPhq9 != null && latestPhq9.getTotalScore() != null ? latestPhq9.getTotalScore() : 0;
     }
 
     private QuestSelection selectQuest(int phq9Total, int cycleDayIndex, int unlockOrder) {
