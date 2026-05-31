@@ -79,7 +79,11 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
 
         // Safety: if rule detects life-threat, short-circuit without calling AI (saves quota and avoids latency).
         if (ruleScore >= 100) {
-            return new JournalAiRiskResultDto(100, "LIFE_THREAT");
+            return new JournalAiRiskResultDto(
+                    100,
+                    "LIFE_THREAT",
+                    List.of(),
+                    "Rule-based safety filter detected life-threat keywords.");
         }
 
         boolean shouldCallAi = aiProperties.isEnabled();
@@ -90,7 +94,11 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
 
         // If AI is disabled or not needed, use rule-based result.
         if (!shouldCallAi) {
-            return new JournalAiRiskResultDto(ruleScore >= 70 ? 70 : 0, ruleScore >= 70 ? "CORE_BELIEF" : "NORMAL");
+            return new JournalAiRiskResultDto(
+                    ruleScore >= 70 ? 70 : 0,
+                    ruleScore >= 70 ? "CORE_BELIEF" : "NORMAL",
+                    List.of(),
+                    ruleScore >= 70 ? "Rule-based safety filter detected high-risk hopelessness signals." : "");
         }
 
         String prompt = buildStandardRiskPrompt(journalType, journalJsonContent);
@@ -109,12 +117,12 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
 
         // Hard safety clamp to expected set.
         if (finalScore >= 100) {
-            return new JournalAiRiskResultDto(100, "LIFE_THREAT");
+            return new JournalAiRiskResultDto(100, "LIFE_THREAT", parsed.getDistortions(), parsed.getReason());
         }
         if (finalScore >= 70) {
-            return new JournalAiRiskResultDto(70, "CORE_BELIEF");
+            return new JournalAiRiskResultDto(70, "CORE_BELIEF", parsed.getDistortions(), parsed.getReason());
         }
-        return new JournalAiRiskResultDto(0, "NORMAL");
+        return new JournalAiRiskResultDto(0, "NORMAL", parsed.getDistortions(), parsed.getReason());
     }
 
     @Override
@@ -181,7 +189,7 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
                 + "  \"aiRiskScore\": 0 | 70 | 100,\n"
                 + "  \"severityLevel\": \"NORMAL\" | \"CORE_BELIEF\" | \"LIFE_THREAT\",\n"
                 + "  \"distortions\": [\"CODE\"],\n"
-                + "  \"reason\": \"Giải thích ngắn nếu aiRiskScore là 70 hoặc 100; nếu 0 để chuỗi rỗng.\"\n"
+                + "  \"reason\": \"Giải thích ngắn nếu aiRiskScore là 70 hoặc 100; nếu 0 để chuỗi rỗng. Không trích nguyên văn nhật ký.\"\n"
                 + "}\n\n"
                 + "Tiêu chí chấm điểm rủi ro:\n"
                 + "- 0 / NORMAL: suy nghĩ tiêu cực, buồn bã, chán nản thông thường; không có nguy cơ đe dọa tính mạng.\n"
@@ -392,7 +400,18 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
                     default -> "NORMAL";
                 };
             }
-            return new JournalAiRiskResultDto(score, severity);
+            List<String> distortions = new ArrayList<>();
+            JsonNode arr = node.path("distortions");
+            if (arr.isArray()) {
+                for (JsonNode it : arr) {
+                    String code = it.asText("").trim();
+                    if (!code.isBlank()) {
+                        distortions.add(code);
+                    }
+                }
+            }
+            String reason = node.path("reason").asText("");
+            return new JournalAiRiskResultDto(score, severity, distortions, reason);
         } catch (Exception e) {
             return new JournalAiRiskResultDto(0, "NORMAL");
         }

@@ -84,6 +84,9 @@ public class JournalServiceImpl implements IJournalService {
             JournalAiRiskResultDto ai = aiAssistantService.scoreJournalRisk(dto.getJournalType(), jsonContent);
             journal.setAiRiskScore(ai.getAiRiskScore() != null ? ai.getAiRiskScore() : 0);
             journal.setSeverityLevel(ai.getSeverityLevel() != null ? ai.getSeverityLevel() : "NORMAL");
+            journal.setAiRiskDistortionsJson(objectMapper.writeValueAsString(
+                    ai.getDistortions() != null ? ai.getDistortions() : List.of()));
+            journal.setAiRiskReason(ai.getReason());
 
             // 5. Save in Database
             Journal savedJournal = journalRepository.save(journal);
@@ -129,6 +132,16 @@ public class JournalServiceImpl implements IJournalService {
     @SuppressWarnings("unchecked")
     private JournalDto convertToDto(Journal entity) {
         JournalDto dto = new JournalDto(entity);
+        if (entity.getAiRiskDistortionsJson() != null && !entity.getAiRiskDistortionsJson().isBlank()) {
+            try {
+                List<String> aiDistortions = objectMapper.readValue(
+                        entity.getAiRiskDistortionsJson(),
+                        objectMapper.getTypeFactory().constructCollectionType(List.class, String.class));
+                dto.setAiRiskDistortions(aiDistortions);
+            } catch (Exception e) {
+                log.warn("Error parsing AI risk distortions for journal id: {}", entity.getId(), e);
+            }
+        }
         if (entity.getContentEncrypted() != null) {
             try {
                 // 1. Decrypt AES-128

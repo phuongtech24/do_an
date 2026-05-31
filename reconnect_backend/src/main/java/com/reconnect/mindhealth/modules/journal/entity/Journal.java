@@ -34,6 +34,12 @@ public class Journal extends BaseObject {
     @Column(name = "severity_level")
     private String severityLevel = "NORMAL";
 
+    @Column(name = "ai_risk_distortions_json", columnDefinition = "TEXT")
+    private String aiRiskDistortionsJson;
+
+    @Column(name = "ai_risk_reason", columnDefinition = "TEXT")
+    private String aiRiskReason;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "patient_id", nullable = false)
     private PatientProfile patientProfile;
@@ -79,6 +85,22 @@ public class Journal extends BaseObject {
 
     public void setSeverityLevel(String severityLevel) {
         this.severityLevel = severityLevel;
+    }
+
+    public String getAiRiskDistortionsJson() {
+        return aiRiskDistortionsJson;
+    }
+
+    public void setAiRiskDistortionsJson(String aiRiskDistortionsJson) {
+        this.aiRiskDistortionsJson = aiRiskDistortionsJson;
+    }
+
+    public String getAiRiskReason() {
+        return aiRiskReason;
+    }
+
+    public void setAiRiskReason(String aiRiskReason) {
+        this.aiRiskReason = aiRiskReason;
     }
 
     public PatientProfile getPatientProfile() {

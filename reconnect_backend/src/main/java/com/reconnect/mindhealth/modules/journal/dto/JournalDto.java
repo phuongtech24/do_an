@@ -16,6 +16,8 @@ public class JournalDto extends BaseObjectDto {
     private JournalType journalType;
     private Integer aiRiskScore;
     private String severityLevel;
+    private List<String> aiRiskDistortions;
+    private String aiRiskReason;
 
     // Thought Record fields
     private String situation;
@@ -44,6 +46,7 @@ public class JournalDto extends BaseObjectDto {
             this.journalType = entity.getJournalType();
             this.aiRiskScore = entity.getAiRiskScore();
             this.severityLevel = entity.getSeverityLevel();
+            this.aiRiskReason = entity.getAiRiskReason();
             if (entity.getPatientProfile() != null) {
                 this.patientId = entity.getPatientProfile().getId();
             }
@@ -80,6 +83,22 @@ public class JournalDto extends BaseObjectDto {
 
     public void setSeverityLevel(String severityLevel) {
         this.severityLevel = severityLevel;
+    }
+
+    public List<String> getAiRiskDistortions() {
+        return aiRiskDistortions;
+    }
+
+    public void setAiRiskDistortions(List<String> aiRiskDistortions) {
+        this.aiRiskDistortions = aiRiskDistortions;
+    }
+
+    public String getAiRiskReason() {
+        return aiRiskReason;
+    }
+
+    public void setAiRiskReason(String aiRiskReason) {
+        this.aiRiskReason = aiRiskReason;
     }
 
     public String getSituation() {
