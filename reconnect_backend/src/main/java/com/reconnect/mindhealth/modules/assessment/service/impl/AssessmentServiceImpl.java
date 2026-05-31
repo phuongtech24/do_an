@@ -1,6 +1,8 @@
 package com.reconnect.mindhealth.modules.assessment.service.impl;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -30,6 +32,7 @@ import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
 import com.reconnect.mindhealth.modules.clinical.enums.Status;
 import com.reconnect.mindhealth.modules.clinical.enums.TaperingStage;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
+import com.reconnect.mindhealth.modules.roadmap.service.RoadmapDailyAssignmentService;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -49,6 +52,9 @@ public class AssessmentServiceImpl implements IAssessmentService {
 
     @Autowired
     private Phq9QuestionRepository phq9QuestionRepository;
+
+    @Autowired
+    private RoadmapDailyAssignmentService roadmapDailyAssignmentService;
 
     @Override
     public Phq9SubmissionDto submitPhq9(Phq9SubmissionDto dto) {
@@ -150,6 +156,16 @@ public class AssessmentServiceImpl implements IAssessmentService {
 
         Phq9Submission savedSubmission = phq9Repository.save(submission);
         log.info("AssessmentService: PHQ-9 submission successfully saved into database with ID: {}", savedSubmission.getId());
+
+        try {
+            LocalDate today = LocalDate.now(ZoneId.of("Asia/Bangkok"));
+            int created = roadmapDailyAssignmentService.ensureDailySystemQuests(patientProfile, today).size();
+            log.info("AssessmentService: Daily CBT roadmap ensured after PHQ-9 patientId={}, date={}, created={}",
+                    patientProfile.getId(), today, created);
+        } catch (Exception e) {
+            log.warn("AssessmentService: Could not auto-create daily CBT quests after PHQ-9 patientId={}, reason={}",
+                    patientProfile.getId(), e.getMessage());
+        }
 
         // Graduation rule (BRD): 2 consecutive PERIODIC submissions with totalScore < 5
         boolean graduatedNow = false;
