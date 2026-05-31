@@ -93,8 +93,8 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
             return new JournalAiRiskResultDto(ruleScore >= 70 ? 70 : 0, ruleScore >= 70 ? "CORE_BELIEF" : "NORMAL");
         }
 
-        String prompt = buildRiskPrompt(journalType, journalJsonContent);
-        String raw = generateContent(prompt, 256, 0.2);
+        String prompt = buildStandardRiskPrompt(journalType, journalJsonContent);
+        String raw = generateContent(prompt, 512, 0.1, riskScoringResponseSchema());
 
         JournalAiRiskResultDto parsed = parseRiskJson(raw);
         if (parsed.getAiRiskScore() == null) {
@@ -169,6 +169,40 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
                 + "Tình huống: " + r.getSituation() + "\n"
                 + "Suy nghĩ tự động: " + r.getAutomaticThought() + "\n"
                 + emotionLine;
+    }
+
+    private String buildStandardRiskPrompt(JournalType journalType, String journalJsonContent) {
+        return ""
+                + "Bạn là chuyên gia phân tích tâm lý theo Liệu pháp Nhận thức Hành vi (CBT).\n"
+                + "Nhiệm vụ: phân tích đoạn Nhật ký suy nghĩ (Thought Record) của bệnh nhân và trả về DUY NHẤT một JSON object hợp lệ.\n"
+                + "Không markdown, không code fence, không giải thích ngoài JSON.\n\n"
+                + "Schema bắt buộc:\n"
+                + "{\n"
+                + "  \"aiRiskScore\": 0 | 70 | 100,\n"
+                + "  \"severityLevel\": \"NORMAL\" | \"CORE_BELIEF\" | \"LIFE_THREAT\",\n"
+                + "  \"distortions\": [\"CODE\"],\n"
+                + "  \"reason\": \"Giải thích ngắn nếu aiRiskScore là 70 hoặc 100; nếu 0 để chuỗi rỗng.\"\n"
+                + "}\n\n"
+                + "Tiêu chí chấm điểm rủi ro:\n"
+                + "- 0 / NORMAL: suy nghĩ tiêu cực, buồn bã, chán nản thông thường; không có nguy cơ đe dọa tính mạng.\n"
+                + "- 70 / CORE_BELIEF: tuyệt vọng sâu sắc, bế tắc tột cùng, buông xuôi mờ nhạt như \"tôi muốn biến mất\", \"không còn hy vọng\".\n"
+                + "- 100 / LIFE_THREAT: có ý định tự sát rõ ràng, kế hoạch tự hại, nhắc tới cái chết hoặc hành vi tự hại.\n\n"
+                + "Danh sách Cognitive Distortions được phép chọn nếu có:\n"
+                + "- ALL_OR_NOTHING\n"
+                + "- CATASTROPHIZING\n"
+                + "- DISQUALIFYING_POSITIVE\n"
+                + "- EMOTIONAL_REASONING\n"
+                + "- LABELING\n"
+                + "- MAGNIFICATION_MINIMIZATION\n"
+                + "- MENTAL_FILTER\n"
+                + "- MIND_READING\n"
+                + "- OVERGENERALIZATION\n"
+                + "- PERSONALIZATION\n"
+                + "- SHOULD_MUST\n"
+                + "- TUNNEL_VISION\n\n"
+                + "Lưu ý an toàn: nếu nội dung có dấu hiệu trực tiếp về tự sát/tự hại, chọn 100.\n"
+                + "journalType=" + journalType.name() + "\n"
+                + "journalJson=" + journalJsonContent;
     }
 
     private String buildRiskPrompt(JournalType journalType, String journalJsonContent) {
@@ -279,6 +313,19 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
                 "required", List.of("questions"));
     }
 
+    private Map<String, Object> riskScoringResponseSchema() {
+        return Map.of(
+                "type", "OBJECT",
+                "properties", Map.of(
+                        "aiRiskScore", Map.of("type", "INTEGER"),
+                        "severityLevel", Map.of("type", "STRING"),
+                        "distortions", Map.of(
+                                "type", "ARRAY",
+                                "items", Map.of("type", "STRING")),
+                        "reason", Map.of("type", "STRING")),
+                "required", List.of("aiRiskScore", "severityLevel", "distortions", "reason"));
+    }
+
     private String extractTextFromGeminiResponse(String rawJson) {
         try {
             JsonNode root = objectMapper.readTree(rawJson);
@@ -334,8 +381,17 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
                 return new JournalAiRiskResultDto(0, "NORMAL");
             }
             JsonNode node = objectMapper.readTree(json);
-            Integer score = node.path("aiRiskScore").isNumber() ? node.path("aiRiskScore").asInt() : 0;
-            String severity = node.path("severityLevel").asText("NORMAL");
+            Integer score = node.path("aiRiskScore").isNumber()
+                    ? node.path("aiRiskScore").asInt()
+                    : (node.path("score").isNumber() ? node.path("score").asInt() : 0);
+            String severity = node.path("severityLevel").asText("");
+            if (severity.isBlank()) {
+                severity = switch (score) {
+                    case 100 -> "LIFE_THREAT";
+                    case 70 -> "CORE_BELIEF";
+                    default -> "NORMAL";
+                };
+            }
             return new JournalAiRiskResultDto(score, severity);
         } catch (Exception e) {
             return new JournalAiRiskResultDto(0, "NORMAL");
