@@ -89,7 +89,7 @@ public class RoadmapDailyAssignmentService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public List<PatientQuest> ensureDailySystemQuests(PatientProfile patientProfile, LocalDate effectiveDate) {
         if (patientProfile == null || patientProfile.getId() == null) {
-            throw new IllegalArgumentException("Thiếu hồ sơ bệnh nhân.");
+            throw new IllegalArgumentException("Missing patient profile.");
         }
 
         LocalDateTime from = effectiveDate.atStartOfDay();
@@ -103,9 +103,44 @@ public class RoadmapDailyAssignmentService {
         return assignDailySystemQuests(patientProfile, effectiveDate);
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public List<PatientQuest> refreshDailySystemQuestsAfterPhq9(
+            PatientProfile patientProfile,
+            LocalDate effectiveDate,
+            Integer phq9Total,
+            LocalDate cycleStartDate) {
+        if (patientProfile == null || patientProfile.getId() == null) {
+            throw new IllegalArgumentException("Missing patient profile.");
+        }
+
+        LocalDateTime from = effectiveDate.atStartOfDay();
+        LocalDateTime to = effectiveDate.atTime(LocalTime.MAX);
+        List<PatientQuest> existingSystem = patientQuestRepository.findDailyQuestsBySourceType(
+                patientProfile.getId(), QuestSourceType.SYSTEM, from, to);
+
+        if (existingSystem != null && !existingSystem.isEmpty()) {
+            boolean hasCompletedQuest = existingSystem.stream()
+                    .anyMatch(quest -> quest.getStatus() == QuestStatus.DONE);
+            if (hasCompletedQuest) {
+                log.info("Skipped PHQ-9 roadmap refresh because a system quest is already completed patientId={}, date={}, existing={}",
+                        patientProfile.getId(), effectiveDate, existingSystem.size());
+                return Collections.emptyList();
+            }
+
+            patientQuestRepository.deleteAll(existingSystem);
+            patientQuestRepository.flush();
+            log.info("Deleted stale daily system quests after PHQ-9 patientId={}, date={}, deleted={}",
+                    patientProfile.getId(), effectiveDate, existingSystem.size());
+        }
+
+        int effectivePhq9 = phq9Total != null ? Math.max(0, Math.min(phq9Total, 27)) : resolveLatestPhq9Score(patientProfile);
+        LocalDate effectiveCycleStart = cycleStartDate != null ? cycleStartDate : effectiveDate;
+        return assignDailySystemQuests(patientProfile, effectiveDate, effectivePhq9, effectiveCycleStart);
+    }
+
     public RoadmapPreviewDto previewDailySystemQuestPlan(UUID patientId, LocalDate startDate, Integer days, Integer phq9Score) {
         PatientProfile patient = patientProfileRepository.findById(patientId)
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy hồ sơ bệnh nhân: " + patientId));
+                .orElseThrow(() -> new EntityNotFoundException("Patient profile not found: " + patientId));
         LocalDate effectiveStart = startDate != null ? startDate : LocalDate.now(APP_ZONE);
         int effectiveDays = days != null ? Math.max(1, Math.min(days, 28)) : 14;
         int effectivePhq9 = phq9Score != null ? Math.max(0, Math.min(phq9Score, 27)) : resolveLatestPhq9Score(patient);
@@ -147,16 +182,24 @@ public class RoadmapDailyAssignmentService {
     }
 
     private List<PatientQuest> assignDailySystemQuests(PatientProfile patientProfile, LocalDate effectiveDate) {
-        List<QuestTemplate> allTemplates = questTemplateRepository.findAll();
-        if (allTemplates.isEmpty()) {
-            throw new IllegalStateException("Chưa có Quest Templates trong hệ thống. Vui lòng seed dữ liệu CBT.");
-        }
-
         Phq9Submission latestPhq9 = phq9Repository.findTopByPatientProfile_IdOrderByCreateDateDesc(patientProfile.getId());
         int phq9Total = latestPhq9 != null && latestPhq9.getTotalScore() != null ? latestPhq9.getTotalScore() : 0;
         LocalDate cycleStart = latestPhq9 != null && latestPhq9.getCreateDate() != null
                 ? latestPhq9.getCreateDate().toInstant().atZone(APP_ZONE).toLocalDate()
                 : effectiveDate;
+        return assignDailySystemQuests(patientProfile, effectiveDate, phq9Total, cycleStart);
+    }
+
+    private List<PatientQuest> assignDailySystemQuests(
+            PatientProfile patientProfile,
+            LocalDate effectiveDate,
+            int phq9Total,
+            LocalDate cycleStart) {
+        List<QuestTemplate> allTemplates = questTemplateRepository.findAll();
+        if (allTemplates.isEmpty()) {
+            throw new IllegalStateException("No Quest Templates found. Please seed CBT data.");
+        }
+
         int cycleDayIndex = (int) Math.floorMod(ChronoUnit.DAYS.between(cycleStart, effectiveDate), 14);
         int rotationSalt = Math.abs(patientProfile.getId().hashCode()) + effectiveDate.getDayOfYear();
 

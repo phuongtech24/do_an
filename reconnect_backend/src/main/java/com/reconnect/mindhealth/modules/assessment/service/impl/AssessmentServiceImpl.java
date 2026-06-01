@@ -159,12 +159,23 @@ public class AssessmentServiceImpl implements IAssessmentService {
 
         try {
             LocalDate today = LocalDate.now(ZoneId.of("Asia/Bangkok"));
-            int created = roadmapDailyAssignmentService.ensureDailySystemQuests(patientProfile, today).size();
-            log.info("AssessmentService: Daily CBT roadmap ensured after PHQ-9 patientId={}, date={}, created={}",
-                    patientProfile.getId(), today, created);
+            int created = roadmapDailyAssignmentService
+                    .refreshDailySystemQuestsAfterPhq9(patientProfile, today, totalScore, today)
+                    .size();
+            log.info("AssessmentService: Daily CBT roadmap refreshed after PHQ-9 patientId={}, date={}, phq9Total={}, created={}",
+                    patientProfile.getId(), today, totalScore, created);
         } catch (Exception e) {
-            log.warn("AssessmentService: Could not auto-create daily CBT quests after PHQ-9 patientId={}, reason={}",
-                    patientProfile.getId(), e.getMessage());
+            log.warn("AssessmentService: Could not refresh daily CBT quests after PHQ-9 patientId={}, phq9Total={}, reason={}",
+                    patientProfile.getId(), totalScore, e.getMessage());
+            try {
+                LocalDate today = LocalDate.now(ZoneId.of("Asia/Bangkok"));
+                int created = roadmapDailyAssignmentService.ensureDailySystemQuests(patientProfile, today).size();
+                log.info("AssessmentService: Fallback daily CBT roadmap ensure after PHQ-9 patientId={}, date={}, created={}",
+                        patientProfile.getId(), today, created);
+            } catch (Exception fallbackError) {
+                log.warn("AssessmentService: Fallback daily CBT roadmap ensure failed patientId={}, reason={}",
+                        patientProfile.getId(), fallbackError.getMessage());
+            }
         }
 
         // Graduation rule (BRD): 2 consecutive PERIODIC submissions with totalScore < 5
