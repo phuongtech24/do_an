@@ -16,6 +16,8 @@ class PatientHomeScreen extends StatefulWidget {
 }
 
 class _PatientHomeScreenState extends State<PatientHomeScreen> {
+  static bool _moodDialogShownThisSession = false;
+
   double _moodValue = 50.0;
   String _selectedMoodLabel = 'Bình thường';
   bool _hasBoosterAlert = false; // Mock flag for demo
@@ -25,7 +27,10 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     super.initState();
     // Use addPostFrameCallback to show the dialog after the first build
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _showMoodCheckDialog();
+      if (!_moodDialogShownThisSession) {
+        _moodDialogShownThisSession = true;
+        _showMoodCheckDialog();
+      }
     });
   }
 
@@ -393,4 +398,3 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     );
   }
 }
-

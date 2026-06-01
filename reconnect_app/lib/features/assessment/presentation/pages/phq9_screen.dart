@@ -125,7 +125,7 @@ class _Phq9ScreenState extends State<Phq9Screen> {
           }
 
           if (provider.isCooldown) {
-            return _CooldownWithHistoryView(
+            return _Phq9CooldownTabbedView(
               history: provider.phq9History,
               loading: provider.historyLoading,
               onRefresh: () => provider.loadPhq9History(
@@ -488,6 +488,107 @@ class _CooldownWithHistoryView extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _Phq9CooldownTabbedView extends StatelessWidget {
+  const _Phq9CooldownTabbedView({
+    required this.history,
+    required this.loading,
+    required this.onRefresh,
+    required this.onBackHome,
+  });
+
+  final List<dynamic> history;
+  final bool loading;
+  final VoidCallback onRefresh;
+  final VoidCallback onBackHome;
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: const TabBar(
+              labelColor: Color(0xFF0F8B7F),
+              unselectedLabelColor: Colors.black54,
+              indicatorColor: Color(0xFF0F8B7F),
+              tabs: [
+                Tab(icon: Icon(Icons.lock_clock_outlined), text: 'Trạng thái'),
+                Tab(icon: Icon(Icons.history_rounded), text: 'Lịch sử'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _Phq9CooldownStatus(onBackHome: onBackHome),
+                RefreshIndicator(
+                  onRefresh: () async => onRefresh(),
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.only(top: 8, bottom: 24),
+                    children: [
+                      _Phq9HistorySection(history: history, loading: loading),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Phq9CooldownStatus extends StatelessWidget {
+  const _Phq9CooldownStatus({required this.onBackHome});
+
+  final VoidCallback onBackHome;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        const SizedBox(height: 36),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(color: Colors.amber.shade50, shape: BoxShape.circle),
+          child: const Icon(Icons.lock_clock_outlined, size: 80, color: Colors.amber),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'Thời gian giãn cách',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 12),
+        const Text(
+          'Bạn đã làm PHQ-9 trong vòng 14 ngày qua. Bài đánh giá định kỳ nên thực hiện sau mỗi 2 tuần để theo dõi chính xác hơn.',
+          style: TextStyle(fontSize: 15, height: 1.5, color: Colors.black87),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 28),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: onBackHome,
+            icon: const Icon(Icons.arrow_back),
+            label: const Text('Quay lại trang chủ'),
+          ),
+        ),
+      ],
     );
   }
 }

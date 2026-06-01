@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../shared/widgets/mindhealth_scaffold.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../data/models/patient_quest_model.dart';
 import '../providers/roadmap_provider.dart';
 
 class RoadmapScreen extends StatelessWidget {
@@ -14,102 +15,210 @@ class RoadmapScreen extends StatelessWidget {
     final auth = Provider.of<AuthProvider>(context);
     final patientId = auth.loginResponse?.user.id ?? '';
     final token = auth.loginResponse?.token;
-    final roadmapProvider = Provider.of<RoadmapProvider>(context);
+    final provider = Provider.of<RoadmapProvider>(context);
 
-    if (patientId.isNotEmpty && roadmapProvider.status == RoadmapStatus.idle) {
+    if (patientId.isNotEmpty && provider.status == RoadmapStatus.idle) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Provider.of<RoadmapProvider>(context, listen: false).loadDailyQuests(patientId, token: token);
       });
     }
 
-    final quests = roadmapProvider.dailyQuests
-        .map((quest) => _QuestItem(
-              id: quest.id,
-              title: quest.title,
-              description: quest.description,
-              category: _toVietnameseCategory(quest.category),
-              sourceLabel: quest.sourceType == 'THERAPIST' ? 'Bác sĩ giao' : 'Tự động',
-              categoryColor: _categoryColor(quest.category),
-              icon: _categoryIcon(quest.category),
-              isCompleted: quest.status == 'DONE',
-              isLocked: quest.status == 'LOCKED',
-            ))
-        .toList();
-
     return MindHealthScaffold(
       title: 'Lộ trình Kích hoạt hành vi',
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (roadmapProvider.safetyOverlay.active) ...[
-            _SafetyOverlayBanner(
-              message: roadmapProvider.safetyOverlay.message,
-              riskScore: roadmapProvider.safetyOverlay.riskScore,
-            ),
+      body: DefaultTabController(
+        length: 2,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (provider.safetyOverlay.active) ...[
+              _SafetyOverlayBanner(
+                message: provider.safetyOverlay.message,
+                riskScore: provider.safetyOverlay.riskScore,
+              ),
+              const SizedBox(height: 12),
+            ],
+            const _RoadmapPrincipleBanner(),
             const SizedBox(height: 16),
-          ],
-          const _RoadmapPrincipleBanner(),
-          const SizedBox(height: 24),
-          Expanded(
-            child: Builder(
-              builder: (context) {
-                if (roadmapProvider.status == RoadmapStatus.loading && quests.isEmpty) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (roadmapProvider.status == RoadmapStatus.error) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
-                          const SizedBox(height: 8),
-                          Text('Lỗi: ${roadmapProvider.errorMessage}', textAlign: TextAlign.center),
-                          const SizedBox(height: 12),
-                          FilledButton(
-                            onPressed: patientId.isEmpty
-                                ? null
-                                : () => roadmapProvider.loadDailyQuests(patientId, token: token),
-                            child: const Text('Thử lại'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-                if (quests.isEmpty) {
-                  return const Center(child: Text('Hôm nay chưa có nhiệm vụ nào.'));
-                }
-
-                return RefreshIndicator(
-                  onRefresh: () async {
-                    if (patientId.isNotEmpty) {
-                      await roadmapProvider.loadDailyQuests(patientId, token: token);
-                    }
-                  },
-                  child: ListView.builder(
-                    itemCount: quests.length,
-                    itemBuilder: (context, index) {
-                      final quest = quests[index];
-                      return _buildRoadmapNode(context, quest, index, isLast: index == quests.length - 1);
-                    },
-                  ),
-                );
-              },
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: const TabBar(
+                labelColor: Color(0xFF0F8B7F),
+                unselectedLabelColor: Colors.black54,
+                indicatorColor: Color(0xFF0F8B7F),
+                tabs: [
+                  Tab(icon: Icon(Icons.today_rounded), text: 'Hôm nay'),
+                  Tab(icon: Icon(Icons.history_rounded), text: 'Lịch sử'),
+                ],
+              ),
             ),
-          ),
-          _CbtHistorySection(
-            history: roadmapProvider.questHistory,
-            loading: roadmapProvider.historyLoading,
-            onRefresh: () => roadmapProvider.loadQuestHistory(patientId, token: token),
-          ),
-        ],
+            const SizedBox(height: 12),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  _TodayQuestTab(
+                    provider: provider,
+                    patientId: patientId,
+                    token: token,
+                  ),
+                  _CbtHistoryTab(
+                    provider: provider,
+                    patientId: patientId,
+                    token: token,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
+}
 
-  Widget _buildRoadmapNode(BuildContext context, _QuestItem quest, int index, {required bool isLast}) {
+class _TodayQuestTab extends StatelessWidget {
+  const _TodayQuestTab({
+    required this.provider,
+    required this.patientId,
+    required this.token,
+  });
+
+  final RoadmapProvider provider;
+  final String patientId;
+  final String? token;
+
+  @override
+  Widget build(BuildContext context) {
+    if (provider.status == RoadmapStatus.loading && provider.dailyQuests.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (provider.status == RoadmapStatus.error) {
+      return _RoadmapErrorState(
+        message: provider.errorMessage,
+        onRetry: patientId.isEmpty ? null : () => provider.loadDailyQuests(patientId, token: token),
+      );
+    }
+
+    if (provider.dailyQuests.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: () => provider.loadDailyQuests(patientId, token: token),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: const [
+            SizedBox(height: 120),
+            _EmptyState(
+              icon: Icons.task_alt_rounded,
+              title: 'Hôm nay chưa có nhiệm vụ',
+              message: 'Sau khi làm PHQ-9 hoặc chạy demo controls, bài CBT sẽ xuất hiện tại đây.',
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => provider.loadDailyQuests(patientId, token: token),
+      child: ListView.builder(
+        padding: const EdgeInsets.only(top: 4),
+        itemCount: provider.dailyQuests.length,
+        itemBuilder: (context, index) {
+          final quest = provider.dailyQuests[index];
+          return _QuestTimelineCard(
+            quest: quest,
+            index: index,
+            isLast: index == provider.dailyQuests.length - 1,
+            onOpen: quest.status == 'AVAILABLE'
+                ? () {
+                    context.push(
+                      '/quest-detail',
+                      extra: {
+                        'id': quest.id,
+                        'title': quest.title,
+                        'category': _toVietnameseCategory(quest.category),
+                        'categoryColor': _categoryColor(quest.category),
+                        'icon': _categoryIcon(quest.category),
+                      },
+                    );
+                  }
+                : null,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _CbtHistoryTab extends StatelessWidget {
+  const _CbtHistoryTab({
+    required this.provider,
+    required this.patientId,
+    required this.token,
+  });
+
+  final RoadmapProvider provider;
+  final String patientId;
+  final String? token;
+
+  @override
+  Widget build(BuildContext context) {
+    if (provider.historyLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (provider.questHistory.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: () => provider.loadQuestHistory(patientId, token: token),
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: const [
+            SizedBox(height: 120),
+            _EmptyState(
+              icon: Icons.history_rounded,
+              title: 'Chưa có lịch sử CBT',
+              message: 'Các bài hệ thống giao và bác sĩ giao sẽ được lưu ở đây.',
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => provider.loadQuestHistory(patientId, token: token),
+      child: ListView.separated(
+        padding: const EdgeInsets.only(top: 4, bottom: 16),
+        itemCount: provider.questHistory.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        itemBuilder: (context, index) {
+          return _QuestHistoryCard(quest: provider.questHistory[index]);
+        },
+      ),
+    );
+  }
+}
+
+class _QuestTimelineCard extends StatelessWidget {
+  const _QuestTimelineCard({
+    required this.quest,
+    required this.index,
+    required this.isLast,
+    required this.onOpen,
+  });
+
+  final PatientQuestModel quest;
+  final int index;
+  final bool isLast;
+  final VoidCallback? onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final categoryColor = _categoryColor(quest.category);
+    final isDone = quest.status == 'DONE';
+    final isLocked = quest.status == 'LOCKED';
+
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -119,38 +228,32 @@ class RoadmapScreen extends StatelessWidget {
             child: Column(
               children: [
                 Container(
-                  width: 32,
-                  height: 32,
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: quest.isCompleted
-                        ? quest.categoryColor
-                        : quest.isLocked
-                            ? Colors.grey[300]
+                    color: isDone
+                        ? categoryColor
+                        : isLocked
+                            ? Colors.grey.shade200
                             : Colors.white,
-                    border: Border.all(
-                      color: quest.isLocked ? Colors.grey[400]! : quest.categoryColor,
-                      width: 2,
-                    ),
+                    border: Border.all(color: isLocked ? Colors.grey.shade400 : categoryColor, width: 2),
                   ),
                   child: Center(
-                    child: quest.isCompleted
-                        ? const Icon(Icons.check, size: 16, color: Colors.white)
+                    child: isDone
+                        ? const Icon(Icons.check, size: 18, color: Colors.white)
                         : Text(
                             '${index + 1}',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: quest.isLocked ? Colors.grey : quest.categoryColor,
+                              color: isLocked ? Colors.grey : categoryColor,
                             ),
                           ),
                   ),
                 ),
                 if (!isLast)
                   Expanded(
-                    child: Container(
-                      width: 2,
-                      color: quest.isCompleted ? quest.categoryColor : Colors.grey[300],
-                    ),
+                    child: Container(width: 2, color: isDone ? categoryColor : Colors.grey.shade300),
                   ),
               ],
             ),
@@ -158,74 +261,20 @@ class RoadmapScreen extends StatelessWidget {
           const SizedBox(width: 12),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.only(bottom: 24),
+              padding: const EdgeInsets.only(bottom: 18),
               child: Opacity(
-                opacity: quest.isLocked ? 0.6 : 1,
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey[200]!),
-                    boxShadow: [
-                      BoxShadow(
-                        color: quest.isLocked ? Colors.transparent : quest.categoryColor.withOpacity(0.1),
-                        blurRadius: 15,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          _CategoryChip(quest: quest),
-                          const Spacer(),
-                          _SourceChip(quest: quest),
-                          const SizedBox(width: 8),
-                          if (quest.isLocked) const Icon(Icons.lock_outline, size: 16, color: Colors.grey),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        quest.title,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        quest.description,
-                        style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                      ),
-                      const SizedBox(height: 16),
-                      if (!quest.isLocked && !quest.isCompleted)
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              context.push(
-                                '/quest-detail',
-                                extra: {
-                                  'id': quest.id,
-                                  'title': quest.title,
-                                  'category': quest.category,
-                                  'categoryColor': quest.categoryColor,
-                                  'icon': quest.icon,
-                                },
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: quest.categoryColor,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                opacity: isLocked ? 0.62 : 1,
+                child: _QuestSurfaceCard(
+                  quest: quest,
+                  trailing: isLocked
+                      ? const Icon(Icons.lock_outline, color: Colors.grey)
+                      : isDone
+                          ? const Icon(Icons.check_circle_rounded, color: Colors.green)
+                          : FilledButton.icon(
+                              onPressed: onOpen,
+                              icon: const Icon(Icons.photo_camera_outlined, size: 18),
+                              label: const Text('Nộp minh chứng'),
                             ),
-                            icon: const Icon(Icons.photo_camera_outlined, size: 18),
-                            label: const Text('Nộp minh chứng', style: TextStyle(fontSize: 12)),
-                          ),
-                        ),
-                    ],
-                  ),
                 ),
               ),
             ),
@@ -236,218 +285,192 @@ class RoadmapScreen extends StatelessWidget {
   }
 }
 
-class _CbtHistorySection extends StatelessWidget {
-  const _CbtHistorySection({
-    required this.history,
-    required this.loading,
-    required this.onRefresh,
-  });
+class _QuestHistoryCard extends StatelessWidget {
+  const _QuestHistoryCard({required this.quest});
 
-  final List<dynamic> history;
-  final bool loading;
-  final VoidCallback onRefresh;
+  final PatientQuestModel quest;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 260,
-      child: Card(
-        elevation: 0,
-        margin: const EdgeInsets.only(top: 8),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Colors.grey.shade200),
-        ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+    return _QuestSurfaceCard(
+      quest: quest,
+      showDates: true,
+      trailing: _StatusPill(status: quest.status),
+    );
+  }
+}
+
+class _QuestSurfaceCard extends StatelessWidget {
+  const _QuestSurfaceCard({
+    required this.quest,
+    this.trailing,
+    this.showDates = false,
+  });
+
+  final PatientQuestModel quest;
+  final Widget? trailing;
+  final bool showDates;
+
+  @override
+  Widget build(BuildContext context) {
+    final categoryColor = _categoryColor(quest.category);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: categoryColor.withOpacity(0.08),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.history_rounded, color: Color(0xFF0F8B7F)),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Lịch sử bài CBT',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: onRefresh,
-                    icon: const Icon(Icons.refresh_rounded),
-                    tooltip: 'Tải lại',
-                  ),
-                ],
-              ),
-              if (loading)
-                const Padding(
-                  padding: EdgeInsets.all(12),
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              else if (history.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.only(top: 8),
-                  child: Text('Chưa có bài CBT nào trong lịch sử.', style: TextStyle(color: Colors.black54)),
-                )
-              else
-                ...history.take(4).map((quest) {
-                  final isDone = quest.status == 'DONE';
-                  final sourceText = quest.sourceType == 'THERAPIST' ? 'Bác sĩ giao' : 'Hệ thống giao';
-                  return Container(
-                    margin: const EdgeInsets.only(top: 10),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          isDone ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-                          color: isDone ? Colors.green : Colors.grey,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(quest.title, style: const TextStyle(fontWeight: FontWeight.w700)),
-                              const SizedBox(height: 4),
-                              Text(
-                                '$sourceText • ${_toVietnameseCategory(quest.category)} • ${_questStatusText(quest.status)}',
-                                style: const TextStyle(color: Colors.black54, fontSize: 12),
-                              ),
-                              Text(
-                                'Giao: ${_formatQuestDateTime(quest.assignedAt)}'
-                                '${quest.completedAt != null ? ' • Xong: ${_formatQuestDateTime(quest.completedAt)}' : ''}',
-                                style: const TextStyle(color: Colors.black54, fontSize: 12),
-                              ),
-                              if (quest.masteryScore != null || quest.pleasureScore != null)
-                                Text(
-                                  'Mastery: ${quest.masteryScore ?? '-'} • Pleasure: ${quest.pleasureScore ?? '-'}',
-                                  style: const TextStyle(color: Colors.black87, fontSize: 12),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
+              _CategoryChip(category: quest.category),
+              const SizedBox(width: 8),
+              _SourceChip(sourceType: quest.sourceType),
+              const Spacer(),
+              if (trailing != null) trailing!,
             ],
           ),
+          const SizedBox(height: 12),
+          Text(
+            quest.title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            quest.description,
+            style: TextStyle(fontSize: 13, height: 1.4, color: Colors.grey.shade700),
+          ),
+          if (showDates) ...[
+            const SizedBox(height: 10),
+            Text(
+              'Giao: ${_formatQuestDateTime(quest.assignedAt)}'
+              '${quest.completedAt != null ? ' • Xong: ${_formatQuestDateTime(quest.completedAt)}' : ''}',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            ),
+          ],
+          if (quest.masteryScore != null || quest.pleasureScore != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _ScoreMiniChip(label: 'Mastery', value: quest.masteryScore),
+                const SizedBox(width: 8),
+                _ScoreMiniChip(label: 'Pleasure', value: quest.pleasureScore),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryChip extends StatelessWidget {
+  const _CategoryChip({required this.category});
+
+  final String category;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _categoryColor(category);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(_categoryIcon(category), size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(
+            _toVietnameseCategory(category),
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SourceChip extends StatelessWidget {
+  const _SourceChip({required this.sourceType});
+
+  final String sourceType;
+
+  @override
+  Widget build(BuildContext context) {
+    final isTherapistQuest = sourceType == 'THERAPIST';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: isTherapistQuest ? Colors.teal.withOpacity(0.12) : Colors.grey.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        isTherapistQuest ? 'Bác sĩ giao' : 'Tự động',
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: isTherapistQuest ? Colors.teal : Colors.grey.shade700,
         ),
       ),
     );
   }
 }
 
-/*
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.history_rounded, color: Color(0xFF0F8B7F)),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Lịch sử bài CBT',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                IconButton(
-                  onPressed: onRefresh,
-                  icon: const Icon(Icons.refresh_rounded),
-                  tooltip: 'Tải lại',
-                ),
-              ],
-            ),
-            if (loading)
-              const Padding(
-                padding: EdgeInsets.all(12),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (history.isEmpty)
-              const Padding(
-                padding: EdgeInsets.only(top: 8),
-                child: Text('Chưa có bài CBT nào trong lịch sử.', style: TextStyle(color: Colors.black54)),
-              )
-            else
-              ...history.take(4).map((quest) {
-                final isDone = quest.status == 'DONE';
-                final sourceText = quest.sourceType == 'THERAPIST' ? 'Bác sĩ giao' : 'Hệ thống giao';
-                return Container(
-                  margin: const EdgeInsets.only(top: 10),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        isDone ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-                        color: isDone ? Colors.green : Colors.grey,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(quest.title, style: const TextStyle(fontWeight: FontWeight.w700)),
-                            const SizedBox(height: 4),
-                            Text(
-                              '$sourceText • ${_toVietnameseCategory(quest.category)} • ${_questStatusText(quest.status)}',
-                              style: const TextStyle(color: Colors.black54, fontSize: 12),
-                            ),
-                            Text(
-                              'Giao: ${_formatQuestDateTime(quest.assignedAt)}'
-                              '${quest.completedAt != null ? ' • Xong: ${_formatQuestDateTime(quest.completedAt)}' : ''}',
-                              style: const TextStyle(color: Colors.black54, fontSize: 12),
-                            ),
-                            if (quest.masteryScore != null || quest.pleasureScore != null)
-                              Text(
-                                'Mastery: ${quest.masteryScore ?? '-'} • Pleasure: ${quest.pleasureScore ?? '-'}',
-                                style: const TextStyle(color: Colors.black87, fontSize: 12),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
-          ],
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({required this.status});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDone = status == 'DONE';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: isDone ? Colors.green.withOpacity(0.12) : Colors.orange.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        _questStatusText(status),
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: isDone ? Colors.green.shade700 : Colors.orange.shade700,
         ),
       ),
-    );*/
-
-String _formatQuestDateTime(String? value) {
-  if (value == null || value.isEmpty) return 'Không rõ ngày';
-  final normalized = value.length >= 16 ? value.substring(0, 16) : value;
-  return normalized.replaceFirst('T', ' ');
+    );
+  }
 }
 
-String _questStatusText(String status) {
-  switch (status) {
-    case 'DONE':
-      return 'Đã hoàn thành';
-    case 'AVAILABLE':
-      return 'Đang mở';
-    case 'LOCKED':
-      return 'Đang khóa';
-    default:
-      return status;
+class _ScoreMiniChip extends StatelessWidget {
+  const _ScoreMiniChip({required this.label, required this.value});
+
+  final String label;
+  final int? value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.blueGrey.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text('$label: ${value ?? '-'}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+    );
   }
 }
 
@@ -515,13 +538,6 @@ class _RoadmapPrincipleBanner extends StatelessWidget {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.blue.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: const Row(
         children: [
@@ -536,7 +552,7 @@ class _RoadmapPrincipleBanner extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue, fontSize: 14),
                 ),
                 Text(
-                  'CBT khuyến nghị bắt đầu bằng những việc nhỏ (5-10 phút) để tránh quá tải và củng cố niềm tin vào bản thân.',
+                  'CBT khuyến nghị bắt đầu bằng những việc nhỏ để tránh quá tải và củng cố niềm tin vào bản thân.',
                   style: TextStyle(color: Colors.black87, fontSize: 12),
                 ),
               ],
@@ -548,86 +564,77 @@ class _RoadmapPrincipleBanner extends StatelessWidget {
   }
 }
 
-class _CategoryChip extends StatelessWidget {
-  const _CategoryChip({required this.quest});
+class _RoadmapErrorState extends StatelessWidget {
+  const _RoadmapErrorState({required this.message, required this.onRetry});
 
-  final _QuestItem quest;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: quest.categoryColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(quest.icon, size: 14, color: quest.categoryColor),
-          const SizedBox(width: 4),
-          Text(
-            quest.category,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: quest.categoryColor,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SourceChip extends StatelessWidget {
-  const _SourceChip({required this.quest});
-
-  final _QuestItem quest;
+  final String message;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
-    final isTherapistQuest = quest.sourceLabel == 'Bác sĩ giao';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: isTherapistQuest ? Colors.teal.withOpacity(0.12) : Colors.grey.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        quest.sourceLabel,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
-          color: isTherapistQuest ? Colors.teal : Colors.grey[700],
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
+            const SizedBox(height: 8),
+            Text('Lỗi: $message', textAlign: TextAlign.center),
+            const SizedBox(height: 12),
+            FilledButton(onPressed: onRetry, child: const Text('Thử lại')),
+          ],
         ),
       ),
     );
   }
 }
 
-class _QuestItem {
-  const _QuestItem({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.category,
-    required this.sourceLabel,
-    required this.categoryColor,
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({
     required this.icon,
-    required this.isCompleted,
-    required this.isLocked,
+    required this.title,
+    required this.message,
   });
 
-  final String id;
-  final String title;
-  final String description;
-  final String category;
-  final String sourceLabel;
-  final Color categoryColor;
   final IconData icon;
-  final bool isCompleted;
-  final bool isLocked;
+  final String title;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        children: [
+          Icon(icon, size: 56, color: Colors.grey.shade400),
+          const SizedBox(height: 12),
+          Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Text(message, textAlign: TextAlign.center, style: const TextStyle(color: Colors.black54)),
+        ],
+      ),
+    );
+  }
+}
+
+String _formatQuestDateTime(String? value) {
+  if (value == null || value.isEmpty) return 'Không rõ ngày';
+  final normalized = value.length >= 16 ? value.substring(0, 16) : value;
+  return normalized.replaceFirst('T', ' ');
+}
+
+String _questStatusText(String status) {
+  switch (status) {
+    case 'DONE':
+      return 'Đã hoàn thành';
+    case 'AVAILABLE':
+      return 'Đang mở';
+    case 'LOCKED':
+      return 'Đang khóa';
+    default:
+      return status;
+  }
 }
 
 String _toVietnameseCategory(String category) {
