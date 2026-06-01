@@ -19,6 +19,7 @@ class GuidedDiscoveryProvider extends ChangeNotifier {
     required String automaticThought,
     String? emotion,
     int? moodScore,
+    String? token,
   }) async {
     _status = GuidedDiscoveryStatus.loading;
     _errorMessage = '';
@@ -30,6 +31,7 @@ class GuidedDiscoveryProvider extends ChangeNotifier {
         automaticThought: automaticThought,
         emotion: emotion,
         moodScore: moodScore,
+        token: token,
       );
       _status = GuidedDiscoveryStatus.success;
     } catch (e) {
@@ -46,4 +48,3 @@ class GuidedDiscoveryProvider extends ChangeNotifier {
     notifyListeners();
   }
 }
-

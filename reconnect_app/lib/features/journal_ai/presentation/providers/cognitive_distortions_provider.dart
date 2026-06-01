@@ -19,6 +19,7 @@ class CognitiveDistortionsProvider extends ChangeNotifier {
   Future<void> detect({
     required String situation,
     required String automaticThought,
+    String? token,
   }) async {
     _status = CognitiveDistortionsStatus.loading;
     _errorMessage = '';
@@ -30,6 +31,7 @@ class CognitiveDistortionsProvider extends ChangeNotifier {
       final data = await _repository.detect(
         situation: situation,
         automaticThought: automaticThought,
+        token: token,
       );
       final list = (data['distortions'] as List<dynamic>? ?? []);
       _distortions = list.map((e) => e.toString()).toList();
@@ -50,4 +52,3 @@ class CognitiveDistortionsProvider extends ChangeNotifier {
     notifyListeners();
   }
 }
-

@@ -48,6 +48,7 @@ class JournalProvider extends ChangeNotifier {
       final saved = await _repository.saveJournal(journal, token: token);
       // Thêm bài viết mới vào đầu danh sách để cập nhật tức thời trên UI
       _journals.insert(0, saved);
+      _selectedJournal = saved;
       _status = JournalProviderStatus.success;
       notifyListeners();
       return true;

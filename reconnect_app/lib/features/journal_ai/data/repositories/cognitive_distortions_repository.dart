@@ -16,11 +16,15 @@ class CognitiveDistortionsRepository {
   Future<Map<String, dynamic>> detect({
     required String situation,
     required String automaticThought,
+    String? token,
   }) async {
     try {
       final response = await http.post(
         Uri.parse(ApiConstants.cognitiveDistortions),
-        headers: {'Content-Type': 'application/json; charset=utf-8'},
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
         body: jsonEncode({
           'situation': situation,
           'automaticThought': automaticThought,
@@ -44,4 +48,3 @@ class CognitiveDistortionsRepository {
     }
   }
 }
-

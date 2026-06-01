@@ -96,6 +96,13 @@ public class JournalServiceImpl implements IJournalService {
             // 5. Save in Database
             Journal savedJournal = journalRepository.save(journal);
             triggerImmediateRiskUpdateIfNeeded(patientProfile.getId(), ai);
+            PatientProfile riskState = patientProfileRepository.findById(patientProfile.getId()).orElse(patientProfile);
+            int currentRiskScore = riskState.getCurrentRiskScore() != null ? riskState.getCurrentRiskScore() : 0;
+            boolean redFlagActive = Boolean.TRUE.equals(riskState.getIsRedFlagActive());
+            boolean overrideTriggered = redFlagActive || currentRiskScore >= 70;
+            log.info("Journal risk saved patientId={}, journalId={}, aiRiskScore={}, severityLevel={}, currentRiskScore={}, overrideTriggered={}, redFlagActive={}",
+                    patientProfile.getId(), savedJournal.getId(), savedJournal.getAiRiskScore(),
+                    savedJournal.getSeverityLevel(), currentRiskScore, overrideTriggered, redFlagActive);
 
             return convertToDto(savedJournal);
 

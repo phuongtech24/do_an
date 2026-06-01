@@ -88,6 +88,7 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
       );
 
       final success = await journalProvider.saveNewJournal(model, token: auth.loginResponse?.token);
+      final savedJournal = journalProvider.selectedJournal;
 
       // Đóng Loading Dialog
       if (mounted) Navigator.pop(context);
@@ -101,9 +102,7 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
             builder: (context) => AlertDialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               title: const Text('Hoàn thành Nhật ký', style: TextStyle(fontWeight: FontWeight.bold)),
-              content: Text(_saveAsCopingCard 
-                ? 'Bạn đã hoàn thành bản ghi nhận thức. Một Thẻ đối phó mới đã được thêm vào kho lưu trữ. AI sẽ cập nhật tiến triển này lên Web CMS của Bác sĩ.'
-                : 'Bạn đã hoàn thành bản ghi nhận thức. Cảm xúc của bạn đã dịu đi đáng kể. AI sẽ lưu trữ kết quả này để Bác sĩ tiện theo dõi.'),
+              content: Text(_successMessage(savedJournal)),
               actions: [
                 TextButton(
                   onPressed: () {
@@ -138,6 +137,22 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
         );
       }
     }
+  }
+
+  String _successMessage(JournalModel? savedJournal) {
+    final aiRisk = savedJournal?.aiRiskScore;
+    final severity = savedJournal?.severityLevel;
+    final riskLine = aiRisk == null
+        ? 'AI Risk: chưa có dữ liệu.'
+        : aiRisk >= 70
+            ? 'AI Risk: $aiRisk/100 - đã bật Red Flag để chuyên gia theo dõi.'
+            : 'AI Risk: $aiRisk/100.';
+    final severityLine =
+        severity == null || severity.isEmpty ? '' : '\nMức AI: $severity.';
+    final baseMessage = _saveAsCopingCard
+        ? 'Bạn đã hoàn thành bản ghi nhận thức. Một Thẻ đối phó mới đã được thêm vào kho lưu trữ.'
+        : 'Bạn đã hoàn thành bản ghi nhận thức. Cảm xúc của bạn đã dịu đi đáng kể.';
+    return '$baseMessage\n\n$riskLine$severityLine';
   }
 
   @override
@@ -175,11 +190,13 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
                 setState(() => _currentStep = v);
                 if (v == 3 && !_distortionsRequested) {
                   _distortionsRequested = true;
+                  final auth = Provider.of<AuthProvider>(context, listen: false);
                   final cd = Provider.of<CognitiveDistortionsProvider>(context, listen: false);
                   cd
                       .detect(
                         situation: _situation.isEmpty ? 'N/A' : _situation,
                         automaticThought: _thought.isEmpty ? 'N/A' : _thought,
+                        token: auth.loginResponse?.token,
                       )
                       .then((_) {
                     if (!mounted) return;
@@ -199,11 +216,13 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
                 }
                 if (v == 4 && !_guidedDiscoveryRequested) {
                   _guidedDiscoveryRequested = true;
+                  final auth = Provider.of<AuthProvider>(context, listen: false);
                   final gd = Provider.of<GuidedDiscoveryProvider>(context, listen: false);
                   gd.fetchQuestions(
                     situation: _situation.isEmpty ? 'N/A' : _situation,
                     automaticThought: _thought.isEmpty ? 'N/A' : _thought,
                     emotion: _emotionLabel,
+                    token: auth.loginResponse?.token,
                   );
                 }
               },
