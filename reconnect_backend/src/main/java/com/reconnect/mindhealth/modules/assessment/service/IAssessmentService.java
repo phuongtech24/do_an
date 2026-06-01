@@ -1,5 +1,6 @@
 package com.reconnect.mindhealth.modules.assessment.service;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -13,6 +14,8 @@ public interface IAssessmentService {
 
     // Kiểm tra xem bệnh nhân có đang trong thời gian khóa 14 ngày không (checkPhq9Cooldown).
     boolean isPhq9OnCoolDown(UUID patientId);
+
+    List<Phq9SubmissionDto> getPhq9History(UUID patientId);
 
     // Ghi nhận tâm trạng hàng ngày (saveUserMood).
     UserMoodDto saveUserMood(UserMoodDto dto);

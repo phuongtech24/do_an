@@ -19,3 +19,11 @@
 .DS_Store
 Thumbs.db
 
+# Environment & Secrets (NEVER commit these!)
+.env
+.env.local
+.env.*.local
+.env.production
+*.pem
+*.key
+

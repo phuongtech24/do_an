@@ -42,6 +42,30 @@ class RoadmapRepository {
     }
   }
 
+  Future<List<PatientQuestModel>> getQuestHistory(String patientId, {String? token}) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiConstants.roadmapHistory}?patientId=$patientId'),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      _handleHttpError(response, 'tải lịch sử bài CBT');
+
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      if (json['status'] == 200 && json['data'] != null) {
+        final List<dynamic> list = json['data'] as List<dynamic>;
+        return list.map((e) => PatientQuestModel.fromJson(e as Map<String, dynamic>)).toList();
+      } else {
+        throw Exception(json['message'] ?? 'Không thể tải lịch sử bài CBT');
+      }
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
   Future<RoadmapSafetyOverlayModel> getSafetyOverlay(String patientId, {String? token}) async {
     try {
       final response = await http.get(

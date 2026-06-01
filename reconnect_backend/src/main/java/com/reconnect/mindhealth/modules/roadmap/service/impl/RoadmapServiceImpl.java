@@ -58,6 +58,22 @@ public class RoadmapServiceImpl implements IRoadmapService {
         return getOrCreateDailyQuests(patientId);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<PatientQuestDto> getQuestHistory(UUID patientId) {
+        if (patientId == null) {
+            throw new IllegalArgumentException("Thiếu thông tin patientId.");
+        }
+
+        patientProfileRepository.findById(patientId)
+                .orElseThrow(() -> new EntityNotFoundException("Bệnh nhân không tồn tại với ID: " + patientId));
+
+        return patientQuestRepository.findByPatientProfile_IdOrderByAssignedAtDesc(patientId)
+                .stream()
+                .map(PatientQuestDto::new)
+                .toList();
+    }
+
     @Transactional
     public List<PatientQuestDto> getOrCreateDailyQuests(UUID patientId) {
         if (patientId == null) {

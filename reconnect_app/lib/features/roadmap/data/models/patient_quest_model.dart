@@ -10,6 +10,9 @@ class PatientQuestModel {
   final int? masteryScore;
   final int? pleasureScore;
   final String? proofImageUrl;
+  final String? assignedAt;
+  final String? dueDate;
+  final String? completedAt;
 
   PatientQuestModel({
     required this.id,
@@ -23,6 +26,9 @@ class PatientQuestModel {
     this.masteryScore,
     this.pleasureScore,
     this.proofImageUrl,
+    this.assignedAt,
+    this.dueDate,
+    this.completedAt,
   });
 
   factory PatientQuestModel.fromJson(Map<String, dynamic> json) {
@@ -38,6 +44,9 @@ class PatientQuestModel {
       masteryScore: (json['masteryScore'] as num?)?.toInt(),
       pleasureScore: (json['pleasureScore'] as num?)?.toInt(),
       proofImageUrl: json['proofImageUrl']?.toString(),
+      assignedAt: json['assignedAt']?.toString(),
+      dueDate: json['dueDate']?.toString(),
+      completedAt: json['completedAt']?.toString(),
     );
   }
 }

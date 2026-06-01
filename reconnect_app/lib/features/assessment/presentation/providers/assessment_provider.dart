@@ -14,6 +14,8 @@ class AssessmentProvider extends ChangeNotifier {
   Phq9QuestionnaireModel? _questionnaire;
   bool _isCooldown = false;
   Phq9SubmissionModel? _lastSubmission;
+  List<Phq9SubmissionModel> _phq9History = [];
+  bool _historyLoading = false;
   UserMoodModel? _lastMood;
 
   // Getters
@@ -22,6 +24,8 @@ class AssessmentProvider extends ChangeNotifier {
   Phq9QuestionnaireModel? get questionnaire => _questionnaire;
   bool get isCooldown => _isCooldown;
   Phq9SubmissionModel? get lastSubmission => _lastSubmission;
+  List<Phq9SubmissionModel> get phq9History => _phq9History;
+  bool get historyLoading => _historyLoading;
   UserMoodModel? get lastMood => _lastMood;
 
   // ======================================================
@@ -82,6 +86,7 @@ class AssessmentProvider extends ChangeNotifier {
         functionalDifficultyScore: functionalDifficultyScore,
       );
       _lastSubmission = await _repository.submitPhq9(submission, token: token);
+      _phq9History = await _repository.getPhq9History(patientId, token: token);
       _isCooldown = true; // Tự động khóa nút làm bài test
       _status = AssessmentStatus.success;
       notifyListeners();
@@ -91,6 +96,20 @@ class AssessmentProvider extends ChangeNotifier {
       _errorMessage = e.toString().replaceAll('Exception: ', '');
       notifyListeners();
       return false;
+    }
+  }
+
+  Future<void> loadPhq9History(String patientId, {String? token}) async {
+    _historyLoading = true;
+    notifyListeners();
+
+    try {
+      _phq9History = await _repository.getPhq9History(patientId, token: token);
+    } catch (e) {
+      debugPrint('AssessmentProvider: Error loading PHQ-9 history: $e');
+    } finally {
+      _historyLoading = false;
+      notifyListeners();
     }
   }
 

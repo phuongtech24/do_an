@@ -99,6 +99,11 @@ class RoadmapScreen extends StatelessWidget {
               },
             ),
           ),
+          _CbtHistorySection(
+            history: roadmapProvider.questHistory,
+            loading: roadmapProvider.historyLoading,
+            onRefresh: () => roadmapProvider.loadQuestHistory(patientId, token: token),
+          ),
         ],
       ),
     );
@@ -228,6 +233,221 @@ class RoadmapScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _CbtHistorySection extends StatelessWidget {
+  const _CbtHistorySection({
+    required this.history,
+    required this.loading,
+    required this.onRefresh,
+  });
+
+  final List<dynamic> history;
+  final bool loading;
+  final VoidCallback onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 260,
+      child: Card(
+        elevation: 0,
+        margin: const EdgeInsets.only(top: 8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: Colors.grey.shade200),
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.history_rounded, color: Color(0xFF0F8B7F)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Lịch sử bài CBT',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: onRefresh,
+                    icon: const Icon(Icons.refresh_rounded),
+                    tooltip: 'Tải lại',
+                  ),
+                ],
+              ),
+              if (loading)
+                const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (history.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: Text('Chưa có bài CBT nào trong lịch sử.', style: TextStyle(color: Colors.black54)),
+                )
+              else
+                ...history.take(4).map((quest) {
+                  final isDone = quest.status == 'DONE';
+                  final sourceText = quest.sourceType == 'THERAPIST' ? 'Bác sĩ giao' : 'Hệ thống giao';
+                  return Container(
+                    margin: const EdgeInsets.only(top: 10),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          isDone ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                          color: isDone ? Colors.green : Colors.grey,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(quest.title, style: const TextStyle(fontWeight: FontWeight.w700)),
+                              const SizedBox(height: 4),
+                              Text(
+                                '$sourceText • ${_toVietnameseCategory(quest.category)} • ${_questStatusText(quest.status)}',
+                                style: const TextStyle(color: Colors.black54, fontSize: 12),
+                              ),
+                              Text(
+                                'Giao: ${_formatQuestDateTime(quest.assignedAt)}'
+                                '${quest.completedAt != null ? ' • Xong: ${_formatQuestDateTime(quest.completedAt)}' : ''}',
+                                style: const TextStyle(color: Colors.black54, fontSize: 12),
+                              ),
+                              if (quest.masteryScore != null || quest.pleasureScore != null)
+                                Text(
+                                  'Mastery: ${quest.masteryScore ?? '-'} • Pleasure: ${quest.pleasureScore ?? '-'}',
+                                  style: const TextStyle(color: Colors.black87, fontSize: 12),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/*
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.history_rounded, color: Color(0xFF0F8B7F)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Lịch sử bài CBT',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                IconButton(
+                  onPressed: onRefresh,
+                  icon: const Icon(Icons.refresh_rounded),
+                  tooltip: 'Tải lại',
+                ),
+              ],
+            ),
+            if (loading)
+              const Padding(
+                padding: EdgeInsets.all(12),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (history.isEmpty)
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Text('Chưa có bài CBT nào trong lịch sử.', style: TextStyle(color: Colors.black54)),
+              )
+            else
+              ...history.take(4).map((quest) {
+                final isDone = quest.status == 'DONE';
+                final sourceText = quest.sourceType == 'THERAPIST' ? 'Bác sĩ giao' : 'Hệ thống giao';
+                return Container(
+                  margin: const EdgeInsets.only(top: 10),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        isDone ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                        color: isDone ? Colors.green : Colors.grey,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(quest.title, style: const TextStyle(fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 4),
+                            Text(
+                              '$sourceText • ${_toVietnameseCategory(quest.category)} • ${_questStatusText(quest.status)}',
+                              style: const TextStyle(color: Colors.black54, fontSize: 12),
+                            ),
+                            Text(
+                              'Giao: ${_formatQuestDateTime(quest.assignedAt)}'
+                              '${quest.completedAt != null ? ' • Xong: ${_formatQuestDateTime(quest.completedAt)}' : ''}',
+                              style: const TextStyle(color: Colors.black54, fontSize: 12),
+                            ),
+                            if (quest.masteryScore != null || quest.pleasureScore != null)
+                              Text(
+                                'Mastery: ${quest.masteryScore ?? '-'} • Pleasure: ${quest.pleasureScore ?? '-'}',
+                                style: const TextStyle(color: Colors.black87, fontSize: 12),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+          ],
+        ),
+      ),
+    );*/
+
+String _formatQuestDateTime(String? value) {
+  if (value == null || value.isEmpty) return 'Không rõ ngày';
+  final normalized = value.length >= 16 ? value.substring(0, 16) : value;
+  return normalized.replaceFirst('T', ' ');
+}
+
+String _questStatusText(String status) {
+  switch (status) {
+    case 'DONE':
+      return 'Đã hoàn thành';
+    case 'AVAILABLE':
+      return 'Đang mở';
+    case 'LOCKED':
+      return 'Đang khóa';
+    default:
+      return status;
   }
 }
 

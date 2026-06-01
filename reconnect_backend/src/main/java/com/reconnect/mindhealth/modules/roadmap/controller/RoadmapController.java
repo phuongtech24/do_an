@@ -38,6 +38,16 @@ public class RoadmapController {
         }
     }
 
+    @GetMapping("/history")
+    public ResponseEntity<ApiResponse<List<PatientQuestDto>>> getQuestHistory(@RequestParam UUID patientId) {
+        try {
+            List<PatientQuestDto> list = roadmapService.getQuestHistory(patientId);
+            return ResponseEntity.ok(ApiResponse.success("Lấy lịch sử bài CBT thành công!", list));
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.error("Lỗi khi tải lịch sử bài CBT: " + e.getMessage()));
+        }
+    }
+
     @GetMapping("/safety-overlay")
     public ResponseEntity<ApiResponse<RoadmapSafetyOverlayDto>> getSafetyOverlay(@RequestParam UUID patientId) {
         try {

@@ -10,6 +10,7 @@ import com.reconnect.mindhealth.modules.roadmap.dto.VerifyQuestProofResponseDto;
 
 public interface IRoadmapService {
     List<PatientQuestDto> getDailyQuests(UUID patientId);
+    List<PatientQuestDto> getQuestHistory(UUID patientId);
     RoadmapSafetyOverlayDto getSafetyOverlay(UUID patientId);
     PatientQuestDto completeQuest(UUID patientId, UUID patientQuestId, CompleteQuestRequest request);
     VerifyQuestProofResponseDto verifyQuestProof(UUID patientId, UUID patientQuestId, byte[] imageBytes, String mimeType);

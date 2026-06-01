@@ -1,5 +1,6 @@
 package com.reconnect.mindhealth.modules.assessment.controller;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -44,6 +45,17 @@ public class AssessmentController {
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/phq9/history")
+    public ResponseEntity<ApiResponse<List<Phq9SubmissionDto>>> getPhq9History(@RequestParam UUID patientId) {
+        try {
+            List<Phq9SubmissionDto> result = assessmentService.getPhq9History(patientId);
+            return ResponseEntity.ok(ApiResponse.success("Lấy lịch sử PHQ-9 thành công!", result));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.ok(ApiResponse.error("Lỗi khi tải lịch sử PHQ-9: " + e.getMessage()));
         }
     }
 

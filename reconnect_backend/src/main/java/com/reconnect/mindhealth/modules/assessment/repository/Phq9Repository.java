@@ -11,6 +11,7 @@ import java.util.UUID;
 public interface Phq9Repository extends JpaRepository<Phq9Submission, UUID> {
     boolean existsByPatientProfile_IdAndSubmissionType(UUID patientId, Phq9Type submissionType);
     Phq9Submission findTopByPatientProfile_IdOrderByCreateDateDesc(UUID patientId);
+    List<Phq9Submission> findByPatientProfile_IdOrderByCreateDateDesc(UUID patientId);
     List<Phq9Submission> findTop2ByPatientProfile_IdAndSubmissionTypeOrderByCreateDateDesc(UUID patientId,
             Phq9Type submissionType);
 }

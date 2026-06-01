@@ -82,6 +82,29 @@ class AssessmentRepository {
     }
   }
 
+  Future<List<Phq9SubmissionModel>> getPhq9History(String patientId, {String? token}) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiConstants.phq9History}?patientId=$patientId'),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+
+      if (json['status'] == 200 && json['data'] != null) {
+        final list = json['data'] as List<dynamic>;
+        return list.map((e) => Phq9SubmissionModel.fromJson(e as Map<String, dynamic>)).toList();
+      } else {
+        throw Exception(json['message'] ?? 'Không thể tải lịch sử PHQ-9');
+      }
+    } catch (e) {
+      throw Exception('Lỗi mạng khi tải lịch sử PHQ-9: $e');
+    }
+  }
+
   // ======================================================
   // 4. GHI NHẬN TÂM TRẠNG HÀNG NGÀY CỦA BỆNH NHÂN
   // ======================================================

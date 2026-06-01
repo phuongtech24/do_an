@@ -14,11 +14,15 @@ class RoadmapProvider extends ChangeNotifier {
   RoadmapStatus _status = RoadmapStatus.idle;
   String _errorMessage = '';
   List<PatientQuestModel> _dailyQuests = [];
+  List<PatientQuestModel> _questHistory = [];
+  bool _historyLoading = false;
   RoadmapSafetyOverlayModel _safetyOverlay = RoadmapSafetyOverlayModel.inactive;
 
   RoadmapStatus get status => _status;
   String get errorMessage => _errorMessage;
   List<PatientQuestModel> get dailyQuests => _dailyQuests;
+  List<PatientQuestModel> get questHistory => _questHistory;
+  bool get historyLoading => _historyLoading;
   RoadmapSafetyOverlayModel get safetyOverlay => _safetyOverlay;
 
   Future<void> loadDailyQuests(String patientId, {String? token}) async {
@@ -29,14 +33,30 @@ class RoadmapProvider extends ChangeNotifier {
     try {
       final questsFuture = _repository.getDailyQuests(patientId, token: token);
       final overlayFuture = _repository.getSafetyOverlay(patientId, token: token);
+      final historyFuture = _repository.getQuestHistory(patientId, token: token);
       _dailyQuests = await questsFuture;
       _safetyOverlay = await overlayFuture;
+      _questHistory = await historyFuture;
       _status = RoadmapStatus.success;
     } catch (e) {
       _status = RoadmapStatus.error;
       _errorMessage = e.toString().replaceAll('Exception: ', '');
     }
     notifyListeners();
+  }
+
+  Future<void> loadQuestHistory(String patientId, {String? token}) async {
+    _historyLoading = true;
+    notifyListeners();
+
+    try {
+      _questHistory = await _repository.getQuestHistory(patientId, token: token);
+    } catch (e) {
+      debugPrint('RoadmapProvider: Error loading CBT history: $e');
+    } finally {
+      _historyLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<bool> completeQuest(

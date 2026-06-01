@@ -21,6 +21,7 @@ class ApiConstants {
   // Assessment Endpoints
   static const String submitPhq9 = '$baseUrl/assessment/phq9';
   static const String getPhq9Questions = '$baseUrl/assessment/phq9/questions';
+  static const String phq9History = '$baseUrl/assessment/phq9/history';
   static const String phq9Cooldown = '$baseUrl/assessment/cooldown';
   static const String submitMood = '$baseUrl/assessment/mood';
   static const String savePhq9Question = '$baseUrl/assessment/phq9/questions/save';
@@ -33,6 +34,7 @@ class ApiConstants {
 
   // Roadmap Endpoints
   static const String getDailyQuests = '$baseUrl/roadmap/daily';
+  static const String roadmapHistory = '$baseUrl/roadmap/history';
   static const String roadmapSafetyOverlay = '$baseUrl/roadmap/safety-overlay';
   static String completeQuest(String id) => '$baseUrl/roadmap/quests/$id/complete';
   static String verifyQuestProof(String id) => '$baseUrl/roadmap/quests/$id/proof/verify';

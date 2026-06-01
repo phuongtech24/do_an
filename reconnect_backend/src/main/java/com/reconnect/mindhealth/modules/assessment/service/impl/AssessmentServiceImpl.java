@@ -226,6 +226,20 @@ public class AssessmentServiceImpl implements IAssessmentService {
     }
 
     @Override
+    public List<Phq9SubmissionDto> getPhq9History(UUID patientId) {
+        if (patientId == null) {
+            throw new IllegalArgumentException("Thiếu thông tin patientId.");
+        }
+        patientProfileRepository.findById(patientId)
+                .orElseThrow(() -> new EntityNotFoundException("Bệnh nhân không tồn tại với ID: " + patientId));
+
+        return phq9Repository.findByPatientProfile_IdOrderByCreateDateDesc(patientId)
+                .stream()
+                .map(Phq9SubmissionDto::new)
+                .toList();
+    }
+
+    @Override
     public UserMoodDto saveUserMood(UserMoodDto dto) {
         log.info("AssessmentService: Receiving daily mood submission for patient: {}. Mood Score: {}", 
                 dto.getPatientId(), dto.getMoodScore());

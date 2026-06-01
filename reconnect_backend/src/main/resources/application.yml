@@ -44,3 +44,9 @@ app:
     distortions:
       call-ai-only-when-suspicious: ${AI_DISTORTIONS_CALL_AI_ONLY_WHEN_SUSPICIOUS:true}
       max-suggestions: ${AI_DISTORTIONS_MAX_SUGGESTIONS:3}
+
+# Encryption configuration
+# Keys are loaded from environment variables (ENCRYPTION_KEY, ENCRYPTION_IV)
+encryption:
+  key: ${ENCRYPTION_KEY:ReconnectMindH78}
+  iv: ${ENCRYPTION_IV:MindHealthIv1234}

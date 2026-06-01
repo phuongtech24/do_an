@@ -30,6 +30,7 @@ class _Phq9ScreenState extends State<Phq9Screen> {
         final assessmentProvider = Provider.of<AssessmentProvider>(context, listen: false);
         assessmentProvider.loadQuestionnaire(token: token);
         assessmentProvider.checkCooldown(patientId, token: token);
+        assessmentProvider.loadPhq9History(patientId, token: token);
       }
     });
   }
@@ -124,7 +125,15 @@ class _Phq9ScreenState extends State<Phq9Screen> {
           }
 
           if (provider.isCooldown) {
-            return _CooldownView(onBackHome: () => context.go('/home'));
+            return _CooldownWithHistoryView(
+              history: provider.phq9History,
+              loading: provider.historyLoading,
+              onRefresh: () => provider.loadPhq9History(
+                patientId,
+                token: authProvider.loginResponse?.token,
+              ),
+              onBackHome: () => context.go('/home'),
+            );
           }
 
           final questions = questionnaire.questions;
@@ -425,6 +434,186 @@ class _CooldownView extends StatelessWidget {
       ),
     );
   }
+}
+
+class _CooldownWithHistoryView extends StatelessWidget {
+  const _CooldownWithHistoryView({
+    required this.history,
+    required this.loading,
+    required this.onRefresh,
+    required this.onBackHome,
+  });
+
+  final List<dynamic> history;
+  final bool loading;
+  final VoidCallback onRefresh;
+  final VoidCallback onBackHome;
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      onRefresh: () async => onRefresh(),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(24),
+        children: [
+          const SizedBox(height: 36),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(color: Colors.amber.shade50, shape: BoxShape.circle),
+            child: const Icon(Icons.lock_clock_outlined, size: 80, color: Colors.amber),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Thời gian giãn cách',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Hệ thống ghi nhận bạn đã làm PHQ-9 trong vòng 14 ngày qua. Bạn vẫn có thể xem lại lịch sử đánh giá bên dưới.',
+            style: TextStyle(fontSize: 15, height: 1.5, color: Colors.black87),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          _Phq9HistorySection(history: history, loading: loading),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: onBackHome,
+              icon: const Icon(Icons.arrow_back),
+              label: const Text('Quay lại trang chủ'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Phq9HistorySection extends StatelessWidget {
+  const _Phq9HistorySection({required this.history, required this.loading});
+
+  final List<dynamic> history;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.history_rounded, color: Color(0xFF0F8B7F)),
+                const SizedBox(width: 8),
+                Text(
+                  'Lịch sử PHQ-9',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (loading)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(12),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (history.isEmpty)
+              const Text('Chưa có lần đánh giá PHQ-9 nào.', style: TextStyle(color: Colors.black54))
+            else
+              ...history.take(6).map((item) {
+                final totalScore = item.totalScore ?? 0;
+                final q9Score = item.q9Score ?? 0;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: _phq9Color(totalScore).withOpacity(0.12),
+                        child: Text(
+                          '$totalScore',
+                          style: TextStyle(color: _phq9Color(totalScore), fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${_formatDateTime(item.createDate)} • ${item.submissionType}',
+                              style: const TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Tổng điểm $totalScore/27 • Mức: ${_severityText(item.severityLevel)}',
+                              style: const TextStyle(color: Colors.black87),
+                            ),
+                            if (q9Score > 0)
+                              const Text(
+                                'Có cảnh báo an toàn từ câu 9',
+                                style: TextStyle(color: Colors.redAccent, fontSize: 12),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _formatDateTime(String? value) {
+  if (value == null || value.isEmpty) return 'Không rõ ngày';
+  final normalized = value.length >= 16 ? value.substring(0, 16) : value;
+  return normalized.replaceFirst('T', ' ');
+}
+
+String _severityText(String? value) {
+  switch (value) {
+    case 'MINIMAL':
+      return 'Tối thiểu';
+    case 'MILD':
+      return 'Nhẹ';
+    case 'MODERATE':
+      return 'Trung bình';
+    case 'MODERATELY_SEVERE':
+      return 'Trung bình nặng';
+    case 'SEVERE':
+      return 'Nặng';
+    default:
+      return value ?? 'Chưa rõ';
+  }
+}
+
+Color _phq9Color(int score) {
+  if (score <= 4) return Colors.green;
+  if (score <= 9) return Colors.teal;
+  if (score <= 14) return Colors.orange;
+  return Colors.redAccent;
 }
 
 class _ScoreSummaryCard extends StatelessWidget {

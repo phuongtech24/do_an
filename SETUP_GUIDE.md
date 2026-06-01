@@ -183,3 +183,81 @@ Dung de test nhanh cac chuc nang onboarding (PHQ-9 Baseline, Goal Setting, Journ
   "password": "123456"
 }
 ```
+
+## 12. Environment Variables & Security ⚠️
+
+### Quy tac QUAN TRONG:
+
+**NEVER commit `.env` file len Git!** Neu ban check `.env` vao repo, API keys, database passwords, encryption keys... se bi leak!
+
+### Setup local environment:
+
+1. **Copy `.env.example` thành `.env.local`:**
+   ```powershell
+   cp .env.example .env.local
+   ```
+
+2. **Sua `.env.local` voi gia tri cua ban** (khong commit file nay!):
+   ```bash
+   GEMINI_API_KEY=sk-xxx... (tuy situation)
+   JWT_SECRET=your-strong-secret-32-chars
+   ENCRYPTION_KEY=ReconnectMindH78 (16 chars dung)
+   ENCRYPTION_IV=MindHealthIv1234  (16 chars dung)
+   DB_HOST=localhost
+   DB_USER=root
+   DB_PASSWORD=123456
+   API_BASE_URL=http://localhost:8081/api
+   ```
+
+3. **Load `.env.local` trc khi chay:**
+   - **Backend (PowerShell):**
+     ```powershell
+     # Windows PowerShell
+     foreach ($line in Get-Content .env.local) {
+       if ($line -and -not $line.StartsWith("#")) {
+         $parts = $line -split "=", 2
+         [Environment]::SetEnvironmentVariable($parts[0], $parts[1])
+       }
+     }
+     mvn spring-boot:run
+     ```
+   
+   - **Hoac dung `application.properties` directly:**
+     ```properties
+     # src/main/resources/application-local.properties
+     spring.datasource.password=${DB_PASSWORD}
+     app.security.jwt-secret=${JWT_SECRET}
+     encryption.key=${ENCRYPTION_KEY}
+     encryption.iv=${ENCRYPTION_IV}
+     ```
+     Rui chay: `mvn spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=local"`
+   
+   - **Flutter/Web (--dart-define):**
+     ```powershell
+     flutter run --dart-define=API_BASE_URL=http://localhost:8081/api
+     ```
+
+4. **Docker compose (Production):**
+   ```bash
+   docker run -e GEMINI_API_KEY=sk-xxx -e JWT_SECRET=xxx -e ENCRYPTION_KEY=xxx image-name
+   ```
+
+### Checklist:
+
+- [x] `.env` trong `.gitignore` (da them san)
+- [x] `.env.example` commit len Git (vay file nay se la template)
+- [x] `EncryptionUtil.java` load key tu env (khong hardcoded - da fix)
+- [x] `application.yml` xai `${VAR:default}` syntax (ok)
+- [x] Flutter xai `String.fromEnvironment()` (ok)
+
+### Neu accident commit key:
+
+```bash
+# Rotate the key immediately!
+# 1. Regenerate GEMINI_API_KEY (vao Google Cloud Console)
+# 2. Change JWT_SECRET va ENCRYPTION_KEY
+# 3. Force push (if private repo) hoac revert + rewrite history
+git revert <commit-hash>
+git push
+```
+
