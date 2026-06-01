@@ -418,7 +418,7 @@ class _SourceChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
-        isTherapistQuest ? 'Bác sĩ giao' : 'Tự động',
+        isTherapistQuest ? 'Bác sĩ giao' : 'Hệ thống giao',
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.bold,

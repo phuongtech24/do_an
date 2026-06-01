@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reconnect.mindhealth.common.util.EncryptionUtil;
 import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
+import com.reconnect.mindhealth.modules.clinical.enums.Status;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
 import com.reconnect.mindhealth.modules.journal.dto.JournalDto;
 import com.reconnect.mindhealth.modules.journal.entity.Journal;
@@ -23,6 +24,7 @@ import com.reconnect.mindhealth.modules.journal.repository.JournalRepository;
 import com.reconnect.mindhealth.modules.journal.service.IJournalService;
 import com.reconnect.mindhealth.modules.ai.dto.JournalAiRiskResultDto;
 import com.reconnect.mindhealth.modules.ai.service.IAiAssistantService;
+import com.reconnect.mindhealth.modules.risk.service.IRiskScoringService;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -43,6 +45,9 @@ public class JournalServiceImpl implements IJournalService {
 
     @Autowired
     private IAiAssistantService aiAssistantService;
+
+    @Autowired
+    private IRiskScoringService riskScoringService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -90,12 +95,37 @@ public class JournalServiceImpl implements IJournalService {
 
             // 5. Save in Database
             Journal savedJournal = journalRepository.save(journal);
+            triggerImmediateRiskUpdateIfNeeded(patientProfile.getId(), ai);
 
             return convertToDto(savedJournal);
 
         } catch (Exception e) {
             log.error("Error saving journal", e);
             throw new RuntimeException("Lỗi lưu nhật ký: " + e.getMessage(), e);
+        }
+    }
+
+    private void triggerImmediateRiskUpdateIfNeeded(UUID patientId, JournalAiRiskResultDto ai) {
+        int aiRiskScore = ai != null && ai.getAiRiskScore() != null ? ai.getAiRiskScore() : 0;
+        if (aiRiskScore < 70) {
+            return;
+        }
+
+        try {
+            riskScoringService.calculateAndPersist(patientId);
+            log.warn("High-risk journal triggered immediate risk scoring patientId={}, aiRiskScore={}",
+                    patientId, aiRiskScore);
+        } catch (Exception e) {
+            log.error("Immediate risk scoring failed after high-risk journal patientId={}, aiRiskScore={}",
+                    patientId, aiRiskScore, e);
+            patientProfileRepository.findById(patientId).ifPresent(patient -> {
+                int current = patient.getCurrentRiskScore() != null ? patient.getCurrentRiskScore() : 0;
+                int fallbackScore = aiRiskScore >= 100 ? 100 : Math.max(current, 70);
+                patient.setCurrentRiskScore(fallbackScore);
+                patient.setIsRedFlagActive(true);
+                patient.setStatus(Status.WARNING);
+                patientProfileRepository.save(patient);
+            });
         }
     }
 

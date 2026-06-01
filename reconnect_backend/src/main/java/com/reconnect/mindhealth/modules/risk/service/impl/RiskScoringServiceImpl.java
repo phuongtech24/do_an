@@ -116,19 +116,29 @@ public class RiskScoringServiceImpl implements IRiskScoringService {
         Phq9Submission lastPhq9 = phq9Repository.findTopByPatientProfile_IdOrderByCreateDateDesc(patientId);
         int q9Score = lastPhq9 != null && lastPhq9.getQ9Score() != null ? lastPhq9.getQ9Score() : 0;
 
-        // Override: Q9>0 OR AI life-threat keyword today (aiRiskScore=100)
+        // Override: Q9>0 OR AI high-risk journal today (aiRiskScore>=70)
         int maxAiToday = journalRepository.getMaxAiRiskScoreInDay(patientId, startOfDay, endOfDay);
-        boolean override = q9Score > 0 || maxAiToday >= 100;
+        boolean lifeThreatOverride = q9Score > 0 || maxAiToday >= 100;
+        boolean journalWarningOverride = maxAiToday >= 70;
+        boolean override = lifeThreatOverride || journalWarningOverride;
 
         RiskCalculationResultDto dto = new RiskCalculationResultDto();
         dto.setPatientId(patientId);
         dto.setOverrideTriggered(override);
 
-        if (override) {
+        if (lifeThreatOverride) {
             dto.setRiskIndex(100);
             dto.setScorePhq9(100);
             dto.setScoreAi(100);
             dto.setScoreMood(0);
+            return dto;
+        }
+
+        if (journalWarningOverride) {
+            dto.setRiskIndex(70);
+            dto.setScorePhq9(calculatePhq9Score(lastPhq9));
+            dto.setScoreAi(70);
+            dto.setScoreMood(calculateMoodScore(patientId));
             return dto;
         }
 
