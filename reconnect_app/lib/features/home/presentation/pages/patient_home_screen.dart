@@ -6,6 +6,7 @@ import 'package:reconnect_app/features/assessment/presentation/providers/assessm
 import 'package:reconnect_app/features/auth/presentation/providers/auth_provider.dart';
 import '../../../../shared/widgets/feature_card.dart';
 import '../../../../shared/widgets/mindhealth_scaffold.dart';
+import '../../../../shared/widgets/therapy_guide_card.dart';
 
 
 class PatientHomeScreen extends StatefulWidget {
@@ -87,6 +88,13 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                 const Text(
                   'Hôm nay bạn cảm thấy thế nào? Hãy đánh giá mức độ tâm trạng từ 0 - 100.',
                   style: TextStyle(color: Colors.black54),
+                ),
+                const TherapyGuideCard(
+                  title: 'Vì sao cần check-in?',
+                  message:
+                      'Theo dõi mood giúp bạn và chuyên gia nhận ra kiểu mẫu cảm xúc, đo tiến bộ và chọn công cụ phù hợp trong ngày.',
+                  icon: Icons.insights_outlined,
+                  accentColor: Color(0xFF6C63FF),
                 ),
                 const SizedBox(height: 24),
                 Text(
@@ -199,10 +207,20 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              isNegative 
-                ? 'Bạn đang cảm thấy $_selectedMoodLabel. Đây là cơ hội tốt để cùng AI ghi lại những gì đang diễn ra trong đầu và tìm cách cân bằng lại. Bạn sẵn lòng chứ?'
-                : 'Thật tuyệt vời khi thấy bạn đang $_selectedMoodLabel! Để củng cố năng lượng tích cực này, bạn có muốn dành 1 phút ghi nhận những việc tốt mình đã làm hôm nay không?',
+              isNegative
+                  ? 'Bạn đang cảm thấy $_selectedMoodLabel. Đây là lúc phù hợp để ghi lại suy nghĩ đang diễn ra và tìm cách cân bằng hơn. Bạn sẵn lòng thử không?'
+                  : 'Thật tốt khi bạn đang $_selectedMoodLabel. Bạn có muốn dành 1 phút ghi nhận những nỗ lực hoặc việc tích cực mình đã làm hôm nay không?',
               style: const TextStyle(height: 1.5),
+            ),
+            TherapyGuideCard(
+              title: isNegative ? 'Gợi ý Nhật ký suy nghĩ' : 'Gợi ý Credit List',
+              message: isNegative
+                  ? 'Khi mood thấp, CBT khuyến khích bắt “suy nghĩ tự động” để kiểm tra xem suy nghĩ đó có đang kéo cảm xúc đi xuống không.'
+                  : 'Credit List giúp bạn nhìn lại cả những việc nhỏ nhưng khó khi đang mệt, thay vì chỉ chú ý điều tiêu cực.',
+              icon: isNegative
+                  ? Icons.edit_note_outlined
+                  : Icons.playlist_add_check_circle_outlined,
+              accentColor: const Color(0xFF6C63FF),
             ),
           ],
         ),

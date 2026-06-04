@@ -21,6 +21,12 @@ public class RuleBasedCognitiveDistortionDetector {
      * - OVERGENERALIZATION
      * - EMOTIONAL_REASONING
      * - LABELING
+     * - DISQUALIFYING_POSITIVE
+     * - MAGNIFICATION_MINIMIZATION
+     * - MENTAL_FILTER
+     * - PERSONALIZATION
+     * - SHOULD_MUST
+     * - TUNNEL_VISION
      */
     public List<String> detect(String situation, String automaticThought, int max) {
         String text = normalize((situation == null ? "" : situation) + " " + (automaticThought == null ? "" : automaticThought));
@@ -47,6 +53,24 @@ public class RuleBasedCognitiveDistortionDetector {
         }
         if (containsAny(text, List.of("toi la", "minh la", "do la toi", "vo dung", "vo gia tri", "that bai", "ngu ngoc"))) {
             out.add("LABELING");
+        }
+        if (containsAny(text, List.of("chi la may man", "do may man", "khong dang ke", "khong tinh", "ai cung lam duoc", "chua co gi gioi", "khong co gi dac biet"))) {
+            out.add("DISQUALIFYING_POSITIVE");
+        }
+        if (containsAny(text, List.of("qua te", "kinh khung", "khung khiep", "toi te nhat", "chuyen nho thoi", "khong quan trong", "chang co gi hay"))) {
+            out.add("MAGNIFICATION_MINIMIZATION");
+        }
+        if (containsAny(text, List.of("chi thay", "chi nho", "chi nghi den", "chi tap trung", "toan nhin thay diem xau", "moi thu deu xau"))) {
+            out.add("MENTAL_FILTER");
+        }
+        if (containsAny(text, List.of("la loi cua toi", "tai toi", "do toi", "vi toi nen", "toi lam ho", "toi khien ho", "tat ca la loi cua toi"))) {
+            out.add("PERSONALIZATION");
+        }
+        if (containsAny(text, List.of("toi phai", "minh phai", "toi nen", "minh nen", "bat buoc phai", "khong duoc phep", "phai luon", "nen luon"))) {
+            out.add("SHOULD_MUST");
+        }
+        if (containsAny(text, List.of("chi co dieu xau", "khong co gi tot", "toan dieu te", "chi nhin thay that bai", "tat ca deu te", "moi thu deu vo nghia"))) {
+            out.add("TUNNEL_VISION");
         }
 
         List<String> list = new ArrayList<>(out);
@@ -78,4 +102,3 @@ public class RuleBasedCognitiveDistortionDetector {
         return noMarks.replaceAll("[^a-z0-9\\s]", " ").replaceAll("\\s+", " ").trim();
     }
 }
-

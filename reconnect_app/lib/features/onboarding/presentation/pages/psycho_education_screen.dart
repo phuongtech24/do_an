@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../../shared/widgets/therapy_guide_card.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/onboarding_provider.dart';
 
@@ -19,27 +20,35 @@ class _PsychoeducationScreenState extends State<PsychoeducationScreen> {
 
   final List<Map<String, String>> _pages = [
     {
-      'title': 'Mô hình Nhận thức',
-      'description': 'Bạn có biết? Không phải sự kiện gây ra cảm xúc của bạn, mà là cách bạn SUY NGHĨ về nó.',
-      'image': 'assets/images/cbt_model.png', // Placeholder
+      'title': 'Mô hình nhận thức',
+      'description':
+          'Không chỉ sự kiện làm bạn thay đổi cảm xúc, mà còn là cách bạn diễn giải sự kiện đó.',
+      'guide':
+          'CBT luyện bạn nhìn lại chuỗi: tình huống → suy nghĩ → cảm xúc → hành vi. Khi nhận ra mắt xích “suy nghĩ”, bạn có thêm lựa chọn để phản ứng khác đi.',
       'icon': '🧠',
     },
     {
       'title': 'Vòng lặp tiêu cực',
-      'description': 'Suy nghĩ tiêu cực dẫn đến Cảm xúc tệ, khiến bạn thu mình lại (Hành vi) và gây ra các Triệu chứng cơ thể.',
-      'image': 'assets/images/loop.png',
+      'description':
+          'Suy nghĩ tiêu cực có thể kéo cảm xúc đi xuống, khiến bạn thu mình lại và mệt hơn.',
+      'guide':
+          'MindHealth không thay chuyên gia. App giúp bạn luyện kỹ năng nhỏ mỗi ngày để theo dõi cảm xúc và phá vòng lặp tiêu cực từng bước.',
       'icon': '🔄',
     },
     {
-      'title': 'Chúng ta sẽ làm gì?',
-      'description': 'MindHealth sẽ giúp bạn nhận diện các "Lỗi tư duy" và thay thế chúng bằng những suy nghĩ khách quan hơn.',
-      'image': 'assets/images/solution.png',
+      'title': 'Nhật ký suy nghĩ',
+      'description':
+          'Bạn sẽ học cách nhận diện lỗi tư duy và viết phản hồi cân bằng hơn cho suy nghĩ tự động.',
+      'guide':
+          'Nhật ký suy nghĩ là nơi bạn thực hành bắt suy nghĩ tự động, kiểm tra bằng chứng và viết phản hồi thích nghi.',
       'icon': '💡',
     },
     {
       'title': 'Kích hoạt hành vi',
-      'description': 'Bằng cách thực hiện các nhiệm vụ nhỏ mỗi ngày, bạn sẽ dần lấy lại niềm vui và sự tự tin.',
-      'image': 'assets/images/roadmap.png',
+      'description':
+          'Các nhiệm vụ nhỏ mỗi ngày giúp bạn bắt đầu hành động, ghi nhận nỗ lực và xây lại sự tự tin.',
+      'guide':
+          'Roadmap giao bài tập vừa sức. Mục tiêu là bắt đầu bằng hành động nhỏ, không phải làm hoàn hảo.',
       'icon': '🚀',
     },
   ];
@@ -63,11 +72,12 @@ class _PsychoeducationScreenState extends State<PsychoeducationScreen> {
                 onPageChanged: (index) => setState(() => _currentPage = index),
                 itemBuilder: (context, index) {
                   final page = _pages[index];
-                  return Padding(
-                    padding: const EdgeInsets.all(40.0),
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.all(40),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
+                        const SizedBox(height: 36),
                         Text(
                           page['icon']!,
                           style: const TextStyle(fontSize: 80),
@@ -92,14 +102,20 @@ class _PsychoeducationScreenState extends State<PsychoeducationScreen> {
                           ),
                           textAlign: TextAlign.center,
                         ),
+                        const SizedBox(height: 18),
+                        TherapyGuideCard(
+                          title: 'Gợi ý sử dụng',
+                          message: page['guide']!,
+                          icon: Icons.psychology_alt_outlined,
+                          accentColor: const Color(0xFF6C63FF),
+                          dismissible: true,
+                        ),
                       ],
                     ),
                   );
                 },
               ),
             ),
-            
-            // Indicators
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(_pages.length, (index) {
@@ -108,15 +124,15 @@ class _PsychoeducationScreenState extends State<PsychoeducationScreen> {
                   width: _currentPage == index ? 24 : 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: _currentPage == index ? const Color(0xFF6C63FF) : Colors.grey[300],
+                    color: _currentPage == index
+                        ? const Color(0xFF6C63FF)
+                        : Colors.grey[300],
                     borderRadius: BorderRadius.circular(4),
                   ),
                 );
               }),
             ),
-            
             const SizedBox(height: 40),
-            
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
               child: SizedBox(
@@ -128,38 +144,56 @@ class _PsychoeducationScreenState extends State<PsychoeducationScreen> {
                         duration: const Duration(milliseconds: 300),
                         curve: Curves.easeInOut,
                       );
-                    } else {
-                      if (patientId.isEmpty) {
-                        context.go('/auth');
-                        return;
-                      }
-                      setState(() => _isSubmitting = true);
-                      WidgetsBinding.instance.addPostFrameCallback((_) async {
-                        final ok = await onboardingProvider.completePsychoeducation(patientId, token: token);
-                        if (!mounted) return;
-                        setState(() => _isSubmitting = false);
-                        if (ok) {
-                          context.go('/home');
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Lỗi: ${onboardingProvider.errorMessage}')),
-                          );
-                        }
-                      });
+                      return;
                     }
+
+                    if (patientId.isEmpty) {
+                      context.go('/auth');
+                      return;
+                    }
+
+                    setState(() => _isSubmitting = true);
+                    WidgetsBinding.instance.addPostFrameCallback((_) async {
+                      final ok = await onboardingProvider.completePsychoeducation(
+                        patientId,
+                        token: token,
+                      );
+                      if (!mounted) return;
+                      setState(() => _isSubmitting = false);
+                      if (ok) {
+                        context.go('/home');
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Lỗi: ${onboardingProvider.errorMessage}',
+                            ),
+                          ),
+                        );
+                      }
+                    });
                   },
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF6C63FF),
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   child: (_currentPage == _pages.length - 1 && _isSubmitting)
                       ? const SizedBox(
                           height: 18,
                           width: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
-                      : Text(_currentPage == _pages.length - 1 ? 'Bắt đầu ngay' : 'Tiếp theo'),
+                      : Text(
+                          _currentPage == _pages.length - 1
+                              ? 'Bắt đầu ngay'
+                              : 'Tiếp theo',
+                        ),
                 ),
               ),
             ),

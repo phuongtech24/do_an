@@ -7,6 +7,7 @@ import 'dart:io';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/roadmap_provider.dart';
 import '../../data/models/verify_quest_proof_result.dart';
+import '../../../../shared/widgets/therapy_guide_card.dart';
 
 class QuestDetailScreen extends StatefulWidget {
   final String id;
@@ -243,6 +244,19 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
               ),
             ),
             const SizedBox(height: 24),
+            TherapyGuideCard(
+              title: _requiresPhotoProof
+                  ? 'Làm trước để tạo năng lượng'
+                  : 'Bài nhận thức',
+              message: _requiresPhotoProof
+                  ? 'Trong CBT, mình bắt đầu bằng hành động nhỏ trước, rồi năng lượng và cảm giác làm chủ thường đến sau. Bạn không cần chờ có động lực mới làm.'
+                  : 'Bài nhận thức giúp bạn luyện quan sát suy nghĩ và phản ứng của mình một cách nhẹ nhàng, không phải viết cho hoàn hảo.',
+              icon: _requiresPhotoProof
+                  ? Icons.directions_walk_outlined
+                  : Icons.psychology_outlined,
+              accentColor: widget.categoryColor,
+              dismissible: true,
+            ),
             
             // Submission Area
             const Text(
@@ -252,6 +266,13 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
             const SizedBox(height: 12),
             
             if (widget.category == 'Hành vi' || widget.category == 'Xã hội') ...[
+              TherapyGuideCard(
+                title: 'Minh chứng ảnh',
+                message:
+                    'Bạn có thể chụp hoặc chọn ảnh minh chứng. AI chỉ kiểm tra ảnh có phù hợp với nhiệm vụ hay không, không chấm “đẹp/xấu” hay đánh giá con người bạn.',
+                icon: Icons.photo_camera_outlined,
+                accentColor: widget.categoryColor,
+              ),
               Container(
                 height: 150,
                 padding: const EdgeInsets.all(16),
@@ -345,6 +366,13 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
             const Text(
               'Tự đánh giá kết quả (Kích hoạt hành vi)',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blueGrey),
+            ),
+            const TherapyGuideCard(
+              title: 'Pleasure/Mastery là tự đánh giá',
+              message:
+                  'Đây là cảm nhận của chính bạn sau khi làm bài: mức vui vẻ và mức thành tựu. Nó không phải điểm chất lượng hay điểm chấm của hệ thống.',
+              icon: Icons.favorite_border,
+              accentColor: Color(0xFF0F8B7F),
             ),
             const SizedBox(height: 24),
             

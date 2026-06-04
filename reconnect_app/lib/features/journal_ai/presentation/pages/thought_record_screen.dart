@@ -6,6 +6,7 @@ import 'package:reconnect_app/features/journal_ai/data/models/journal_model.dart
 import 'package:reconnect_app/features/journal_ai/presentation/providers/cognitive_distortions_provider.dart';
 import 'package:reconnect_app/features/journal_ai/presentation/providers/guided_discovery_provider.dart';
 import 'package:reconnect_app/features/journal_ai/presentation/providers/journal_provider.dart';
+import 'package:reconnect_app/shared/widgets/therapy_guide_card.dart';
 
 class ThoughtRecordScreen extends StatefulWidget {
   final String? agenda;
@@ -17,14 +18,31 @@ class ThoughtRecordScreen extends StatefulWidget {
 
 class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
   final PageController _pageController = PageController();
+  final TextEditingController _situationController = TextEditingController();
+  final TextEditingController _thoughtController = TextEditingController();
+  final TextEditingController _adaptiveResponseController = TextEditingController();
   int _currentStep = 0;
   bool _guidedDiscoveryRequested = false;
   bool _distortionsRequested = false;
+  late final String _initialSituation;
+  late final String _initialEmotionLabel;
 
   @override
   void initState() {
     super.initState();
-    _situation = widget.agenda ?? '';
+    _initialSituation = widget.agenda ?? '';
+    _initialEmotionLabel = _emotionLabel;
+    _situation = _initialSituation;
+    _situationController.text = _situation;
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _situationController.dispose();
+    _thoughtController.dispose();
+    _adaptiveResponseController.dispose();
+    super.dispose();
   }
 
   // Data
@@ -40,12 +58,18 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
   bool _saveAsCopingCard = true;
 
   final List<Map<String, String>> _distortions = [
-    {'code': 'CATASTROPHIZING', 'label': 'Thảm họa hóa (Catastrophizing)'},
-    {'code': 'MIND_READING', 'label': 'Đọc tâm trí (Mind Reading)'},
     {'code': 'ALL_OR_NOTHING', 'label': 'Suy nghĩ trắng - đen'},
-    {'code': 'OVERGENERALIZATION', 'label': 'Khái quát hóa quá mức'},
+    {'code': 'CATASTROPHIZING', 'label': 'Thảm họa hóa (Catastrophizing)'},
+    {'code': 'DISQUALIFYING_POSITIVE', 'label': 'Bác bỏ/Đánh giá thấp điều tích cực'},
     {'code': 'EMOTIONAL_REASONING', 'label': 'Lập luận bằng cảm xúc'},
     {'code': 'LABELING', 'label': 'Dán nhãn (Labeling)'},
+    {'code': 'MAGNIFICATION_MINIMIZATION', 'label': 'Phóng đại tiêu cực / Thu nhỏ tích cực'},
+    {'code': 'MENTAL_FILTER', 'label': 'Lọc bằng trí óc'},
+    {'code': 'MIND_READING', 'label': 'Đọc tâm trí (Mind Reading)'},
+    {'code': 'OVERGENERALIZATION', 'label': 'Khái quát hóa quá mức'},
+    {'code': 'PERSONALIZATION', 'label': 'Cá nhân hóa'},
+    {'code': 'SHOULD_MUST', 'label': 'Câu lệnh "Phải" / "Nên"'},
+    {'code': 'TUNNEL_VISION', 'label': 'Tầm nhìn hình ống'},
   ];
 
   void _nextStep() {
@@ -57,6 +81,80 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
     } else {
       _finish();
     }
+  }
+
+  void _previousStep() {
+    if (_currentStep <= 0) return;
+    _pageController.previousPage(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  bool _hasDraftChanges() {
+    return _situation.trim() != _initialSituation.trim() ||
+        _thought.trim().isNotEmpty ||
+        _emotionLabel != _initialEmotionLabel ||
+        _belief.toInt() != 50 ||
+        _intensity.toInt() != 50 ||
+        _selectedDistortions.isNotEmpty ||
+        _adaptiveResponse.trim().isNotEmpty ||
+        _finalBelief.toInt() != 30 ||
+        _finalIntensity.toInt() != 30 ||
+        !_saveAsCopingCard;
+  }
+
+  Future<bool> _confirmDiscardDraft() async {
+    final discard = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Bỏ bản nháp nhật ký?'),
+        content: const Text(
+          'Nội dung bạn đang nhập chưa được lưu. Nếu thoát, hệ thống sẽ không tạo nhật ký và không lưu dữ liệu này.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Ở lại'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'Bỏ bản nháp',
+              style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+    return discard ?? false;
+  }
+
+  void _resetAiDraftState() {
+    Provider.of<CognitiveDistortionsProvider>(context, listen: false).reset();
+    Provider.of<GuidedDiscoveryProvider>(context, listen: false).reset();
+  }
+
+  void _exitJournal() {
+    _resetAiDraftState();
+    context.go('/home');
+  }
+
+  Future<void> _handleBackIntent() async {
+    if (_currentStep > 0) {
+      _previousStep();
+      return;
+    }
+
+    if (!_hasDraftChanges()) {
+      _exitJournal();
+      return;
+    }
+
+    final discard = await _confirmDiscardDraft();
+    if (!mounted || !discard) return;
+    _exitJournal();
   }
 
   void _finish() async {
@@ -157,9 +255,19 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        await _handleBackIntent();
+      },
+      child: Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: _handleBackIntent,
+        ),
         title: const Text('Nhật ký Suy nghĩ 6 bước', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
         elevation: 0,
@@ -247,15 +355,12 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
               if (_currentStep > 0)
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => _pageController.previousPage(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                    ),
+                    onPressed: _previousStep,
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const Text('Quay lại'),
+                    child: const Text('Bước trước'),
                   ),
                 ),
               if (_currentStep > 0) const SizedBox(width: 16),
@@ -277,6 +382,7 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
             ],
           ),
         ),
+      ),
       ),
     );
   }
@@ -311,7 +417,7 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
             ),
           TextField(
             maxLines: 5,
-            controller: TextEditingController(text: _situation)..selection = TextSelection.fromPosition(TextPosition(offset: _situation.length)),
+            controller: _situationController,
             onChanged: (v) => _situation = v,
             decoration: InputDecoration(
               hintText: 'VD: Bạn thân không trả lời tin nhắn của tôi suốt 2 tiếng...',
@@ -329,8 +435,16 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
       description: 'Ý tưởng nào lóe lên trong đầu bạn ngay lúc đó?',
       child: Column(
         children: [
+          const TherapyGuideCard(
+            title: 'Bắt suy nghĩ tự động',
+            message:
+                'Hãy ghi câu vừa lóe lên trong đầu bạn, càng gần nguyên văn càng tốt. Đây là bước giúp mình nhìn rõ suy nghĩ đang kéo cảm xúc đi xuống.',
+            icon: Icons.psychology_outlined,
+            accentColor: Color(0xFF6C63FF),
+          ),
           TextField(
             maxLines: 3,
+            controller: _thoughtController,
             onChanged: (v) => _thought = v,
             decoration: InputDecoration(
               hintText: 'VD: Họ chắc chắn đang ghét mình và muốn cắt đứt liên lạc.',
@@ -392,6 +506,13 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
                 : 'Dựa trên suy nghĩ "$_thought", mình gợi ý bạn có thể đang mắc một số lỗi tư duy sau:',
           ),
           const SizedBox(height: 12),
+          const TherapyGuideCard(
+            title: 'AI chỉ gợi ý',
+            message:
+                'Gemini có thể gợi ý 1–3 lỗi tư duy, nhưng bạn vẫn là người tự xác nhận lỗi nào phù hợp nhất với trải nghiệm của mình.',
+            icon: Icons.fact_check_outlined,
+            accentColor: Color(0xFF6C63FF),
+          ),
           if (cd.status == CognitiveDistortionsStatus.loading)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
@@ -454,6 +575,13 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
             'Để đánh giá tính xác thực của suy nghĩ "$_thought", hãy thử trả lời câu hỏi này nhé:',
           ),
           const SizedBox(height: 12),
+          const TherapyGuideCard(
+            title: 'Câu hỏi Socratic',
+            message:
+                'Các câu hỏi này giúp bạn kiểm tra suy nghĩ bằng bằng chứng và góc nhìn khác. Chúng không nhằm phán xét bạn đúng hay sai.',
+            icon: Icons.help_outline,
+            accentColor: Color(0xFF6C63FF),
+          ),
           if (gd.status == GuidedDiscoveryStatus.loading)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
@@ -468,6 +596,7 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
           const SizedBox(height: 24),
           TextField(
             maxLines: 5,
+            controller: _adaptiveResponseController,
             onChanged: (v) => _adaptiveResponse = v,
             decoration: InputDecoration(
               hintText: 'Nhập câu trả lời thực tế và khách quan hơn của bạn...',
@@ -523,6 +652,13 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
       description: 'Sau khi suy nghĩ lại, hãy đánh giá lại niềm tin của bạn.',
       child: Column(
         children: [
+          const TherapyGuideCard(
+            title: 'Phản hồi thích nghi',
+            message:
+                'Câu trả lời cân bằng hơn có thể trở thành Thẻ đối phó để bạn đọc lại khi cảm xúc xấu quay lại.',
+            icon: Icons.card_membership_outlined,
+            accentColor: Color(0xFF6C63FF),
+          ),
           Text('Niềm tin vào suy nghĩ cũ giờ còn: (${_finalBelief.toInt()}%)'),
           Slider(
             value: _finalBelief,

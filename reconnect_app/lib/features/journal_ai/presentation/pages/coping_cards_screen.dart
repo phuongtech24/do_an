@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../shared/widgets/mindhealth_scaffold.dart';
+import '../../../../shared/widgets/therapy_guide_card.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../data/models/journal_model.dart';
 import '../providers/journal_provider.dart';
@@ -205,6 +206,14 @@ class _CopingCardsScreenState extends State<CopingCardsScreen> {
             'Đọc các thẻ này mỗi khi bạn cảm thấy những suy nghĩ tiêu cực quay trở lại.',
             style: TextStyle(color: Colors.grey),
           ),
+          const TherapyGuideCard(
+            title: 'Thẻ đối phó dùng khi nào?',
+            message:
+                'Đọc lại các phản hồi cân bằng khi bạn đang bình thường sẽ giúp não “tập trước”, để lúc cảm xúc xấu quay lại bạn có điểm tựa nhanh hơn.',
+            icon: Icons.style_outlined,
+            accentColor: Color(0xFF6C63FF),
+            dismissible: true,
+          ),
           const SizedBox(height: 24),
           
           ..._cards.map((card) => _buildCard(card)),
@@ -234,6 +243,13 @@ class _CopingCardsScreenState extends State<CopingCardsScreen> {
             ],
           ),
           const SizedBox(height: 12),
+          const TherapyGuideCard(
+            title: 'Ghi nhận nỗ lực nhỏ',
+            message:
+                'Credit List không chỉ là việc “thành công lớn”. Hãy ghi cả việc nhỏ nhưng khó khi đang mệt, ví dụ: đi tắm, ra khỏi giường, tự nấu ăn.',
+            icon: Icons.playlist_add_check_circle_outlined,
+            accentColor: Color(0xFF0F8B7F),
+          ),
           
           ...allCredits.map((text) => _buildCreditItem(text)),
           const SizedBox(height: 80), // Space for FAB

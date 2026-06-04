@@ -179,10 +179,27 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
                 + emotionLine;
     }
 
+    private String cognitiveDistortionDefinitionsPrompt() {
+        return ""
+                + "Cơ sở phân loại 12 Cognitive Distortions. Chỉ chọn code trong danh sách này nếu nội dung thật sự phù hợp:\n"
+                + "- ALL_OR_NOTHING: Tư duy trắng-đen; nhìn tình huống theo hai thái cực thay vì một dải liên tục.\n"
+                + "- CATASTROPHIZING: Thảm họa hóa/dự đoán tương lai tiêu cực mà bỏ qua kết quả thực tế hơn.\n"
+                + "- DISQUALIFYING_POSITIVE: Bác bỏ hoặc đánh giá thấp trải nghiệm, hành động, phẩm chất tích cực.\n"
+                + "- EMOTIONAL_REASONING: Cho rằng điều gì đó đúng chỉ vì cảm thấy/tin rất mạnh như vậy.\n"
+                + "- LABELING: Gắn nhãn tiêu cực, cố định, toàn diện cho bản thân hoặc người khác.\n"
+                + "- MAGNIFICATION_MINIMIZATION: Phóng đại điều tiêu cực hoặc thu nhỏ điều tích cực một cách vô lý.\n"
+                + "- MENTAL_FILTER: Chỉ chú ý một chi tiết tiêu cực thay vì nhìn toàn bộ bức tranh.\n"
+                + "- MIND_READING: Tin chắc mình biết người khác đang nghĩ gì mà không xét khả năng khác.\n"
+                + "- OVERGENERALIZATION: Rút ra kết luận tiêu cực bao quát vượt xa tình huống hiện tại.\n"
+                + "- PERSONALIZATION: Tự đổ lỗi cho phản ứng/hành vi tiêu cực của người khác mà bỏ qua giải thích hợp lý hơn.\n"
+                + "- SHOULD_MUST: Câu lệnh phải/nên cứng nhắc về cách bản thân hoặc người khác phải hành xử.\n"
+                + "- TUNNEL_VISION: Chỉ nhìn thấy các khía cạnh tiêu cực của một tình huống.\n";
+    }
+
     private String buildStandardRiskPrompt(JournalType journalType, String journalJsonContent) {
         return ""
                 + "Bạn là chuyên gia phân tích tâm lý theo Liệu pháp Nhận thức Hành vi (CBT).\n"
-                + "Nhiệm vụ: phân tích đoạn Nhật ký suy nghĩ (Thought Record) của bệnh nhân và trả về DUY NHẤT một JSON object hợp lệ.\n"
+                + "Nhiệm vụ: phân tích đoạn Nhật ký suy nghĩ (Thought Record) của bệnh nhân theo risk và lỗi tư duy, rồi trả về DUY NHẤT một JSON object hợp lệ.\n"
                 + "Không markdown, không code fence, không giải thích ngoài JSON.\n\n"
                 + "Schema bắt buộc:\n"
                 + "{\n"
@@ -195,20 +212,10 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
                 + "- 0 / NORMAL: suy nghĩ tiêu cực, buồn bã, chán nản thông thường; không có nguy cơ đe dọa tính mạng.\n"
                 + "- 70 / CORE_BELIEF: tuyệt vọng sâu sắc, bế tắc tột cùng, buông xuôi mờ nhạt như \"tôi muốn biến mất\", \"không còn hy vọng\".\n"
                 + "- 100 / LIFE_THREAT: có ý định tự sát rõ ràng, kế hoạch tự hại, nhắc tới cái chết hoặc hành vi tự hại.\n\n"
-                + "Danh sách Cognitive Distortions được phép chọn nếu có:\n"
-                + "- ALL_OR_NOTHING\n"
-                + "- CATASTROPHIZING\n"
-                + "- DISQUALIFYING_POSITIVE\n"
-                + "- EMOTIONAL_REASONING\n"
-                + "- LABELING\n"
-                + "- MAGNIFICATION_MINIMIZATION\n"
-                + "- MENTAL_FILTER\n"
-                + "- MIND_READING\n"
-                + "- OVERGENERALIZATION\n"
-                + "- PERSONALIZATION\n"
-                + "- SHOULD_MUST\n"
-                + "- TUNNEL_VISION\n\n"
+                + cognitiveDistortionDefinitionsPrompt()
+                + "\n"
                 + "Lưu ý an toàn: nếu nội dung có dấu hiệu trực tiếp về tự sát/tự hại, chọn 100.\n"
+                + "reason phải ngắn gọn, không trích nguyên văn thông tin nhạy cảm của bệnh nhân.\n"
                 + "journalType=" + journalType.name() + "\n"
                 + "journalJson=" + journalJsonContent;
     }
@@ -228,13 +235,7 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
     private String buildCognitiveDistortionsPrompt(CognitiveDistortionRequestDto r, int max) {
         return ""
                 + "Bạn là chuyên gia CBT. Nhiệm vụ: dựa vào 'automaticThought' và 'situation' để gợi ý 1-3 lỗi tư duy.\n"
-                + "Chỉ được chọn trong danh sách code sau:\n"
-                + "- CATASTROPHIZING\n"
-                + "- MIND_READING\n"
-                + "- ALL_OR_NOTHING\n"
-                + "- OVERGENERALIZATION\n"
-                + "- EMOTIONAL_REASONING\n"
-                + "- LABELING\n"
+                + cognitiveDistortionDefinitionsPrompt()
                 + "Đầu ra BẮT BUỘC là JSON thuần đúng schema: {\"distortions\":[\"CODE\"...],\"hint\":\"...\"}\n"
                 + "Quy tắc: distortions dài tối đa " + max + " phần tử; hint 1 câu ngắn tiếng Việt.\n"
                 + "situation=" + r.getSituation() + "\n"
