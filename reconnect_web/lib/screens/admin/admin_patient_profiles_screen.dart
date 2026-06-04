@@ -234,14 +234,14 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
               const SizedBox(height: 16),
               _DemoActionTile(
                 icon: Icons.lock_open,
-                title: 'Mở khóa PHQ-9',
-                subtitle: 'Bệnh nhân vào app làm lại PHQ-9 ngay.',
-                onTap: () => Navigator.pop(context, 'unlock-phq9'),
+                title: 'Mở khóa LSAS',
+                subtitle: 'Bệnh nhân vào app làm lại LSAS/re-rating ngay.',
+                onTap: () => Navigator.pop(context, 'unlock-lsas'),
               ),
               _DemoActionTile(
                 icon: Icons.assignment_turned_in,
-                title: 'Tạo bài CBT hôm nay',
-                subtitle: 'Tạo daily quest SYSTEM cho Roadmap nếu chưa có.',
+                title: 'Tạo bài thực hành hôm nay',
+                subtitle: 'Tạo bài hệ thống cho Fear Ladder nếu chưa có.',
                 onTap: () => Navigator.pop(context, 'run-daily-roadmap'),
               ),
               _DemoActionTile(

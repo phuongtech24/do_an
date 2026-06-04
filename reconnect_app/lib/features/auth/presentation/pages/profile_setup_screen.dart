@@ -144,7 +144,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               width: double.infinity,
               child: FilledButton(
                 onPressed: _onContinue,
-                child: const Text('Luu ho so va tiep tuc PHQ-9'),
+                child: const Text('Lưu hồ sơ và tiếp tục LSAS'),
               ),
             ),
           ],
@@ -157,7 +157,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-    context.go('/phq9');
+    context.go('/lsas');
   }
 }
-

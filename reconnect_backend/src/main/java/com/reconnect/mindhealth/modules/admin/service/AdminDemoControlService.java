@@ -40,23 +40,23 @@ public class AdminDemoControlService {
     }
 
     @Transactional
-    public AdminDemoControlResultDto unlockPhq9(UUID patientId, UUID adminId) {
+    public AdminDemoControlResultDto unlockLsas(UUID patientId, UUID adminId) {
         PatientProfile patient = getPatient(patientId);
-        patient.setLastPhq9Date(null);
+        patient.setLastLsasDate(null);
         patientProfileRepository.save(patient);
-        log.info("Admin demo control unlock PHQ-9 adminId={}, patientId={}", adminId, patientId);
-        return new AdminDemoControlResultDto(patientId, "UNLOCK_PHQ9",
-                "Đã mở khóa PHQ-9. Bệnh nhân có thể vào app để làm lại bài đánh giá.");
+        log.info("Admin demo control unlock LSAS adminId={}, patientId={}", adminId, patientId);
+        return new AdminDemoControlResultDto(patientId, "UNLOCK_LSAS",
+                "Đã mở khóa LSAS/re-rating. Bệnh nhân có thể vào app để làm lại đánh giá.");
     }
 
     @Transactional
-    public AdminDemoControlResultDto triggerPhq9(UUID patientId, UUID adminId) {
+    public AdminDemoControlResultDto triggerLsas(UUID patientId, UUID adminId) {
         PatientProfile patient = getPatient(patientId);
-        patient.setLastPhq9Date(null);
+        patient.setLastLsasDate(null);
         patientProfileRepository.save(patient);
-        log.info("Admin demo control trigger PHQ-9 adminId={}, patientId={}", adminId, patientId);
-        return new AdminDemoControlResultDto(patientId, "TRIGGER_PHQ9",
-                "Đã kích hoạt PHQ-9 đột xuất cho demo. Bệnh nhân có thể làm ngay trên app.");
+        log.info("Admin demo control trigger LSAS adminId={}, patientId={}", adminId, patientId);
+        return new AdminDemoControlResultDto(patientId, "TRIGGER_LSAS",
+                "Đã kích hoạt LSAS/re-rating đột xuất cho demo. Bệnh nhân có thể làm ngay trên app.");
     }
 
     public AdminDemoControlResultDto runDailyRoadmap(UUID patientId, LocalDate date, UUID adminId) {
@@ -65,8 +65,8 @@ public class AdminDemoControlService {
         List<PatientQuest> created = roadmapDailyAssignmentService.ensureDailySystemQuests(patient, effectiveDate);
         AdminDemoControlResultDto result = new AdminDemoControlResultDto(patientId, "RUN_DAILY_ROADMAP",
                 created.isEmpty()
-                        ? "Bệnh nhân đã có bài CBT hệ thống trong ngày, không tạo trùng."
-                        : "Đã tạo bài CBT hệ thống cho hôm nay.");
+                        ? "Bệnh nhân đã có bài hệ thống trong ngày, không tạo trùng."
+                        : "Đã tạo bài hệ thống cho hôm nay.");
         result.setCreatedQuests(created.size());
         log.info("Admin demo control run daily roadmap adminId={}, patientId={}, date={}, created={}",
                 adminId, patientId, effectiveDate, created.size());
@@ -86,7 +86,7 @@ public class AdminDemoControlService {
         riskLog.setPatientProfile(patient);
         riskLog.setRiskDate(LocalDate.now());
         riskLog.setRiskScore(normalizedScore);
-        riskLog.setScorePhq9(normalizedScore);
+        riskLog.setScoreSafety(normalizedScore);
         riskLog.setScoreAi(0);
         riskLog.setScoreMood(0);
         riskLog.setOverrideTriggered(redFlag || normalizedScore >= 70);
@@ -115,7 +115,7 @@ public class AdminDemoControlService {
         riskLog.setPatientProfile(patient);
         riskLog.setRiskDate(LocalDate.now());
         riskLog.setRiskScore(0);
-        riskLog.setScorePhq9(0);
+        riskLog.setScoreSafety(0);
         riskLog.setScoreAi(0);
         riskLog.setScoreMood(0);
         riskLog.setOverrideTriggered(false);

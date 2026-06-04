@@ -1,28 +1,20 @@
 package com.reconnect.mindhealth.modules.assessment.service;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
-import com.reconnect.mindhealth.modules.assessment.dto.Phq9QuestionDto;
-import com.reconnect.mindhealth.modules.assessment.dto.Phq9SubmissionDto;
+import com.reconnect.mindhealth.modules.assessment.dto.LsasSituationDto;
+import com.reconnect.mindhealth.modules.assessment.dto.LsasSubmissionDto;
 import com.reconnect.mindhealth.modules.assessment.dto.UserMoodDto;
 
 public interface IAssessmentService {
-    // Nộp bài test PHQ-9 (submitPhq9).
-    Phq9SubmissionDto submitPhq9(Phq9SubmissionDto dto);
+    List<LsasSituationDto> getLsasSituations();
 
-    // Kiểm tra xem bệnh nhân có đang trong thời gian khóa 14 ngày không (checkPhq9Cooldown).
-    boolean isPhq9OnCoolDown(UUID patientId);
+    LsasSubmissionDto submitLsas(LsasSubmissionDto dto);
 
-    List<Phq9SubmissionDto> getPhq9History(UUID patientId);
+    boolean isLsasOnCoolDown(UUID patientId);
 
-    // Ghi nhận tâm trạng hàng ngày (saveUserMood).
+    List<LsasSubmissionDto> getLsasHistory(UUID patientId);
+
     UserMoodDto saveUserMood(UserMoodDto dto);
-
-    // Lấy bộ câu hỏi và đáp án PHQ-9 cố định từ file CSV
-    Map<String, Object> getPhq9Questionnaire();
-
-    // Lưu (Thêm mới hoặc Cập nhật) câu hỏi PHQ-9
-    Phq9QuestionDto savePhq9Question(Phq9QuestionDto dto);
 }

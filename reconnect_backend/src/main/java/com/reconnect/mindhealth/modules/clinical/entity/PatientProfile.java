@@ -60,8 +60,14 @@ public class PatientProfile extends BaseObject {
     @Column(name = "is_red_flag_active")
     private Boolean isRedFlagActive = false;
 
-    @Column(name = "last_phq9_date")
-    private java.time.LocalDateTime lastPhq9Date;
+    @Column(name = "last_lsas_date")
+    private java.time.LocalDateTime lastLsasDate;
+
+    @Column(name = "current_lsas_score")
+    private Integer currentLsasScore = 0;
+
+    @Column(name = "current_cycle_start_date")
+    private java.time.LocalDateTime currentCycleStartDate;
 
     @Column(name = "graduated_at")
     private java.time.LocalDateTime graduatedAt;
@@ -163,12 +169,28 @@ public class PatientProfile extends BaseObject {
         this.isRedFlagActive = isRedFlagActive;
     }
 
-    public java.time.LocalDateTime getLastPhq9Date() {
-        return lastPhq9Date;
+    public java.time.LocalDateTime getLastLsasDate() {
+        return lastLsasDate;
     }
 
-    public void setLastPhq9Date(java.time.LocalDateTime lastPhq9Date) {
-        this.lastPhq9Date = lastPhq9Date;
+    public void setLastLsasDate(java.time.LocalDateTime lastLsasDate) {
+        this.lastLsasDate = lastLsasDate;
+    }
+
+    public Integer getCurrentLsasScore() {
+        return currentLsasScore;
+    }
+
+    public void setCurrentLsasScore(Integer currentLsasScore) {
+        this.currentLsasScore = currentLsasScore;
+    }
+
+    public java.time.LocalDateTime getCurrentCycleStartDate() {
+        return currentCycleStartDate;
+    }
+
+    public void setCurrentCycleStartDate(java.time.LocalDateTime currentCycleStartDate) {
+        this.currentCycleStartDate = currentCycleStartDate;
     }
 
     public java.time.LocalDateTime getGraduatedAt() {

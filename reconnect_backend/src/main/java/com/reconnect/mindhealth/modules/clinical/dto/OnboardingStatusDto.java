@@ -4,7 +4,7 @@ import java.util.UUID;
 
 public class OnboardingStatusDto {
     private UUID patientId;
-    private boolean hasBaselinePhq9;
+    private boolean hasBaselineLsas;
     private boolean hasGoals;
     private boolean hasCompletedPsychoeducation;
 
@@ -19,12 +19,12 @@ public class OnboardingStatusDto {
         this.patientId = patientId;
     }
 
-    public boolean isHasBaselinePhq9() {
-        return hasBaselinePhq9;
+    public boolean isHasBaselineLsas() {
+        return hasBaselineLsas;
     }
 
-    public void setHasBaselinePhq9(boolean hasBaselinePhq9) {
-        this.hasBaselinePhq9 = hasBaselinePhq9;
+    public void setHasBaselineLsas(boolean hasBaselineLsas) {
+        this.hasBaselineLsas = hasBaselineLsas;
     }
 
     public boolean isHasGoals() {
@@ -43,4 +43,3 @@ public class OnboardingStatusDto {
         this.hasCompletedPsychoeducation = hasCompletedPsychoeducation;
     }
 }
-

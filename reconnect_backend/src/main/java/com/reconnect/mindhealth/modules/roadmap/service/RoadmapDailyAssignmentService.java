@@ -16,8 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.reconnect.mindhealth.modules.assessment.entity.Phq9Submission;
-import com.reconnect.mindhealth.modules.assessment.repository.Phq9Repository;
 import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
 import com.reconnect.mindhealth.modules.roadmap.dto.DailyQuestAssignmentSummaryDto;
@@ -46,17 +44,14 @@ public class RoadmapDailyAssignmentService {
     private final PatientProfileRepository patientProfileRepository;
     private final QuestTemplateRepository questTemplateRepository;
     private final PatientQuestRepository patientQuestRepository;
-    private final Phq9Repository phq9Repository;
 
     public RoadmapDailyAssignmentService(
             PatientProfileRepository patientProfileRepository,
             QuestTemplateRepository questTemplateRepository,
-            PatientQuestRepository patientQuestRepository,
-            Phq9Repository phq9Repository) {
+            PatientQuestRepository patientQuestRepository) {
         this.patientProfileRepository = patientProfileRepository;
         this.questTemplateRepository = questTemplateRepository;
         this.patientQuestRepository = patientQuestRepository;
-        this.phq9Repository = phq9Repository;
     }
 
     public DailyQuestAssignmentSummaryDto assignDailyQuestsForAllActivePatients(LocalDate date) {
@@ -104,10 +99,10 @@ public class RoadmapDailyAssignmentService {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public List<PatientQuest> refreshDailySystemQuestsAfterPhq9(
+    public List<PatientQuest> refreshDailySystemQuestsAfterLsas(
             PatientProfile patientProfile,
             LocalDate effectiveDate,
-            Integer phq9Total,
+            Integer lsasTotal,
             LocalDate cycleStartDate) {
         if (patientProfile == null || patientProfile.getId() == null) {
             throw new IllegalArgumentException("Missing patient profile.");
@@ -122,34 +117,34 @@ public class RoadmapDailyAssignmentService {
             boolean hasCompletedQuest = existingSystem.stream()
                     .anyMatch(quest -> quest.getStatus() == QuestStatus.DONE);
             if (hasCompletedQuest) {
-                log.info("Skipped PHQ-9 roadmap refresh because a system quest is already completed patientId={}, date={}, existing={}",
+                log.info("Skipped LSAS roadmap refresh because a system quest is already completed patientId={}, date={}, existing={}",
                         patientProfile.getId(), effectiveDate, existingSystem.size());
                 return Collections.emptyList();
             }
 
             patientQuestRepository.deleteAll(existingSystem);
             patientQuestRepository.flush();
-            log.info("Deleted stale daily system quests after PHQ-9 patientId={}, date={}, deleted={}",
+            log.info("Deleted stale daily system quests after LSAS patientId={}, date={}, deleted={}",
                     patientProfile.getId(), effectiveDate, existingSystem.size());
         }
 
-        int effectivePhq9 = phq9Total != null ? Math.max(0, Math.min(phq9Total, 27)) : resolveLatestPhq9Score(patientProfile);
+        int effectiveLsas = lsasTotal != null ? Math.max(0, Math.min(lsasTotal, 144)) : resolveLatestLsasScore(patientProfile);
         LocalDate effectiveCycleStart = cycleStartDate != null ? cycleStartDate : effectiveDate;
-        return assignDailySystemQuests(patientProfile, effectiveDate, effectivePhq9, effectiveCycleStart);
+        return assignDailySystemQuests(patientProfile, effectiveDate, effectiveLsas, effectiveCycleStart);
     }
 
-    public RoadmapPreviewDto previewDailySystemQuestPlan(UUID patientId, LocalDate startDate, Integer days, Integer phq9Score) {
+    public RoadmapPreviewDto previewDailySystemQuestPlan(UUID patientId, LocalDate startDate, Integer days, Integer lsasScore) {
         PatientProfile patient = patientProfileRepository.findById(patientId)
                 .orElseThrow(() -> new EntityNotFoundException("Patient profile not found: " + patientId));
         LocalDate effectiveStart = startDate != null ? startDate : LocalDate.now(APP_ZONE);
         int effectiveDays = days != null ? Math.max(1, Math.min(days, 28)) : 14;
-        int effectivePhq9 = phq9Score != null ? Math.max(0, Math.min(phq9Score, 27)) : resolveLatestPhq9Score(patient);
+        int effectiveLsas = lsasScore != null ? Math.max(0, Math.min(lsasScore, 144)) : resolveLatestLsasScore(patient);
 
         RoadmapPreviewDto preview = new RoadmapPreviewDto();
         preview.setPatientId(patient.getId());
         preview.setStartDate(effectiveStart);
         preview.setDays(effectiveDays);
-        preview.setPhq9Score(effectivePhq9);
+        preview.setLsasScore(effectiveLsas);
 
         List<RoadmapPreviewItemDto> items = new ArrayList<>();
         int behavioralCount = 0;
@@ -158,7 +153,7 @@ public class RoadmapDailyAssignmentService {
             LocalDate date = effectiveStart.plusDays(day);
             int cycleDayIndex = Math.floorMod(day, 14);
             for (int order = 1; order <= DAILY_MAX_QUESTS; order++) {
-                QuestSelection selection = selectQuest(effectivePhq9, cycleDayIndex, order);
+                QuestSelection selection = selectQuest(effectiveLsas, cycleDayIndex, order);
                 if (selection.category() == QuestCategory.BEHAVIORAL) {
                     behavioralCount++;
                 } else if (selection.category() == QuestCategory.COGNITIVE) {
@@ -182,18 +177,17 @@ public class RoadmapDailyAssignmentService {
     }
 
     private List<PatientQuest> assignDailySystemQuests(PatientProfile patientProfile, LocalDate effectiveDate) {
-        Phq9Submission latestPhq9 = phq9Repository.findTopByPatientProfile_IdOrderByCreateDateDesc(patientProfile.getId());
-        int phq9Total = latestPhq9 != null && latestPhq9.getTotalScore() != null ? latestPhq9.getTotalScore() : 0;
-        LocalDate cycleStart = latestPhq9 != null && latestPhq9.getCreateDate() != null
-                ? latestPhq9.getCreateDate().toInstant().atZone(APP_ZONE).toLocalDate()
+        int lsasTotal = resolveLatestLsasScore(patientProfile);
+        LocalDate cycleStart = patientProfile.getCurrentCycleStartDate() != null
+                ? patientProfile.getCurrentCycleStartDate().toLocalDate()
                 : effectiveDate;
-        return assignDailySystemQuests(patientProfile, effectiveDate, phq9Total, cycleStart);
+        return assignDailySystemQuests(patientProfile, effectiveDate, lsasTotal, cycleStart);
     }
 
     private List<PatientQuest> assignDailySystemQuests(
             PatientProfile patientProfile,
             LocalDate effectiveDate,
-            int phq9Total,
+            int lsasTotal,
             LocalDate cycleStart) {
         List<QuestTemplate> allTemplates = questTemplateRepository.findAll();
         if (allTemplates.isEmpty()) {
@@ -205,7 +199,7 @@ public class RoadmapDailyAssignmentService {
 
         List<PatientQuest> created = new ArrayList<>();
         for (int order = 1; order <= DAILY_MAX_QUESTS; order++) {
-            QuestSelection selection = selectQuest(phq9Total, cycleDayIndex, order);
+            QuestSelection selection = selectQuest(lsasTotal, cycleDayIndex, order);
             QuestTemplate picked = pickTemplateByCategoryAndDifficulty(
                     allTemplates, selection.category(), selection.difficulty(), rotationSalt + order);
             if (picked == null) {
@@ -230,19 +224,18 @@ public class RoadmapDailyAssignmentService {
             created.add(patientQuestRepository.save(quest));
         }
 
-        log.info("Assigned daily system quests patientId={}, date={}, created={}, phq9={}, cycleDay={}",
-                patientProfile.getId(), effectiveDate, created.size(), phq9Total, cycleDayIndex);
+        log.info("Assigned legacy daily system quests patientId={}, date={}, created={}, lsas={}, cycleDay={}",
+                patientProfile.getId(), effectiveDate, created.size(), lsasTotal, cycleDayIndex);
         return created;
     }
 
-    private int resolveLatestPhq9Score(PatientProfile patientProfile) {
-        Phq9Submission latestPhq9 = phq9Repository.findTopByPatientProfile_IdOrderByCreateDateDesc(patientProfile.getId());
-        return latestPhq9 != null && latestPhq9.getTotalScore() != null ? latestPhq9.getTotalScore() : 0;
+    private int resolveLatestLsasScore(PatientProfile patientProfile) {
+        return patientProfile.getCurrentLsasScore() != null ? patientProfile.getCurrentLsasScore() : 0;
     }
 
-    private QuestSelection selectQuest(int phq9Total, int cycleDayIndex, int unlockOrder) {
+    private QuestSelection selectQuest(int lsasTotal, int cycleDayIndex, int unlockOrder) {
         int globalSlotIndex = cycleDayIndex * DAILY_MAX_QUESTS + (unlockOrder - 1);
-        if (phq9Total >= 15) {
+        if (lsasTotal >= 60) {
             if (globalSlotIndex % 5 == 4) {
                 return new QuestSelection(QuestCategory.COGNITIVE, QuestDifficulty.EASY);
             }

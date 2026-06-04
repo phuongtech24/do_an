@@ -18,8 +18,8 @@ import com.reconnect.mindhealth.modules.clinical.dto.OnboardingStatusDto;
 import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
 import com.reconnect.mindhealth.modules.clinical.service.IClinicalService;
-import com.reconnect.mindhealth.modules.assessment.enums.Phq9Type;
-import com.reconnect.mindhealth.modules.assessment.repository.Phq9Repository;
+import com.reconnect.mindhealth.modules.assessment.enums.LsasSubmissionType;
+import com.reconnect.mindhealth.modules.assessment.repository.LsasSubmissionRepository;
 
 import jakarta.persistence.EntityNotFoundException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -34,7 +34,7 @@ public class ClinicalServiceImpl implements IClinicalService {
     private PatientProfileRepository patientProfileRepository;
 
     @Autowired
-    private Phq9Repository phq9Repository;
+    private LsasSubmissionRepository lsasSubmissionRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -141,13 +141,13 @@ public class ClinicalServiceImpl implements IClinicalService {
         PatientProfile patientProfile = patientProfileRepository.findById(patientId)
                 .orElseThrow(() -> new EntityNotFoundException("Bệnh nhân không tồn tại với ID: " + patientId));
 
-        boolean hasBaseline = phq9Repository.existsByPatientProfile_IdAndSubmissionType(patientId, Phq9Type.BASELINE);
+        boolean hasBaseline = lsasSubmissionRepository.existsByPatientProfile_IdAndSubmissionType(patientId, LsasSubmissionType.BASELINE);
         boolean hasGoals = patientProfile.getGoalsJson() != null && !patientProfile.getGoalsJson().trim().isEmpty();
         boolean hasPsycho = Boolean.TRUE.equals(patientProfile.getPsychoeducationCompleted());
 
         OnboardingStatusDto dto = new OnboardingStatusDto();
         dto.setPatientId(patientId);
-        dto.setHasBaselinePhq9(hasBaseline);
+        dto.setHasBaselineLsas(hasBaseline);
         dto.setHasGoals(hasGoals);
         dto.setHasCompletedPsychoeducation(hasPsycho);
         return dto;

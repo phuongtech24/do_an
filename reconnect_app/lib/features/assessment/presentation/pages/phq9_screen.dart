@@ -4,588 +4,218 @@ import 'package:provider/provider.dart';
 
 import '../../../../shared/widgets/mindhealth_scaffold.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
-import '../../data/models/phq9_question_model.dart';
+import '../../data/models/lsas_situation_model.dart';
+import '../../data/models/lsas_submission_model.dart';
 import '../providers/assessment_provider.dart';
 
-class Phq9Screen extends StatefulWidget {
+class Phq9Screen extends StatelessWidget {
   const Phq9Screen({super.key});
 
   @override
-  State<Phq9Screen> createState() => _Phq9ScreenState();
+  Widget build(BuildContext context) => const LsasAssessmentScreen();
 }
 
-class _Phq9ScreenState extends State<Phq9Screen> {
-  final Map<String, int> _answers = {};
-  int? _functionalDifficultyScore;
+class LsasAssessmentScreen extends StatefulWidget {
+  const LsasAssessmentScreen({super.key});
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final patientId = authProvider.loginResponse?.user.id ?? '';
-      final token = authProvider.loginResponse?.token;
+  State<LsasAssessmentScreen> createState() => _LsasAssessmentScreenState();
+}
 
+class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
+  final Map<String, int> _fearScores = {};
+  final Map<String, int> _avoidanceScores = {};
+  bool _bootstrapped = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_bootstrapped) return;
+    _bootstrapped = true;
+    final auth = context.read<AuthProvider>();
+    final patientId = auth.loginResponse?.user.id ?? '';
+    final token = auth.token;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = context.read<AssessmentProvider>();
+      provider.loadSituations(token: token);
       if (patientId.isNotEmpty) {
-        final assessmentProvider = Provider.of<AssessmentProvider>(context, listen: false);
-        assessmentProvider.loadQuestionnaire(token: token);
-        assessmentProvider.checkCooldown(patientId, token: token);
-        assessmentProvider.loadPhq9History(patientId, token: token);
+        provider.checkCooldown(patientId, token: token);
+        provider.loadLsasHistory(patientId, token: token);
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    final patientId = authProvider.loginResponse?.user.id ?? '';
-
-    if (patientId.isEmpty) {
-      return MindHealthScaffold(
-        title: 'Đánh giá lâm sàng (PHQ-9)',
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.login_rounded, size: 64, color: Color(0xFF6C63FF)),
-                const SizedBox(height: 12),
-                const Text(
-                  'Bạn chưa đăng nhập.',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Vui lòng đăng nhập để tải bộ câu hỏi PHQ-9 từ hệ thống.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.black54),
-                ),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: () => context.go('/auth'),
-                  child: const Text('Đi tới đăng nhập'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
+    final auth = context.watch<AuthProvider>();
+    final provider = context.watch<AssessmentProvider>();
+    final patientId = auth.loginResponse?.user.id ?? '';
+    final token = auth.token;
 
     return MindHealthScaffold(
-      title: 'Đánh giá lâm sàng (PHQ-9)',
-      body: Consumer<AssessmentProvider>(
-        builder: (context, provider, child) {
-          if (provider.status == AssessmentStatus.loading && provider.questionnaire == null) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Đang tải bộ câu hỏi từ máy chủ lâm sàng...'),
-                ],
-              ),
-            );
-          }
-
-          if (provider.status == AssessmentStatus.error && provider.questionnaire == null) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.error_outline, size: 60, color: Colors.red),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Không thể tải dữ liệu: ${provider.errorMessage}',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () {
-                        final token = authProvider.loginResponse?.token;
-                        provider.loadQuestionnaire(token: token);
-                        provider.checkCooldown(patientId, token: token);
-                      },
-                      child: const Text('Thử lại'),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-
-          final questionnaire = provider.questionnaire;
-          if (questionnaire == null) {
-            return const Center(child: Text('Không tìm thấy dữ liệu câu hỏi.'));
-          }
-
-          if (provider.isCooldown) {
-            return _Phq9CooldownTabbedView(
-              history: provider.phq9History,
-              loading: provider.historyLoading,
-              onRefresh: () => provider.loadPhq9History(
-                patientId,
-                token: authProvider.loginResponse?.token,
-              ),
-              onBackHome: () => context.go('/home'),
-            );
-          }
-
-          final questions = questionnaire.questions;
-          final options = questionnaire.options;
-          final totalScore = _calculateTotalScore(questions);
-          final severityLabel = _getSeverityLabel(totalScore);
-          final hasAnyProblem = _answers.values.any((score) => score > 0);
-          final isCompleted = _answers.length == questions.length &&
-              (!hasAnyProblem || _functionalDifficultyScore != null);
-          final hasSuicidalRisk = _hasSuicidalRisk(questions);
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Bộ câu hỏi PHQ-9',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                questionnaire.instruction,
-                style: const TextStyle(color: Colors.black54, height: 1.4),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Chọn mức độ phù hợp nhất với bạn trong 2 tuần vừa qua.',
-                style: TextStyle(color: Colors.grey.shade700, height: 1.4),
-              ),
-              const SizedBox(height: 16),
-              LinearProgressIndicator(
-                value: questions.isEmpty ? 0 : _answers.length / questions.length,
-                borderRadius: BorderRadius.circular(20),
-                minHeight: 8,
-              ),
-              const SizedBox(height: 12),
-              Expanded(
-                child: ListView.separated(
-                  itemCount: questions.length + (hasAnyProblem ? 1 : 0),
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    if (index == questions.length) {
-                      return _FunctionalDifficultyCard(
-                        question: questionnaire.functionalDifficultyQuestion,
-                        options: questionnaire.functionalDifficultyOptions,
-                        selectedValue: _functionalDifficultyScore,
-                        onChanged: (score) => setState(() => _functionalDifficultyScore = score),
-                      );
-                    }
-                    final question = questions[index];
-                    return _QuestionCard(
-                      question: question,
-                      selectedValue: _answers[question.id],
-                      options: options,
-                      onChanged: (score) {
-                        setState(() {
-                          _answers[question.id] = score;
-                          if (!_answers.values.any((value) => value > 0)) {
-                            _functionalDifficultyScore = null;
-                          }
-                        });
-                      },
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 12),
-              _ScoreSummaryCard(totalScore: totalScore, severityLabel: severityLabel),
-              if (hasSuicidalRisk) const _SafetyWarningCard(),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: FilledButton(
-                  onPressed: isCompleted && provider.status != AssessmentStatus.loading
-                      ? () => _handleSubmit(provider, patientId, questions)
-                      : null,
-                  child: provider.status == AssessmentStatus.loading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+      title: 'Đánh giá lo âu xã hội (LSAS)',
+      body: patientId.isEmpty
+          ? const _LsasEmptyState(
+              icon: Icons.lock_outline_rounded,
+              title: 'Vui lòng đăng nhập',
+              message: 'Bạn cần đăng nhập để làm LSAS và tạo Fear Ladder cá nhân.',
+            )
+          : provider.status == AssessmentStatus.loading && provider.situations.isEmpty
+              ? const Center(child: CircularProgressIndicator())
+              : provider.status == AssessmentStatus.error && provider.situations.isEmpty
+                  ? _LsasErrorState(
+                      message: provider.errorMessage,
+                      onRetry: () => provider.loadSituations(token: token),
+                    )
+                  : provider.isCooldown
+                      ? _LsasCooldownView(
+                          history: provider.lsasHistory,
+                          loading: provider.historyLoading,
+                          onRefresh: () => provider.loadLsasHistory(patientId, token: token),
+                          onBackHome: () => context.go('/home'),
                         )
-                      : const Text('Hoàn tất bài đánh giá'),
-                ),
-              ),
-              if (!isCompleted)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8, bottom: 4),
-                  child: Center(
-                    child: Text(
-                      hasAnyProblem
-                          ? 'Vui lòng trả lời thêm mức độ ảnh hưởng đến sinh hoạt.'
-                          : 'Vui lòng trả lời đầy đủ tất cả các câu để nộp bài.',
-                      style: const TextStyle(fontSize: 13, color: Colors.black54),
-                    ),
-                  ),
-                ),
-            ],
-          );
-        },
-      ),
+                      : _LsasForm(
+                          situations: provider.situations,
+                          fearScores: _fearScores,
+                          avoidanceScores: _avoidanceScores,
+                          loading: provider.status == AssessmentStatus.loading,
+                          onChanged: () => setState(() {}),
+                          onSubmit: () => _submit(context, patientId, token),
+                        ),
     );
   }
 
-  int _calculateTotalScore(List<Phq9QuestionModel> questions) {
-    int sum = 0;
-    for (final question in questions) {
-      sum += _answers[question.id] ?? 0;
-    }
-    return sum;
-  }
+  Future<void> _submit(BuildContext context, String patientId, String? token) async {
+    final provider = context.read<AssessmentProvider>();
+    final situations = provider.situations;
+    final missing = situations.where((item) {
+      return !_fearScores.containsKey(item.id) || !_avoidanceScores.containsKey(item.id);
+    }).toList();
 
-  String _getSeverityLabel(int score) {
-    if (score <= 4) return 'Tối thiểu';
-    if (score <= 9) return 'Nhẹ';
-    if (score <= 14) return 'Trung bình';
-    if (score <= 19) return 'Trung bình nặng';
-    return 'Nặng';
-  }
-
-  bool _hasSuicidalRisk(List<Phq9QuestionModel> questions) {
-    if (questions.isEmpty) return false;
-    final q9 = questions.firstWhere(
-      (question) => question.questionNumber == 9,
-      orElse: () => questions.last,
-    );
-    return (_answers[q9.id] ?? 0) > 0;
-  }
-
-  Future<void> _handleSubmit(
-    AssessmentProvider provider,
-    String patientId,
-    List<Phq9QuestionModel> questions,
-  ) async {
-    final sortedQuestions = List<Phq9QuestionModel>.from(questions)
-      ..sort((a, b) => a.questionNumber.compareTo(b.questionNumber));
-    final answersList = sortedQuestions.map((question) => _answers[question.id] ?? 0).toList();
-
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final token = authProvider.loginResponse?.token;
-    final success = await provider.submitPhq9(
-      patientId,
-      answersList,
-      token: token,
-      functionalDifficultyScore: _functionalDifficultyScore,
-    );
-
-    if (success && mounted) {
-      final score = provider.lastSubmission?.totalScore ?? _calculateTotalScore(questions);
-      final severity = provider.lastSubmission?.severityLevel ?? _getSeverityLabel(score);
-      final submissionType = provider.lastSubmission?.submissionType ?? 'PERIODIC';
-      final nextRoute = submissionType == 'BASELINE' ? '/goal-setting' : '/home';
-      final nextLabel = submissionType == 'BASELINE' ? 'Thiết lập mục tiêu' : 'Về trang chủ';
-
-      if (provider.lastSubmission?.graduatedNow == true) {
-        _showGraduationDialog(nextRoute, nextLabel);
-        return;
-      }
-
-      if (score < 5) {
-        _showRecoveryCongratsDialog(score, severity, nextRoute, nextLabel);
-      } else {
-        _showResultDialog(score, severity, nextRoute, nextLabel);
-      }
-    } else if (mounted) {
+    if (missing.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi: ${provider.errorMessage}')),
+        SnackBar(content: Text('Bạn còn ${missing.length} tình huống chưa chấm đủ Fear/Avoidance.')),
+      );
+      return;
+    }
+
+    final answers = situations.map((item) {
+      return LsasAnswerInput(
+        situationId: item.id,
+        fearScore: _fearScores[item.id]!,
+        avoidanceScore: _avoidanceScores[item.id]!,
+      );
+    }).toList();
+
+    final hasHistory = provider.lsasHistory.isNotEmpty;
+    final ok = await provider.submitLsas(
+      patientId,
+      answers,
+      token: token,
+      submissionType: hasHistory ? 'PERIODIC' : 'BASELINE',
+    );
+
+    if (!context.mounted) return;
+    if (ok) {
+      final score = provider.lastSubmission?.totalScore ?? 0;
+      await showDialog<void>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Đã lưu LSAS'),
+          content: Text(
+            'Tổng điểm LSAS của bạn là $score/144.\n\nHệ thống sẽ dùng kết quả này để tạo Fear Ladder và bài thực hành hành vi theo mức dễ → khó.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Xem lộ trình'),
+            ),
+          ],
+        ),
+      );
+      if (context.mounted) context.go('/roadmap');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(provider.errorMessage)),
       );
     }
   }
-
-  void _showResultDialog(int score, String severity, String nextRoute, String nextLabel) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Kết quả đánh giá'),
-        content: Text(
-          'Tổng điểm của bạn là $score/27 (mức độ: $severity).\n\nLộ trình CBT sẽ được cập nhật theo chu kỳ đánh giá PHQ-9.',
-          style: const TextStyle(height: 1.5),
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.go(nextRoute);
-            },
-            child: Text(nextLabel),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showRecoveryCongratsDialog(int score, String severity, String nextRoute, String nextLabel) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.emoji_events_rounded, color: Colors.amber, size: 28),
-            SizedBox(width: 8),
-            Text('Chúc mừng bạn!'),
-          ],
-        ),
-        content: Text(
-          'Chỉ số PHQ-9 của bạn đang ở mức an toàn ($score/27 - $severity).\n\nHãy tiếp tục duy trì các hành vi và kỹ năng CBT đang giúp bạn tiến bộ.',
-          style: const TextStyle(height: 1.5),
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.go(nextRoute);
-            },
-            child: Text(nextLabel),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showGraduationDialog(String nextRoute, String nextLabel) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.celebration, color: Colors.deepPurple, size: 26),
-            SizedBox(width: 8),
-            Text('Bạn đã tốt nghiệp!'),
-          ],
-        ),
-        content: const Text(
-          'Chúc mừng bạn đã đạt điều kiện tốt nghiệp: 2 chu kỳ PHQ-9 liên tiếp dưới 5 điểm.\n\nHệ thống sẽ chuyển sang giai đoạn duy trì để phòng ngừa tái phát.',
-          style: TextStyle(height: 1.5),
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.go(nextRoute);
-            },
-            child: Text(nextLabel),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
-class _CooldownView extends StatelessWidget {
-  const _CooldownView({required this.onBackHome});
-
-  final VoidCallback onBackHome;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(color: Colors.amber.shade50, shape: BoxShape.circle),
-              child: const Icon(Icons.lock_clock_outlined, size: 80, color: Colors.amber),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Thời gian giãn cách',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Hệ thống ghi nhận bạn đã làm PHQ-9 trong vòng 14 ngày qua. Bài đánh giá định kỳ nên được thực hiện sau mỗi 2 tuần để theo dõi chính xác hơn.',
-              style: TextStyle(fontSize: 15, height: 1.5, color: Colors.black87),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: onBackHome,
-                icon: const Icon(Icons.arrow_back),
-                label: const Text('Quay lại trang chủ'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CooldownWithHistoryView extends StatelessWidget {
-  const _CooldownWithHistoryView({
-    required this.history,
+class _LsasForm extends StatelessWidget {
+  const _LsasForm({
+    required this.situations,
+    required this.fearScores,
+    required this.avoidanceScores,
     required this.loading,
-    required this.onRefresh,
-    required this.onBackHome,
+    required this.onChanged,
+    required this.onSubmit,
   });
 
-  final List<dynamic> history;
+  final List<LsasSituationModel> situations;
+  final Map<String, int> fearScores;
+  final Map<String, int> avoidanceScores;
   final bool loading;
-  final VoidCallback onRefresh;
-  final VoidCallback onBackHome;
+  final VoidCallback onChanged;
+  final VoidCallback onSubmit;
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: () async => onRefresh(),
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(24),
-        children: [
-          const SizedBox(height: 36),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(color: Colors.amber.shade50, shape: BoxShape.circle),
-            child: const Icon(Icons.lock_clock_outlined, size: 80, color: Colors.amber),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Thời gian giãn cách',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Hệ thống ghi nhận bạn đã làm PHQ-9 trong vòng 14 ngày qua. Bạn vẫn có thể xem lại lịch sử đánh giá bên dưới.',
-            style: TextStyle(fontSize: 15, height: 1.5, color: Colors.black87),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          _Phq9HistorySection(history: history, loading: loading),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: onBackHome,
-              icon: const Icon(Icons.arrow_back),
-              label: const Text('Quay lại trang chủ'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+    final completed = situations.where((item) {
+      return fearScores.containsKey(item.id) && avoidanceScores.containsKey(item.id);
+    }).length;
+    final progress = situations.isEmpty ? 0.0 : completed / situations.length;
 
-class _Phq9CooldownTabbedView extends StatelessWidget {
-  const _Phq9CooldownTabbedView({
-    required this.history,
-    required this.loading,
-    required this.onRefresh,
-    required this.onBackHome,
-  });
-
-  final List<dynamic> history;
-  final bool loading;
-  final VoidCallback onRefresh;
-  final VoidCallback onBackHome;
-
-  @override
-  Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Column(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: const TabBar(
-              labelColor: Color(0xFF0F8B7F),
-              unselectedLabelColor: Colors.black54,
-              indicatorColor: Color(0xFF0F8B7F),
-              tabs: [
-                Tab(icon: Icon(Icons.lock_clock_outlined), text: 'Trạng thái'),
-                Tab(icon: Icon(Icons.history_rounded), text: 'Lịch sử'),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: TabBarView(
-              children: [
-                _Phq9CooldownStatus(onBackHome: onBackHome),
-                RefreshIndicator(
-                  onRefresh: () async => onRefresh(),
-                  child: ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.only(top: 8, bottom: 24),
-                    children: [
-                      _Phq9HistorySection(history: history, loading: loading),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Phq9CooldownStatus extends StatelessWidget {
-  const _Phq9CooldownStatus({required this.onBackHome});
-
-  final VoidCallback onBackHome;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(24),
+    return Column(
       children: [
-        const SizedBox(height: 36),
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(color: Colors.amber.shade50, shape: BoxShape.circle),
-          child: const Icon(Icons.lock_clock_outlined, size: 80, color: Colors.amber),
-        ),
-        const SizedBox(height: 24),
-        Text(
-          'Thời gian giãn cách',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-          textAlign: TextAlign.center,
+        _GuideCard(
+          icon: Icons.psychology_alt_rounded,
+          title: 'LSAS là gì?',
+          message:
+              'Bạn sẽ chấm 24 tình huống xã hội theo 2 mặt: mức sợ/hồi hộp và mức né tránh. Hệ thống dùng điểm này để tạo thang tiếp xúc cá nhân.',
         ),
         const SizedBox(height: 12),
-        const Text(
-          'Bạn đã làm PHQ-9 trong vòng 14 ngày qua. Bài đánh giá định kỳ nên thực hiện sau mỗi 2 tuần để theo dõi chính xác hơn.',
-          style: TextStyle(fontSize: 15, height: 1.5, color: Colors.black87),
-          textAlign: TextAlign.center,
+        LinearProgressIndicator(value: progress, minHeight: 8, borderRadius: BorderRadius.circular(999)),
+        const SizedBox(height: 8),
+        Text('$completed/${situations.length} tình huống đã hoàn tất', style: const TextStyle(color: Colors.black54)),
+        const SizedBox(height: 12),
+        Expanded(
+          child: ListView.separated(
+            itemCount: situations.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final item = situations[index];
+              return _SituationCard(
+                situation: item,
+                fearScore: fearScores[item.id],
+                avoidanceScore: avoidanceScores[item.id],
+                onFearChanged: (value) {
+                  fearScores[item.id] = value;
+                  onChanged();
+                },
+                onAvoidanceChanged: (value) {
+                  avoidanceScores[item.id] = value;
+                  onChanged();
+                },
+              );
+            },
+          ),
         ),
-        const SizedBox(height: 28),
+        const SizedBox(height: 12),
         SizedBox(
           width: double.infinity,
-          child: FilledButton.icon(
-            onPressed: onBackHome,
-            icon: const Icon(Icons.arrow_back),
-            label: const Text('Quay lại trang chủ'),
+          child: ElevatedButton.icon(
+            onPressed: loading ? null : onSubmit,
+            icon: loading
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.check_circle_outline_rounded),
+            label: const Text('Lưu LSAS và tạo Fear Ladder'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0F8B7F),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            ),
           ),
         ),
       ],
@@ -593,336 +223,336 @@ class _Phq9CooldownStatus extends StatelessWidget {
   }
 }
 
-class _Phq9HistorySection extends StatelessWidget {
-  const _Phq9HistorySection({required this.history, required this.loading});
+class _SituationCard extends StatelessWidget {
+  const _SituationCard({
+    required this.situation,
+    required this.fearScore,
+    required this.avoidanceScore,
+    required this.onFearChanged,
+    required this.onAvoidanceChanged,
+  });
 
-  final List<dynamic> history;
+  final LsasSituationModel situation;
+  final int? fearScore;
+  final int? avoidanceScore;
+  final ValueChanged<int> onFearChanged;
+  final ValueChanged<int> onAvoidanceChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final isPerformance = situation.group == 'PERFORMANCE';
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 18, offset: const Offset(0, 8)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: const Color(0xFFE0F2F1),
+                child: Text('${situation.situationNumber}', style: const TextStyle(color: Color(0xFF0F8B7F))),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(situation.title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 4),
+                    Text(
+                      isPerformance ? 'Hiệu suất/biểu diễn' : 'Tương tác xã hội',
+                      style: TextStyle(color: isPerformance ? Colors.deepPurple : const Color(0xFF0F8B7F)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (situation.description.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(situation.description, style: const TextStyle(color: Colors.black54, height: 1.35)),
+          ],
+          const SizedBox(height: 16),
+          _ScoreSelector(
+            title: 'Mức sợ/hồi hộp',
+            value: fearScore,
+            labels: const ['Không', 'Nhẹ', 'Vừa', 'Nhiều'],
+            onChanged: onFearChanged,
+          ),
+          const SizedBox(height: 14),
+          _ScoreSelector(
+            title: 'Mức né tránh',
+            value: avoidanceScore,
+            labels: const ['Không', 'Đôi khi', 'Thường', 'Luôn né'],
+            onChanged: onAvoidanceChanged,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ScoreSelector extends StatelessWidget {
+  const _ScoreSelector({
+    required this.title,
+    required this.value,
+    required this.labels,
+    required this.onChanged,
+  });
+
+  final String title;
+  final int? value;
+  final List<String> labels;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: List.generate(4, (index) {
+            final selected = value == index;
+            return ChoiceChip(
+              label: Text('$index - ${labels[index]}'),
+              selected: selected,
+              onSelected: (_) => onChanged(index),
+              selectedColor: const Color(0xFFD7F5EF),
+              labelStyle: TextStyle(
+                color: selected ? const Color(0xFF0F8B7F) : Colors.black87,
+                fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+              ),
+            );
+          }),
+        ),
+      ],
+    );
+  }
+}
+
+class _LsasCooldownView extends StatelessWidget {
+  const _LsasCooldownView({
+    required this.history,
+    required this.loading,
+    required this.onRefresh,
+    required this.onBackHome,
+  });
+
+  final List<LsasSubmissionModel> history;
+  final bool loading;
+  final Future<void> Function() onRefresh;
+  final VoidCallback onBackHome;
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          const SizedBox(height: 28),
+          const Icon(Icons.lock_clock_rounded, size: 96, color: Color(0xFFFFB300)),
+          const SizedBox(height: 20),
+          const Text(
+            'Đang trong chu kỳ 14 ngày',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Bạn đã làm LSAS gần đây. Sau 14 ngày, hệ thống sẽ mở re-rating để cập nhật Fear Ladder.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 16, color: Colors.black54, height: 1.5),
+          ),
+          const SizedBox(height: 24),
+          _LsasHistorySection(history: history, loading: loading),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: onBackHome,
+            icon: const Icon(Icons.arrow_back_rounded),
+            label: const Text('Quay lại trang chủ'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0F8B7F),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LsasHistorySection extends StatelessWidget {
+  const _LsasHistorySection({required this.history, required this.loading});
+
+  final List<LsasSubmissionModel> history;
   final bool loading;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.shade200),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.history_rounded, color: Color(0xFF0F8B7F)),
-                const SizedBox(width: 8),
-                Text(
-                  'Lịch sử PHQ-9',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.history_rounded, color: Color(0xFF0F8B7F)),
+              SizedBox(width: 10),
+              Text('Lịch sử LSAS', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (loading)
+            const Center(child: CircularProgressIndicator())
+          else if (history.isEmpty)
+            const Text('Chưa có lần đánh giá LSAS nào.', style: TextStyle(color: Colors.black54))
+          else
+            ...history.map((item) {
+              final score = item.totalScore;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFA),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.shade200),
                 ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: _lsasColor(score).withOpacity(0.14),
+                      child: Text('$score', style: TextStyle(color: _lsasColor(score), fontWeight: FontWeight.w900)),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        '${item.createDate ?? ''} • ${item.submissionType}\nFear ${item.fearTotal}/72 • Avoidance ${item.avoidanceTotal}/72',
+                        style: const TextStyle(height: 1.35),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+        ],
+      ),
+    );
+  }
+}
+
+class _GuideCard extends StatelessWidget {
+  const _GuideCard({required this.icon, required this.title, required this.message});
+
+  final IconData icon;
+  final String title;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE3F7F4),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: const Color(0xFF0F8B7F)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
+                const SizedBox(height: 4),
+                Text(message, style: const TextStyle(color: Colors.black87, height: 1.4)),
               ],
             ),
-            const SizedBox(height: 12),
-            if (loading)
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(12),
-                  child: CircularProgressIndicator(),
-                ),
-              )
-            else if (history.isEmpty)
-              const Text('Chưa có lần đánh giá PHQ-9 nào.', style: TextStyle(color: Colors.black54))
-            else
-              ...history.take(6).map((item) {
-                final totalScore = item.totalScore ?? 0;
-                final q9Score = item.q9Score ?? 0;
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        backgroundColor: _phq9Color(totalScore).withOpacity(0.12),
-                        child: Text(
-                          '$totalScore',
-                          style: TextStyle(color: _phq9Color(totalScore), fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '${_formatDateTime(item.createDate)} • ${item.submissionType}',
-                              style: const TextStyle(fontWeight: FontWeight.w700),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Tổng điểm $totalScore/27 • Mức: ${_severityText(item.severityLevel)}',
-                              style: const TextStyle(color: Colors.black87),
-                            ),
-                            if (q9Score > 0)
-                              const Text(
-                                'Có cảnh báo an toàn từ câu 9',
-                                style: TextStyle(color: Colors.redAccent, fontSize: 12),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-String _formatDateTime(String? value) {
-  if (value == null || value.isEmpty) return 'Không rõ ngày';
-  final normalized = value.length >= 16 ? value.substring(0, 16) : value;
-  return normalized.replaceFirst('T', ' ');
-}
-
-String _severityText(String? value) {
-  switch (value) {
-    case 'MINIMAL':
-      return 'Tối thiểu';
-    case 'MILD':
-      return 'Nhẹ';
-    case 'MODERATE':
-      return 'Trung bình';
-    case 'MODERATELY_SEVERE':
-      return 'Trung bình nặng';
-    case 'SEVERE':
-      return 'Nặng';
-    default:
-      return value ?? 'Chưa rõ';
-  }
-}
-
-Color _phq9Color(int score) {
-  if (score <= 4) return Colors.green;
-  if (score <= 9) return Colors.teal;
-  if (score <= 14) return Colors.orange;
-  return Colors.redAccent;
-}
-
-class _ScoreSummaryCard extends StatelessWidget {
-  const _ScoreSummaryCard({required this.totalScore, required this.severityLabel});
-
-  final int totalScore;
-  final String severityLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Theme.of(context).colorScheme.primary.withOpacity(0.1)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            const Icon(Icons.insights_rounded, color: Colors.indigo),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Tổng điểm: $totalScore/27',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                  Text(
-                    'Mức độ: $severityLabel',
-                    style: const TextStyle(color: Colors.black87, fontSize: 14),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SafetyWarningCard extends StatelessWidget {
-  const _SafetyWarningCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: Colors.red.shade50,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.red.shade100),
-      ),
-      child: const ListTile(
-        leading: Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
-        title: Text(
-          'Chú ý an toàn',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
-        ),
-        subtitle: Text(
-          'Bạn đã đánh dấu có ý nghĩ tự hại ở câu số 9. Hệ thống sẽ bật cảnh báo để chuyên gia phụ trách hỗ trợ kịp thời.',
-          style: TextStyle(color: Colors.black87),
-        ),
-      ),
-    );
-  }
-}
-
-class _QuestionCard extends StatelessWidget {
-  const _QuestionCard({
-    required this.question,
-    required this.selectedValue,
-    required this.options,
-    required this.onChanged,
-  });
-
-  final Phq9QuestionModel question;
-  final int? selectedValue;
-  final List<Phq9OptionModel> options;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.shade200),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${question.questionNumber}. ${question.text}',
-              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, height: 1.4),
-            ),
-            const SizedBox(height: 12),
-            for (final option in options)
-              _OptionTile(
-                score: option.score,
-                text: option.text,
-                selectedValue: selectedValue,
-                onChanged: onChanged,
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _FunctionalDifficultyCard extends StatelessWidget {
-  const _FunctionalDifficultyCard({
-    required this.question,
-    required this.options,
-    required this.selectedValue,
-    required this.onChanged,
-  });
-
-  final String question;
-  final List<Phq9OptionModel> options;
-  final int? selectedValue;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      color: Colors.blueGrey.shade50,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.blueGrey.shade100),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Mức độ ảnh hưởng đến sinh hoạt',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              question,
-              style: const TextStyle(fontSize: 14, height: 1.4),
-            ),
-            const SizedBox(height: 12),
-            for (final option in options)
-              _OptionTile(
-                score: option.score,
-                text: option.text,
-                selectedValue: selectedValue,
-                onChanged: onChanged,
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _OptionTile extends StatelessWidget {
-  const _OptionTile({
-    required this.score,
-    required this.text,
-    required this.selectedValue,
-    required this.onChanged,
-  });
-
-  final int score;
-  final String text;
-  final int? selectedValue;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final isSelected = selectedValue == score;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        color: isSelected ? Theme.of(context).colorScheme.primary.withOpacity(0.08) : Colors.transparent,
-      ),
-      child: RadioListTile<int>(
-        title: Text(
-          '$score - $text',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-            color: isSelected ? Theme.of(context).colorScheme.primary : Colors.black87,
           ),
-        ),
-        value: score,
-        groupValue: selectedValue,
-        onChanged: (value) {
-          if (value != null) onChanged(value);
-        },
-        controlAffinity: ListTileControlAffinity.leading,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-        activeColor: Theme.of(context).colorScheme.primary,
+        ],
       ),
     );
   }
+}
+
+class _LsasErrorState extends StatelessWidget {
+  const _LsasErrorState({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return _LsasEmptyState(
+      icon: Icons.error_outline_rounded,
+      title: 'Không tải được LSAS',
+      message: message,
+      actionLabel: 'Tải lại',
+      onAction: onRetry,
+    );
+  }
+}
+
+class _LsasEmptyState extends StatelessWidget {
+  const _LsasEmptyState({
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 72, color: const Color(0xFF0F8B7F)),
+          const SizedBox(height: 16),
+          Text(title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 8),
+          Text(message, textAlign: TextAlign.center, style: const TextStyle(color: Colors.black54, height: 1.4)),
+          if (actionLabel != null && onAction != null) ...[
+            const SizedBox(height: 16),
+            ElevatedButton(onPressed: onAction, child: Text(actionLabel!)),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+Color _lsasColor(int score) {
+  if (score >= 95) return Colors.red;
+  if (score >= 65) return Colors.deepOrange;
+  if (score >= 35) return Colors.orange;
+  return const Color(0xFF0F8B7F);
 }

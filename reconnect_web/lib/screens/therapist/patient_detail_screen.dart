@@ -338,7 +338,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
         ),
         lineBarsData: [
           _riskLine(_riskSpots(points, (point) => point.riskScore), AppColors.alert, width: 4),
-          _riskLine(_riskSpots(points, (point) => point.scorePhq9), AppColors.primary),
+          _riskLine(_riskSpots(points, (point) => point.scoreSafety), AppColors.primary),
           _riskLine(_riskSpots(points, (point) => point.scoreAi), Colors.purple),
           _riskLine(_riskSpots(points, (point) => point.scoreMood), Colors.teal),
         ],

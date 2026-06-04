@@ -4,8 +4,8 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -38,23 +38,23 @@ public class AdminDemoControlController {
         this.roadmapDailyAssignmentService = roadmapDailyAssignmentService;
     }
 
-    @PostMapping("/patients/{patientId}/unlock-phq9")
-    public ResponseEntity<ApiResponse<AdminDemoControlResultDto>> unlockPhq9(@PathVariable UUID patientId) {
+    @PostMapping("/patients/{patientId}/unlock-lsas")
+    public ResponseEntity<ApiResponse<AdminDemoControlResultDto>> unlockLsas(@PathVariable UUID patientId) {
         try {
             User admin = requireAdmin();
             return ResponseEntity.ok(ApiResponse.success("OK",
-                    adminDemoControlService.unlockPhq9(patientId, admin.getId())));
+                    adminDemoControlService.unlockLsas(patientId, admin.getId())));
         } catch (Exception e) {
             return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
         }
     }
 
-    @PostMapping("/patients/{patientId}/trigger-phq9")
-    public ResponseEntity<ApiResponse<AdminDemoControlResultDto>> triggerPhq9(@PathVariable UUID patientId) {
+    @PostMapping("/patients/{patientId}/trigger-lsas")
+    public ResponseEntity<ApiResponse<AdminDemoControlResultDto>> triggerLsas(@PathVariable UUID patientId) {
         try {
             User admin = requireAdmin();
             return ResponseEntity.ok(ApiResponse.success("OK",
-                    adminDemoControlService.triggerPhq9(patientId, admin.getId())));
+                    adminDemoControlService.triggerLsas(patientId, admin.getId())));
         } catch (Exception e) {
             return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
         }
@@ -116,11 +116,11 @@ public class AdminDemoControlController {
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(defaultValue = "14") int days,
-            @RequestParam(required = false) Integer phq9Score) {
+            @RequestParam(required = false) Integer lsasScore) {
         try {
             requireAdmin();
             RoadmapPreviewDto preview = roadmapDailyAssignmentService.previewDailySystemQuestPlan(
-                    patientId, startDate, days, phq9Score);
+                    patientId, startDate, days, lsasScore);
             return ResponseEntity.ok(ApiResponse.success("OK", preview));
         } catch (Exception e) {
             return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));

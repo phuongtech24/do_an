@@ -17,7 +17,7 @@ class _CopingCardsScreenState extends State<CopingCardsScreen> {
   // Bản ghi tĩnh làm mẫu ban đầu
   final List<String> _staticCredits = [
     'Hôm nay mình đã tự nấu ăn.',
-    'Mình đã hoàn thành bài tập PHQ-9.',
+    'Mình đã hoàn thành bài đánh giá LSAS.',
     'Mình đã đứng lên đi dạo 10 phút.',
   ];
 

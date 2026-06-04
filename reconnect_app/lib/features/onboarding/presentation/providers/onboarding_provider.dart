@@ -18,7 +18,7 @@ class OnboardingProvider extends ChangeNotifier {
   List<String> get savedGoals => _savedGoals;
   OnboardingStatusModel? get onboardingStatus => _onboardingStatus;
   bool get isOnboardingComplete => _onboardingStatus?.isComplete == true;
-  String get nextOnboardingRoute => _onboardingStatus?.nextRoute ?? '/phq9';
+  String get nextOnboardingRoute => _onboardingStatus?.nextRoute ?? '/lsas';
 
   Future<bool> saveGoals(String patientId, List<String> goals, {String? token}) async {
     _status = OnboardingStatus.loading;

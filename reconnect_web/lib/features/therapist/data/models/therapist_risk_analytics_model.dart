@@ -40,7 +40,7 @@ class TherapistRiskAnalyticsModel {
 class TherapistRiskPointModel {
   final DateTime? riskDate;
   final int riskScore;
-  final int scorePhq9;
+  final int scoreSafety;
   final int scoreAi;
   final int scoreMood;
   final bool overrideTriggered;
@@ -49,7 +49,7 @@ class TherapistRiskPointModel {
   TherapistRiskPointModel({
     required this.riskDate,
     required this.riskScore,
-    required this.scorePhq9,
+    required this.scoreSafety,
     required this.scoreAi,
     required this.scoreMood,
     required this.overrideTriggered,
@@ -60,7 +60,7 @@ class TherapistRiskPointModel {
     return TherapistRiskPointModel(
       riskDate: _parseDate(json['riskDate']),
       riskScore: (json['riskScore'] as num?)?.toInt() ?? 0,
-      scorePhq9: (json['scorePhq9'] as num?)?.toInt() ?? 0,
+      scoreSafety: (json['scoreSafety'] as num?)?.toInt() ?? 0,
       scoreAi: (json['scoreAi'] as num?)?.toInt() ?? 0,
       scoreMood: (json['scoreMood'] as num?)?.toInt() ?? 0,
       overrideTriggered: json['overrideTriggered'] == true,

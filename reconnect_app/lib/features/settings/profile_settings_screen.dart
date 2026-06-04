@@ -255,7 +255,7 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Cảnh báo nguy hiểm'),
-        content: const Text('Hành động này sẽ xóa vĩnh viễn toàn bộ nhật ký AI, điểm số PHQ-9 và lộ trình CBT của bạn. Bạn có chắc chắn không?'),
+        content: const Text('Hành động này sẽ xóa vĩnh viễn toàn bộ nhật ký AI, điểm LSAS và lộ trình Fear Ladder của bạn. Bạn có chắc chắn không?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),

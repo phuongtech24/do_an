@@ -34,8 +34,8 @@ public class DailyRiskLog extends BaseObject {
     @Column(name = "risk_score", nullable = false)
     private Integer riskScore;
 
-    @Column(name = "score_phq9", nullable = false)
-    private Integer scorePhq9;
+    @Column(name = "score_safety", nullable = false)
+    private Integer scoreSafety;
 
     @Column(name = "score_ai", nullable = false)
     private Integer scoreAi;
@@ -76,12 +76,12 @@ public class DailyRiskLog extends BaseObject {
         this.riskScore = riskScore;
     }
 
-    public Integer getScorePhq9() {
-        return scorePhq9;
+    public Integer getScoreSafety() {
+        return scoreSafety;
     }
 
-    public void setScorePhq9(Integer scorePhq9) {
-        this.scorePhq9 = scorePhq9;
+    public void setScoreSafety(Integer scoreSafety) {
+        this.scoreSafety = scoreSafety;
     }
 
     public Integer getScoreAi() {

@@ -109,8 +109,8 @@ class _NicknameAvatarScreenState extends State<NicknameAvatarScreen> {
             height: 56,
             child: ElevatedButton(
               onPressed: () {
-                // Navigate to PHQ-9 Test
-                context.go('/phq9');
+                // Navigate to LSAS assessment
+                context.go('/lsas');
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
@@ -118,7 +118,7 @@ class _NicknameAvatarScreenState extends State<NicknameAvatarScreen> {
                   borderRadius: BorderRadius.circular(16),
                 ),
               ),
-              child: const Text('TIẾP TỤC ĐÁNH GIÁ (PHQ-9)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              child: const Text('TIẾP TỤC ĐÁNH GIÁ LSAS', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             ),
           ),
         ),

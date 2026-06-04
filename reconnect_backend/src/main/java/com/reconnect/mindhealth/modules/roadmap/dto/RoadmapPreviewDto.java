@@ -9,7 +9,7 @@ public class RoadmapPreviewDto {
     private UUID patientId;
     private LocalDate startDate;
     private Integer days;
-    private Integer phq9Score;
+    private Integer lsasScore;
     private Integer totalSlots;
     private Integer behavioralCount;
     private Integer cognitiveCount;
@@ -39,12 +39,12 @@ public class RoadmapPreviewDto {
         this.days = days;
     }
 
-    public Integer getPhq9Score() {
-        return phq9Score;
+    public Integer getLsasScore() {
+        return lsasScore;
     }
 
-    public void setPhq9Score(Integer phq9Score) {
-        this.phq9Score = phq9Score;
+    public void setLsasScore(Integer lsasScore) {
+        this.lsasScore = lsasScore;
     }
 
     public Integer getTotalSlots() {

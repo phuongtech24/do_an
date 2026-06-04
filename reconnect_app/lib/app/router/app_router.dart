@@ -106,6 +106,11 @@ class AppRouter {
         ],
       ),
       GoRoute(
+        path: '/lsas',
+        name: 'lsas',
+        builder: (context, state) => const Phq9Screen(),
+      ),
+      GoRoute(
         path: '/phq9',
         name: 'phq9',
         builder: (context, state) => const Phq9Screen(),

@@ -21,8 +21,9 @@ import com.reconnect.mindhealth.modules.clinical.enums.ApprovalStatus;
 import com.reconnect.mindhealth.modules.clinical.enums.Status;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
 import com.reconnect.mindhealth.modules.clinical.repository.TherapistProfileRepository;
-import com.reconnect.mindhealth.modules.assessment.entity.Phq9Question;
-import com.reconnect.mindhealth.modules.assessment.repository.Phq9QuestionRepository;
+import com.reconnect.mindhealth.modules.assessment.entity.LsasSituation;
+import com.reconnect.mindhealth.modules.assessment.enums.LsasSituationGroup;
+import com.reconnect.mindhealth.modules.assessment.repository.LsasSituationRepository;
 import com.reconnect.mindhealth.modules.journal.entity.Journal;
 import com.reconnect.mindhealth.modules.journal.enums.JournalType;
 import com.reconnect.mindhealth.modules.journal.repository.JournalRepository;
@@ -50,7 +51,7 @@ public class DatabaseSeeder implements CommandLineRunner {
     private TherapistProfileRepository therapistProfileRepository;
 
     @Autowired
-    private Phq9QuestionRepository phq9QuestionRepository;
+    private LsasSituationRepository lsasSituationRepository;
 
     @Autowired
     private JournalRepository journalRepository;
@@ -70,8 +71,8 @@ public class DatabaseSeeder implements CommandLineRunner {
     @Value("classpath:seed_data/therapist_profiles.csv")
     private Resource therapistProfilesCsv;
 
-    @Value("classpath:seed_data/phq9_questions.csv")
-    private Resource questionsCsv;
+    @Value("classpath:seed_data/lsas_situations.csv")
+    private Resource lsasSituationsCsv;
 
     @Value("classpath:seed_data/journals.csv")
     private Resource journalsCsv;
@@ -87,11 +88,11 @@ public class DatabaseSeeder implements CommandLineRunner {
         boolean needsSeed = userRepository.count() == 0
                 || therapistProfileRepository.count() == 0
                 || patientProfileRepository.count() == 0
-                || phq9QuestionRepository.count() == 0
+                || lsasSituationRepository.count() == 0
                 || questTemplateRepository.count() == 0;
 
         if (!needsSeed) {
-            safeSeed("phq9_questions", this::seedPhq9Questions);
+            safeSeed("lsas_situations", this::seedLsasSituations);
             System.out.println("====== RECONNECT: SKIP DATABASE SEEDING (DATA ALREADY EXISTS) ======");
             return;
         }
@@ -101,7 +102,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         safeSeed("users", this::seedUsers);
         safeSeed("therapist_profiles", this::seedTherapistProfiles);
         safeSeed("patient_profiles", this::seedPatientProfiles);
-        safeSeed("phq9_questions", this::seedPhq9Questions);
+        safeSeed("lsas_situations", this::seedLsasSituations);
         safeSeed("journals", this::seedJournals);
         safeSeed("quest_templates", this::seedQuestTemplates);
 
@@ -286,13 +287,13 @@ public class DatabaseSeeder implements CommandLineRunner {
         }
     }
 
-    private void seedPhq9Questions() throws Exception {
-        if (!questionsCsv.exists()) {
-            System.out.println("PHQ-9 questions CSV file not found at classpath:seed_data/phq9_questions.csv");
+    private void seedLsasSituations() throws Exception {
+        if (!lsasSituationsCsv.exists()) {
+            System.out.println("LSAS situations CSV file not found at classpath:seed_data/lsas_situations.csv");
             return;
         }
-        System.out.println("Upserting PHQ-9 questions into database...");
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(questionsCsv.getInputStream(), StandardCharsets.UTF_8))) {
+        System.out.println("Upserting LSAS situations into database...");
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(lsasSituationsCsv.getInputStream(), StandardCharsets.UTF_8))) {
             String line;
             boolean isHeader = true;
             while ((line = reader.readLine()) != null) {
@@ -300,20 +301,24 @@ public class DatabaseSeeder implements CommandLineRunner {
                     isHeader = false;
                     continue;
                 }
-                String[] data = line.split(",", 2);
-                if (data.length < 2) continue;
+                String[] data = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+                if (data.length < 3) continue;
 
-                Integer questionNumber = Integer.parseInt(data[0].trim());
-                String text = data[1].trim().replace("\"", "");
+                Integer situationNumber = Integer.parseInt(data[0].trim());
+                LsasSituationGroup group = LsasSituationGroup.valueOf(data[1].trim());
+                String text = data[2].trim().replace("\"", "");
 
-                Phq9Question question = phq9QuestionRepository.findByQuestionNumber(questionNumber);
-                if (question == null) {
-                    question = new Phq9Question(questionNumber, text);
+                LsasSituation situation = lsasSituationRepository.findBySituationNumber(situationNumber);
+                if (situation == null) {
+                    situation = new LsasSituation();
+                    situation.setSituationNumber(situationNumber);
                 } else {
-                    question.setText(text);
+                    situation.setSituationNumber(situationNumber);
                 }
-                phq9QuestionRepository.save(question);
-                System.out.println("Successfully upserted PHQ-9 question " + questionNumber + ": " + text);
+                situation.setSituationGroup(group);
+                situation.setText(text);
+                lsasSituationRepository.save(situation);
+                System.out.println("Successfully upserted LSAS situation " + situationNumber + ": " + text);
             }
         }
     }

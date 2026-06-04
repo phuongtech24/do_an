@@ -113,7 +113,7 @@ class _TodayQuestTab extends StatelessWidget {
             _EmptyState(
               icon: Icons.task_alt_rounded,
               title: 'Hôm nay chưa có nhiệm vụ',
-              message: 'Sau khi làm PHQ-9 hoặc chạy demo controls, bài CBT sẽ xuất hiện tại đây.',
+              message: 'Sau khi làm LSAS baseline, hệ thống sẽ tạo Fear Ladder và bài thực hành hành vi tại đây.',
             ),
           ],
         ),

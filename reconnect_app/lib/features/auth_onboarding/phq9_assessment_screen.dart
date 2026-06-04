@@ -15,22 +15,22 @@ class _PHQ9AssessmentScreenState extends State<PHQ9AssessmentScreen> {
   List<int?> _answers = List.filled(9, null);
 
   final List<String> _questions = [
-    "Ít hứng thú hoặc niềm vui trong việc làm mọi thứ.",
-    "Cảm thấy buồn rầu, chán nản hoặc tuyệt vọng.",
-    "Khó đi vào giấc ngủ hoặc ngủ không yên, hoặc ngủ quá nhiều.",
-    "Cảm thấy mệt mỏi hoặc có ít năng lượng.",
-    "Ăn kém ngon miệng hoặc ăn quá nhiều.",
-    "Cảm thấy tồi tệ về bản thân, hoặc cho rằng mình là người thất bại.",
-    "Khó tập trung vào mọi việc, chẳng hạn như đọc báo hoặc xem tivi.",
-    "Di chuyển hoặc nói năng chậm chạp đến mức người khác có thể nhận thấy.",
-    "Có ý nghĩ rằng bạn thà chết đi cho xong hoặc muốn làm tổn thương bản thân theo cách nào đó."
+    "Ãt há»©ng thÃº hoáº·c niá»m vui trong viá»‡c lÃ m má»i thá»©.",
+    "Cáº£m tháº¥y buá»“n ráº§u, chÃ¡n náº£n hoáº·c tuyá»‡t vá»ng.",
+    "KhÃ³ Ä‘i vÃ o giáº¥c ngá»§ hoáº·c ngá»§ khÃ´ng yÃªn, hoáº·c ngá»§ quÃ¡ nhiá»u.",
+    "Cáº£m tháº¥y má»‡t má»i hoáº·c cÃ³ Ã­t nÄƒng lÆ°á»£ng.",
+    "Ä‚n kÃ©m ngon miá»‡ng hoáº·c Äƒn quÃ¡ nhiá»u.",
+    "Cáº£m tháº¥y tá»“i tá»‡ vá» báº£n thÃ¢n, hoáº·c cho ráº±ng mÃ¬nh lÃ  ngÆ°á»i tháº¥t báº¡i.",
+    "KhÃ³ táº­p trung vÃ o má»i viá»‡c, cháº³ng háº¡n nhÆ° Ä‘á»c bÃ¡o hoáº·c xem tivi.",
+    "Di chuyá»ƒn hoáº·c nÃ³i nÄƒng cháº­m cháº¡p Ä‘áº¿n má»©c ngÆ°á»i khÃ¡c cÃ³ thá»ƒ nháº­n tháº¥y.",
+    "CÃ³ Ã½ nghÄ© ráº±ng báº¡n thÃ  cháº¿t Ä‘i cho xong hoáº·c muá»‘n lÃ m tá»•n thÆ°Æ¡ng báº£n thÃ¢n theo cÃ¡ch nÃ o Ä‘Ã³."
   ];
 
   final List<String> _options = [
-    "Hoàn toàn không (0)",
-    "Vài ngày (1)",
-    "Hơn một nửa số ngày (2)",
-    "Gần như mỗi ngày (3)"
+    "HoÃ n toÃ n khÃ´ng (0)",
+    "VÃ i ngÃ y (1)",
+    "HÆ¡n má»™t ná»­a sá»‘ ngÃ y (2)",
+    "Gáº§n nhÆ° má»—i ngÃ y (3)"
   ];
 
   void _answerQuestion(int score) {
@@ -52,27 +52,27 @@ class _PHQ9AssessmentScreenState extends State<PHQ9AssessmentScreen> {
 
   void _showResultDialog(int score) {
     String severity = "";
-    if (score <= 4) severity = "Bình thường";
-    else if (score <= 9) severity = "Nhẹ";
-    else if (score <= 14) severity = "Vừa";
-    else if (score <= 19) severity = "Nặng";
-    else severity = "Rất nặng";
+    if (score <= 4) severity = "BÃ¬nh thÆ°á»ng";
+    else if (score <= 9) severity = "Nháº¹";
+    else if (score <= 14) severity = "Vá»«a";
+    else if (score <= 19) severity = "Náº·ng";
+    else severity = "Ráº¥t náº·ng";
 
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Hoàn tất đánh giá Baseline'),
+        title: const Text('HoÃ n táº¥t Ä‘Ã¡nh giÃ¡ Baseline'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Điểm PHQ-9 của bạn: $score/27', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            Text('Äiá»ƒm LSAS cá»§a báº¡n: $score/144', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             const SizedBox(height: 8),
-            Text('Mức độ: $severity', style: const TextStyle(color: AppColors.secondary, fontSize: 16)),
+            Text('Má»©c Ä‘á»™: $severity', style: const TextStyle(color: AppColors.secondary, fontSize: 16)),
             const SizedBox(height: 16),
-            const Text('Hệ thống đã lưu lại mức độ này. Chúng tôi sẽ thiết kế Roadmap Game hóa phù hợp riêng cho bạn!'),
+            const Text('Há»‡ thá»‘ng Ä‘Ã£ lÆ°u láº¡i má»©c Ä‘á»™ nÃ y. ChÃºng tÃ´i sáº½ thiáº¿t káº¿ Fear Ladder phÃ¹ há»£p riÃªng cho báº¡n!'),
           ],
         ),
         actions: [
@@ -81,7 +81,7 @@ class _PHQ9AssessmentScreenState extends State<PHQ9AssessmentScreen> {
               Navigator.pop(context); // close dialog
               context.go('/chat'); // Go to Main App (Chat tab)
             },
-            child: const Text('BẮT ĐẦU HÀNH TRÌNH'),
+            child: const Text('Báº®T Äáº¦U HÃ€NH TRÃŒNH'),
           ),
         ],
       ),
@@ -93,7 +93,7 @@ class _PHQ9AssessmentScreenState extends State<PHQ9AssessmentScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text('Đánh giá PHQ-9 (${_currentIndex + 1}/${_questions.length})'),
+        title: Text('ÄÃ¡nh giÃ¡ LSAS (${_currentIndex + 1}/${_questions.length})'),
         elevation: 0,
       ),
       body: SafeArea(
@@ -123,7 +123,7 @@ class _PHQ9AssessmentScreenState extends State<PHQ9AssessmentScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          "Trong 2 tuần qua, bạn có thường xuyên bị làm phiền bởi vấn đề sau đây không?",
+                          "Trong 2 tuáº§n qua, báº¡n cÃ³ thÆ°á»ng xuyÃªn bá»‹ lÃ m phiá»n bá»Ÿi váº¥n Ä‘á» sau Ä‘Ã¢y khÃ´ng?",
                           style: Theme.of(context).textTheme.bodyMedium,
                           textAlign: TextAlign.center,
                         ),

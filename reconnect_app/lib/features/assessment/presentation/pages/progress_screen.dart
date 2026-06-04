@@ -7,7 +7,7 @@ class ProgressScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Mock PHQ-9 data over 8 weeks
+    // Mock LSAS trend over 8 weeks
     final dataPoints = [
       const FlSpot(0, 18), // Week 0: Severe
       const FlSpot(2, 14), // Week 2: Moderate
@@ -22,7 +22,7 @@ class ProgressScreen extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         children: [
           const Text(
-            'Chỉ số PHQ-9 của bạn',
+            'Tiến độ LSAS/Fear Ladder của bạn',
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),

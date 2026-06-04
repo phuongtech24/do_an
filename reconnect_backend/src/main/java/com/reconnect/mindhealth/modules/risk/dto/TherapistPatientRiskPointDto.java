@@ -8,7 +8,7 @@ public class TherapistPatientRiskPointDto {
 
     private LocalDate riskDate;
     private Integer riskScore;
-    private Integer scorePhq9;
+    private Integer scoreSafety;
     private Integer scoreAi;
     private Integer scoreMood;
     private Boolean overrideTriggered;
@@ -20,7 +20,7 @@ public class TherapistPatientRiskPointDto {
     public TherapistPatientRiskPointDto(DailyRiskLog entity) {
         this.riskDate = entity.getRiskDate();
         this.riskScore = entity.getRiskScore();
-        this.scorePhq9 = entity.getScorePhq9();
+        this.scoreSafety = entity.getScoreSafety();
         this.scoreAi = entity.getScoreAi();
         this.scoreMood = entity.getScoreMood();
         this.overrideTriggered = entity.getOverrideTriggered();
@@ -43,12 +43,12 @@ public class TherapistPatientRiskPointDto {
         this.riskScore = riskScore;
     }
 
-    public Integer getScorePhq9() {
-        return scorePhq9;
+    public Integer getScoreSafety() {
+        return scoreSafety;
     }
 
-    public void setScorePhq9(Integer scorePhq9) {
-        this.scorePhq9 = scorePhq9;
+    public void setScoreSafety(Integer scoreSafety) {
+        this.scoreSafety = scoreSafety;
     }
 
     public Integer getScoreAi() {
