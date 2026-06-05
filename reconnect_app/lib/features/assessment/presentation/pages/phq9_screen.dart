@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../shared/widgets/mindhealth_scaffold.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../onboarding/presentation/providers/onboarding_provider.dart';
 import '../../data/models/lsas_situation_model.dart';
 import '../../data/models/lsas_submission_model.dart';
 import '../providers/assessment_provider.dart';
@@ -128,12 +129,15 @@ class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Xem lộ trình'),
+              child: const Text('Tiếp tục'),
             ),
           ],
         ),
       );
-      if (context.mounted) context.go('/roadmap');
+      await context.read<OnboardingProvider>().loadOnboardingStatus(patientId, token: token);
+      if (context.mounted) {
+        context.go(context.read<OnboardingProvider>().nextOnboardingRoute);
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(provider.errorMessage)),
