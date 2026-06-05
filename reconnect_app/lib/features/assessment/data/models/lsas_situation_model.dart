@@ -1,4 +1,4 @@
-class LsasSituationModel {
+﻿class LsasSituationModel {
   final String id;
   final int situationNumber;
   final String group;
@@ -14,11 +14,13 @@ class LsasSituationModel {
   });
 
   factory LsasSituationModel.fromJson(Map<String, dynamic> json) {
+    final text = json['text']?.toString() ?? '';
+    final title = json['title']?.toString() ?? '';
     return LsasSituationModel(
       id: json['id']?.toString() ?? '',
       situationNumber: (json['situationNumber'] as num?)?.toInt() ?? 0,
-      group: json['group']?.toString() ?? 'SOCIAL_INTERACTION',
-      title: json['title']?.toString() ?? '',
+      group: json['situationGroup']?.toString() ?? json['group']?.toString() ?? 'SOCIAL_INTERACTION',
+      title: title.isNotEmpty ? title : text,
       description: json['description']?.toString() ?? '',
     );
   }

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -7,7 +7,6 @@ import 'package:reconnect_app/features/auth/presentation/providers/auth_provider
 import '../../../../shared/widgets/feature_card.dart';
 import '../../../../shared/widgets/mindhealth_scaffold.dart';
 import '../../../../shared/widgets/therapy_guide_card.dart';
-
 
 class PatientHomeScreen extends StatefulWidget {
   const PatientHomeScreen({super.key});
@@ -20,13 +19,12 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   static bool _moodDialogShownThisSession = false;
 
   double _moodValue = 50.0;
-  String _selectedMoodLabel = 'BÃ¬nh thÆ°á»ng';
-  bool _hasBoosterAlert = false; // Mock flag for demo
+  String _selectedMoodLabel = 'Bình thường';
+  bool _hasBoosterAlert = false;
 
   @override
   void initState() {
     super.initState();
-    // Use addPostFrameCallback to show the dialog after the first build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_moodDialogShownThisSession) {
         _moodDialogShownThisSession = true;
@@ -44,23 +42,18 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           children: [
             Icon(Icons.emoji_events, color: Colors.amber),
             SizedBox(width: 8),
-            Text('ChÃºc má»«ng báº¡n!'),
+            Text('Chúc mừng bạn!'),
           ],
         ),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Điểm LSAS/Fear Ladder của bạn đang cải thiện. Bạn có nhận thấy mình đã bớt né tránh và dám thử các tình huống xã hội hơn không?',
-              style: TextStyle(height: 1.5),
-            ),
-          ],
+        content: const Text(
+          'Điểm LSAS/Fear Ladder của bạn đang cải thiện. Bạn có nhận thấy mình đã bớt né tránh và dám thử các tình huống xã hội hơn không?',
+          style: TextStyle(height: 1.5),
         ),
         actions: [
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF6C63FF)),
-            child: const Text('TÃ´i Ä‘Ã£ lÃ m Ä‘Æ°á»£c!', style: TextStyle(color: Colors.white)),
+            child: const Text('Tôi đã làm được!', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -79,20 +72,21 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
               children: [
                 Icon(Icons.face_retouching_natural, color: Color(0xFF6C63FF)),
                 SizedBox(width: 8),
-                Text('Mood Check-in', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text('Daily Check-in', style: TextStyle(fontWeight: FontWeight.bold)),
               ],
             ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Text(
-                  'HÃ´m nay báº¡n cáº£m tháº¥y tháº¿ nÃ o? HÃ£y Ä‘Ã¡nh giÃ¡ má»©c Ä‘á»™ tÃ¢m tráº¡ng tá»« 0 - 100.',
+                  'Hôm nay mức lo âu/né tránh của bạn đang ở đâu? Hãy chấm nhanh từ 0–100 để theo dõi tiến triển.',
                   style: TextStyle(color: Colors.black54),
                 ),
+                const SizedBox(height: 12),
                 const TherapyGuideCard(
-                  title: 'VÃ¬ sao cáº§n check-in?',
+                  title: 'Vì sao cần check-in?',
                   message:
-                      'Theo dÃµi mood giÃºp báº¡n vÃ  chuyÃªn gia nháº­n ra kiá»ƒu máº«u cáº£m xÃºc, Ä‘o tiáº¿n bá»™ vÃ  chá»n cÃ´ng cá»¥ phÃ¹ há»£p trong ngÃ y.',
+                      'Check-in giúp bạn và chuyên gia nhận ra kiểu mẫu lo âu, né tránh, lo âu dự kiến và nhai lại sau sự kiện. Nếu chỉ số tăng cao, app sẽ gợi ý công cụ phù hợp trong ngày.',
                   icon: Icons.insights_outlined,
                   accentColor: Color(0xFF6C63FF),
                 ),
@@ -113,11 +107,11 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-                const Text('Báº¡n Ä‘ang cáº£m tháº¥y tháº¿ nÃ o?', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                const Text('Bạn đang cảm thấy thế nào?', style: TextStyle(fontSize: 12, color: Colors.grey)),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
-                  children: ['Vui váº»', 'BÃ¬nh thÆ°á»ng', 'Buá»“n bÃ£', 'Lo Ã¢u', 'Giáº­n dá»¯'].map((label) {
+                  children: ['Vui vẻ', 'Bình thường', 'Buồn bã', 'Lo âu', 'Giận dữ'].map((label) {
                     final isSelected = _selectedMoodLabel == label;
                     return ChoiceChip(
                       label: Text(label, style: TextStyle(fontSize: 11, color: isSelected ? Colors.white : Colors.black87)),
@@ -137,7 +131,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Bá» qua', style: TextStyle(color: Colors.grey)),
+                child: const Text('Bỏ qua', style: TextStyle(color: Colors.grey)),
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
@@ -149,35 +143,22 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                   final patientId = authProvider.loginResponse?.user.id ?? '';
                   final token = authProvider.loginResponse?.token;
 
-                  debugPrint('--- MOOD CHECK-IN DEBUG ---');
-                  debugPrint('Patient ID from AuthProvider: "$patientId"');
-
                   if (patientId.isNotEmpty) {
                     final assessmentProvider = Provider.of<AssessmentProvider>(context, listen: false);
-                    debugPrint('Submitting mood score: ${_moodValue.toInt()} with label: $_selectedMoodLabel');
-
-                    final success = await assessmentProvider.submitUserMood(
+                    await assessmentProvider.submitUserMood(
                       patientId,
                       _moodValue.toInt(),
-                      'Tráº¡ng thÃ¡i cáº£m xÃºc: $_selectedMoodLabel',
+                      'Trạng thái cảm xúc: $_selectedMoodLabel',
                       token: token,
                     );
-
-                    debugPrint('Submission Success: $success');
-                    if (!success) {
-                      debugPrint('Submission Error: ${assessmentProvider.errorMessage}');
-                    }
-                  } else {
-                    debugPrint('WARNING: Cannot submit mood because patientId is EMPTY. Are you logged in?');
                   }
-                  debugPrint('---------------------------');
 
                   if (context.mounted) {
-                    Navigator.pop(context); // close first dialog
+                    Navigator.pop(context);
                     _showAISuggestionDialog();
                   }
                 },
-                child: const Text('Tiáº¿p tá»¥c', style: TextStyle(color: Colors.white)),
+                child: const Text('Tiếp tục', style: TextStyle(color: Colors.white)),
               ),
             ],
           );
@@ -187,7 +168,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   }
 
   void _showAISuggestionDialog() {
-    final isNegative = _moodValue < 45;
+    final isHighAnxiety = _moodValue < 45 || _selectedMoodLabel == 'Lo âu';
 
     showDialog(
       context: context,
@@ -195,31 +176,27 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            Icon(
-              isNegative ? Icons.auto_awesome : Icons.stars_rounded,
-              color: const Color(0xFF6C63FF)
-            ),
+            Icon(isHighAnxiety ? Icons.auto_awesome : Icons.stars_rounded, color: const Color(0xFF6C63FF)),
             const SizedBox(width: 8),
-            Text(isNegative ? 'AI Ä‘á»“ng hÃ nh' : 'Ghi nháº­n tÃ­ch cá»±c'),
+            Text(isHighAnxiety ? 'AI đồng hành' : 'Ghi nhận tích cực'),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              isNegative
-                  ? 'Báº¡n Ä‘ang cáº£m tháº¥y $_selectedMoodLabel. ÄÃ¢y lÃ  lÃºc phÃ¹ há»£p Ä‘á»ƒ ghi láº¡i suy nghÄ© Ä‘ang diá»…n ra vÃ  tÃ¬m cÃ¡ch cÃ¢n báº±ng hÆ¡n. Báº¡n sáºµn lÃ²ng thá»­ khÃ´ng?'
-                  : 'Tháº­t tá»‘t khi báº¡n Ä‘ang $_selectedMoodLabel. Báº¡n cÃ³ muá»‘n dÃ nh 1 phÃºt ghi nháº­n nhá»¯ng ná»— lá»±c hoáº·c viá»‡c tÃ­ch cá»±c mÃ¬nh Ä‘Ã£ lÃ m hÃ´m nay khÃ´ng?',
+              isHighAnxiety
+                  ? 'Bạn đang cảm thấy $_selectedMoodLabel. Đây là lúc phù hợp để viết Nhật ký Lo âu Xã hội, kiểm tra dự đoán và nhận diện hành vi an toàn.'
+                  : 'Thật tốt khi bạn đang $_selectedMoodLabel. Bạn có muốn dành 1 phút ghi nhận những nỗ lực hoặc việc tích cực mình đã làm hôm nay không?',
               style: const TextStyle(height: 1.5),
             ),
+            const SizedBox(height: 12),
             TherapyGuideCard(
-              title: isNegative ? 'Gá»£i Ã½ Nháº­t kÃ½ suy nghÄ©' : 'Gá»£i Ã½ Credit List',
-              message: isNegative
-                  ? 'Khi mood tháº¥p, CBT khuyáº¿n khÃ­ch báº¯t â€œsuy nghÄ© tá»± Ä‘á»™ngâ€ Ä‘á»ƒ kiá»ƒm tra xem suy nghÄ© Ä‘Ã³ cÃ³ Ä‘ang kÃ©o cáº£m xÃºc Ä‘i xuá»‘ng khÃ´ng.'
-                  : 'Credit List giÃºp báº¡n nhÃ¬n láº¡i cáº£ nhá»¯ng viá»‡c nhá» nhÆ°ng khÃ³ khi Ä‘ang má»‡t, thay vÃ¬ chá»‰ chÃº Ã½ Ä‘iá»u tiÃªu cá»±c.',
-              icon: isNegative
-                  ? Icons.edit_note_outlined
-                  : Icons.playlist_add_check_circle_outlined,
+              title: isHighAnxiety ? 'Gợi ý Nhật ký Lo âu Xã hội' : 'Gợi ý Credit List',
+              message: isHighAnxiety
+                  ? 'Khi lo âu tăng, CBT khuyến khích bắt dự đoán tồi tệ nhất, quan sát self-focus và thử giảm bớt safety behaviors.'
+                  : 'Credit List giúp bạn nhìn lại cả những việc nhỏ nhưng khó khi đang mệt, thay vì chỉ chú ý điều tiêu cực.',
+              icon: isHighAnxiety ? Icons.edit_note_outlined : Icons.playlist_add_check_circle_outlined,
               accentColor: const Color(0xFF6C63FF),
             ),
           ],
@@ -227,7 +204,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Äá»ƒ sau', style: TextStyle(color: Colors.grey)),
+            child: const Text('Để sau', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -236,13 +213,13 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             ),
             onPressed: () {
               Navigator.pop(context);
-              if (isNegative) {
+              if (isHighAnxiety) {
                 context.push('/agenda-setting');
               } else {
-                context.push('/coping-cards'); // Credit Lists are here
+                context.push('/coping-cards');
               }
             },
-            child: Text(isNegative ? 'Äá»“ng Ã½' : 'Ghi nháº­n ngay', style: const TextStyle(color: Colors.white)),
+            child: Text(isHighAnxiety ? 'Đồng ý' : 'Ghi nhận ngay', style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -253,7 +230,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
     final user = auth.loginResponse?.user;
-    final displayName = user?.username ?? 'CÃ¡o Nhá»';
+    final displayName = user?.username ?? 'Cáo Nhỏ';
     final isAnonymous = user?.isAnonymous ?? true;
 
     return MindHealthScaffold(
@@ -261,7 +238,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
       actions: [
         IconButton(
           icon: const Icon(Icons.bolt, color: Colors.amber),
-          tooltip: 'Demo: Trigger Doctor Alert',
+          tooltip: 'Demo: bật/tắt cảnh báo bác sĩ',
           onPressed: () => setState(() => _hasBoosterAlert = !_hasBoosterAlert),
         ),
       ],
@@ -284,7 +261,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                       const SizedBox(width: 12),
                       const Expanded(
                         child: Text(
-                          'BÃ¡c sÄ© yÃªu cáº§u Booster Session',
+                          'Bác sĩ yêu cầu Booster Session',
                           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
                         ),
                       ),
@@ -295,7 +272,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     ],
                   ),
                   const Text(
-                    'Há»‡ thá»‘ng nháº­n tháº¥y chá»‰ sá»‘ rá»§i ro cá»§a báº¡n tÄƒng nháº¹. BÃ¡c sÄ© khuyÃªn báº¡n nÃªn Ã´n táº­p láº¡i ká»¹ nÄƒng Nháº­t kÃ½ suy nghÄ© ngay hÃ´m nay.',
+                    'Hệ thống nhận thấy chỉ số rủi ro của bạn tăng nhẹ. Bác sĩ khuyên bạn nên ôn tập lại kỹ năng Nhật ký suy nghĩ ngay hôm nay.',
                     style: TextStyle(fontSize: 12, color: Colors.black87),
                   ),
                   const SizedBox(height: 12),
@@ -304,7 +281,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     child: ElevatedButton(
                       onPressed: () => context.push('/agenda-setting'),
                       style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-                      child: const Text('Báº¯t Ä‘áº§u Ã´n táº­p ngay'),
+                      child: const Text('Bắt đầu ôn tập ngay'),
                     ),
                   ),
                 ],
@@ -321,11 +298,11 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Xin chÃ o, $displayName!',
+                    'Xin chào, $displayName!',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    isAnonymous ? 'Báº¡n Ä‘ang á»Ÿ cháº¿ Ä‘á»™ áº©n danh' : 'TÃ i khoáº£n chÃ­nh thá»©c (${user?.email ?? ""})',
+                    isAnonymous ? 'Bạn đang ở chế độ ẩn danh' : 'Tài khoản chính thức (${user?.email ?? ""})',
                     style: const TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                 ],
@@ -333,8 +310,6 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             ],
           ),
           const SizedBox(height: 24),
-
-          // Mood Card
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -354,10 +329,12 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('TÃ¢m tráº¡ng hÃ´m nay', style: TextStyle(color: Colors.white70)),
+                      const Text('Check-in hôm nay', style: TextStyle(color: Colors.white70)),
                       const SizedBox(height: 4),
-                      Text('${_moodValue.toInt()}% - ${(_moodValue > 70) ? "Ráº¥t tÃ­ch cá»±c" : (_moodValue > 40) ? "á»”n Ä‘á»‹nh" : "Cáº§n há»— trá»£"}',
-                        style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                      Text(
+                        '${_moodValue.toInt()}% - ${(_moodValue > 70) ? "Rất tích cực" : (_moodValue > 40) ? "Ổn định" : "Cần hỗ trợ"}',
+                        style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
                     ],
                   ),
                 ),
@@ -368,14 +345,12 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
               ],
             ),
           ),
-
           const SizedBox(height: 32),
-          const Text('HOáº T Äá»˜NG CHÃNH', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.grey, fontSize: 12, letterSpacing: 1.2)),
+          const Text('HOẠT ĐỘNG CHÍNH', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.grey, fontSize: 12, letterSpacing: 1.2)),
           const SizedBox(height: 12),
-
           FeatureCard(
-            title: 'Nháº­t kÃ½ Suy nghÄ© 6 bÆ°á»›c',
-            subtitle: 'AI Guided Discovery (TÃ¬nh huá»‘ng -> Pháº£n á»©ng)',
+            title: 'Nhật ký Lo âu Xã hội',
+            subtitle: 'Clark & Wells: dự đoán → self-focus → safety behaviors',
             icon: Icons.psychology_outlined,
             onTap: () => context.go('/journal'),
           ),
@@ -386,18 +361,17 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             onTap: () => context.go('/roadmap'),
           ),
           FeatureCard(
-            title: 'Tháº» Ä‘á»‘i phÃ³ & Ghi nháº­n',
+            title: 'Thẻ đối phó & Ghi nhận',
             subtitle: 'Coping Cards & Credit Lists',
             icon: Icons.style_outlined,
             onTap: () => context.push('/coping-cards'),
           ),
           FeatureCard(
-            title: 'Tham váº¥n tá»« xa',
-            subtitle: 'Äáº·t lá»‹ch háº¹n áº©n danh vá»›i BÃ¡c sÄ©',
+            title: 'Tham vấn từ xa',
+            subtitle: 'Đặt lịch hẹn ẩn danh với Bác sĩ',
             icon: Icons.video_camera_front_outlined,
             onTap: () => context.go('/telehealth'),
           ),
-
           const SizedBox(height: 24),
           FeatureCard(
             title: 'Re-rating LSAS định kỳ',
@@ -406,8 +380,8 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             onTap: () => context.go('/lsas'),
           ),
           FeatureCard(
-            title: 'Tiáº¿n triá»ƒn há»“i phá»¥c',
-            subtitle: 'Re-rating LSAS định kỳ',
+            title: 'Tiến triển hồi phục',
+            subtitle: 'Theo dõi LSAS/Fear Ladder theo thời gian',
             icon: Icons.trending_up,
             onTap: () => context.push('/progress'),
           ),

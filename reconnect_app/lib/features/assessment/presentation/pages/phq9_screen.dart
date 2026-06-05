@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -123,7 +123,7 @@ class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
         builder: (_) => AlertDialog(
           title: const Text('Đã lưu LSAS'),
           content: Text(
-            'Tổng điểm LSAS của bạn là $score/144.\n\nHệ thống sẽ dùng kết quả này để tạo Fear Ladder và bài thực hành hành vi theo mức dễ → khó.',
+            'Tổng điểm LSAS của bạn là $score/144.\n\nBaseline và re-rating định kỳ đều dùng cùng 24 tình huống để so sánh tiến triển theo thời gian. Hệ thống sẽ dùng kết quả này để tạo Fear Ladder và bài thực hành hành vi theo mức dễ → khó.',
           ),
           actions: [
             TextButton(
@@ -168,11 +168,11 @@ class _LsasForm extends StatelessWidget {
 
     return Column(
       children: [
-        _GuideCard(
+        const _GuideCard(
           icon: Icons.psychology_alt_rounded,
           title: 'LSAS là gì?',
           message:
-              'Bạn sẽ chấm 24 tình huống xã hội theo 2 mặt: mức sợ/hồi hộp và mức né tránh. Hệ thống dùng điểm này để tạo thang tiếp xúc cá nhân.',
+              'Bạn sẽ chấm 24 tình huống xã hội theo 2 trục: mức sợ/hồi hộp và mức né tránh. Cả baseline và re-rating đều dùng đúng 24 tình huống này để đo tiến triển.',
         ),
         const SizedBox(height: 12),
         LinearProgressIndicator(value: progress, minHeight: 8, borderRadius: BorderRadius.circular(999)),
@@ -276,22 +276,18 @@ class _SituationCard extends StatelessWidget {
               ),
             ],
           ),
-          if (situation.description.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Text(situation.description, style: const TextStyle(color: Colors.black54, height: 1.35)),
-          ],
           const SizedBox(height: 16),
           _ScoreSelector(
-            title: 'Mức sợ/hồi hộp',
+            title: 'Mức độ sợ hãi / lo âu (Fear)',
             value: fearScore,
-            labels: const ['Không', 'Nhẹ', 'Vừa', 'Nhiều'],
+            labels: const ['Không có', 'Nhẹ', 'Vừa phải / Trung bình', 'Nghiêm trọng'],
             onChanged: onFearChanged,
           ),
           const SizedBox(height: 14),
           _ScoreSelector(
-            title: 'Mức né tránh',
+            title: 'Mức độ né tránh (Avoidance)',
             value: avoidanceScore,
-            labels: const ['Không', 'Đôi khi', 'Thường', 'Luôn né'],
+            labels: const ['Không bao giờ', 'Thỉnh thoảng', 'Thường xuyên', 'Hầu như luôn luôn'],
             onChanged: onAvoidanceChanged,
           ),
         ],
@@ -372,7 +368,7 @@ class _LsasCooldownView extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           const Text(
-            'Bạn đã làm LSAS gần đây. Sau 14 ngày, hệ thống sẽ mở re-rating để cập nhật Fear Ladder.',
+            'Bạn đã làm LSAS gần đây. Sau 14 ngày, hệ thống sẽ mở re-rating để cập nhật Fear Ladder. Bài định kỳ vẫn dùng đủ 24 tình huống giống baseline.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 16, color: Colors.black54, height: 1.5),
           ),
