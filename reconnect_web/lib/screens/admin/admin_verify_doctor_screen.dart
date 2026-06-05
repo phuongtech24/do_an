@@ -1,15 +1,16 @@
+import 'dart:html' as html;
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
 
 import '../../core/auth/auth_provider.dart';
 import '../../features/admin/data/models/therapist_applicant_model.dart';
 import '../../features/admin/data/models/therapist_credential_model.dart';
-import '../../features/admin/data/repositories/admin_therapist_credentials_repository.dart';
 import '../../features/admin/data/repositories/admin_therapist_approval_repository.dart';
-import '../../features/admin/data/repositories/admin_user_repository.dart';
+import '../../features/admin/data/repositories/admin_therapist_credentials_repository.dart';
 import '../../features/admin/data/repositories/admin_therapist_management_repository.dart';
+import '../../features/admin/data/repositories/admin_user_repository.dart';
 import '../../theme/app_colors.dart';
 
 class AdminVerifyDoctorScreen extends StatefulWidget {
@@ -24,6 +25,7 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
   final AdminTherapistCredentialsRepository _credRepo = AdminTherapistCredentialsRepository();
   final AdminUserRepository _adminUserRepo = AdminUserRepository();
   final AdminTherapistManagementRepository _managementRepo = AdminTherapistManagementRepository();
+
   bool _loading = false;
   String _error = '';
   String _query = '';
@@ -42,10 +44,12 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
       setState(() => _error = 'Chưa đăng nhập.');
       return;
     }
+
     setState(() {
       _loading = true;
       _error = '';
     });
+
     try {
       final list = await _repo.list(token: token);
       if (!mounted) return;
@@ -104,9 +108,15 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
     });
 
     try {
-      final updated = await _repo.setApproval(token: token, therapistId: item.therapistId, status: status);
+      final updated = await _repo.setApproval(
+        token: token,
+        therapistId: item.therapistId,
+        status: status,
+      );
       if (!mounted) return;
-      setState(() => _items = _items.map((x) => x.therapistId == item.therapistId ? updated : x).toList());
+      setState(() {
+        _items = _items.map((x) => x.therapistId == item.therapistId ? updated : x).toList();
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = e.toString().replaceAll('Exception: ', ''));
@@ -128,7 +138,11 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
     });
 
     try {
-      final updated = await _adminUserRepo.setActive(token: token, userId: item.therapistId, active: !item.active);
+      final updated = await _adminUserRepo.setActive(
+        token: token,
+        userId: item.therapistId,
+        active: !item.active,
+      );
       if (!mounted) return;
       setState(() {
         _items = _items
@@ -170,15 +184,21 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
     });
 
     try {
-      final newPw = await _managementRepo.resetPassword(token: token, therapistId: item.therapistId);
+      final newPassword = await _managementRepo.resetPassword(
+        token: token,
+        therapistId: item.therapistId,
+      );
       if (!mounted) return;
       await showDialog(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Đặt lại mật khẩu'),
-          content: SelectableText('Mật khẩu mới: $newPw'),
+          content: SelectableText('Mật khẩu mới: $newPassword'),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Đóng')),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Đóng'),
+            ),
           ],
         ),
       );
@@ -244,7 +264,9 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
         bio: bioCtrl.text.trim(),
       );
       if (!mounted) return;
-      setState(() => _items = _items.map((x) => x.therapistId == item.therapistId ? updated : x).toList());
+      setState(() {
+        _items = _items.map((x) => x.therapistId == item.therapistId ? updated : x).toList();
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = e.toString().replaceAll('Exception: ', ''));
@@ -278,55 +300,16 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
     if (!mounted) return;
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Chứng chỉ: ${item.fullName}', style: const TextStyle(fontWeight: FontWeight.bold)),
-        content: SizedBox(
-          width: 520,
-          child: list.isEmpty
-              ? const Text('Chưa có chứng chỉ nào.')
-              : ListView.separated(
-                  shrinkWrap: true,
-                  itemCount: list.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final c = list[index];
-                    return ListTile(
-                      leading: const Icon(Icons.description_outlined),
-                      title: Text(c.fileName, maxLines: 1, overflow: TextOverflow.ellipsis),
-                      subtitle: Text('${(c.sizeBytes / 1024).toStringAsFixed(1)} KB • ${c.uploadedAt}'),
-                      trailing: TextButton(
-                        onPressed: _loading
-                            ? null
-                            : () async {
-                                try {
-                                  final bytes = await _credRepo.downloadBytes(
-                                    token: token,
-                                    therapistId: item.therapistId,
-                                    credentialId: c.id,
-                                  );
-                                  final blob = html.Blob([bytes], c.mimeType);
-                                  final url = html.Url.createObjectUrlFromBlob(blob);
-                                  final a = html.AnchorElement(href: url)
-                                    ..download = c.fileName
-                                    ..style.display = 'none';
-                                  html.document.body?.children.add(a);
-                                  a.click();
-                                  a.remove();
-                                  html.Url.revokeObjectUrl(url);
-                                } catch (e) {
-                                  if (!mounted) return;
-                                  setState(() => _error = e.toString().replaceAll('Exception: ', ''));
-                                }
-                              },
-                        child: const Text('Tải'),
-                      ),
-                    );
-                  },
-                ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Đóng')),
-        ],
+      builder: (context) => _CredentialPreviewDialog(
+        applicantName: item.fullName,
+        therapistId: item.therapistId,
+        token: token,
+        credentials: list,
+        repository: _credRepo,
+        onDownloadError: (message) {
+          if (!mounted) return;
+          setState(() => _error = message);
+        },
       ),
     );
   }
@@ -349,7 +332,10 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Admin đặt mật khẩu và cung cấp trực tiếp cho chuyên gia.', style: TextStyle(color: Colors.black54)),
+              const Text(
+                'Admin đặt mật khẩu và cung cấp trực tiếp cho chuyên gia.',
+                style: TextStyle(color: Colors.black54),
+              ),
               const SizedBox(height: 16),
               TextField(
                 controller: nameCtrl,
@@ -369,7 +355,10 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
               const SizedBox(height: 12),
               TextField(
                 controller: specializationCtrl,
-                decoration: const InputDecoration(labelText: 'Chuyên môn (optional)', border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                  labelText: 'Chuyên môn (optional)',
+                  border: OutlineInputBorder(),
+                ),
               ),
             ],
           ),
@@ -412,7 +401,10 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
       if (!mounted) return;
       setState(() => _items = [created, ..._items]);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã tạo tài khoản therapist. Trạng thái: PENDING'), backgroundColor: AppColors.success),
+        const SnackBar(
+          content: Text('Đã tạo tài khoản therapist. Trạng thái: PENDING'),
+          backgroundColor: AppColors.success,
+        ),
       );
     } catch (e) {
       if (!mounted) return;
@@ -458,9 +450,15 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: const [
-                Text('Quản lý Bác sĩ/Chuyên gia (Approval)', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                Text(
+                  'Quản lý Bác sĩ/Chuyên gia (Approval)',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
                 SizedBox(height: 8),
-                Text('Dữ liệu lấy từ backend (/api/admin/therapists).', style: TextStyle(color: AppColors.textSecondary)),
+                Text(
+                  'Dữ liệu lấy từ backend (/api/admin/therapists).',
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
               ],
             ),
             Row(
@@ -468,11 +466,17 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
                   icon: const Icon(Icons.person_add, color: Colors.white),
-                  label: const Text('CẤP TÀI KHOẢN', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  label: const Text(
+                    'CẤP TÀI KHOẢN',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
                   onPressed: _loading ? null : _showCreateAccountDialog,
                 ),
                 const SizedBox(width: 8),
-                IconButton(onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh)),
+                IconButton(
+                  onPressed: _loading ? null : _load,
+                  icon: const Icon(Icons.refresh),
+                ),
               ],
             )
           ],
@@ -493,7 +497,7 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
               borderSide: BorderSide(color: Colors.grey.shade300),
             ),
           ),
-          onChanged: (v) => setState(() => _query = v),
+          onChanged: (value) => setState(() => _query = value),
         ),
         const SizedBox(height: 12),
         if (_error.isNotEmpty)
@@ -575,13 +579,13 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
                               ),
                             ),
                             PopupMenuButton<String>(
-                              onSelected: (v) {
-                                if (v == 'edit') _editTherapist(doc);
-                                if (v == 'reset_pw') _resetPassword(doc);
+                              onSelected: (value) {
+                                if (value == 'edit') _editTherapist(doc);
+                                if (value == 'reset_pw') _resetPassword(doc);
                               },
-                              itemBuilder: (context) => [
-                                const PopupMenuItem(value: 'edit', child: Text('Chỉnh sửa hồ sơ')),
-                                const PopupMenuItem(value: 'reset_pw', child: Text('Đặt lại mật khẩu')),
+                              itemBuilder: (context) => const [
+                                PopupMenuItem(value: 'edit', child: Text('Chỉnh sửa hồ sơ')),
+                                PopupMenuItem(value: 'reset_pw', child: Text('Đặt lại mật khẩu')),
                               ],
                               child: const Padding(
                                 padding: EdgeInsets.symmetric(horizontal: 6),
@@ -594,6 +598,255 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
                     },
                   ),
           ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CredentialPreviewDialog extends StatefulWidget {
+  const _CredentialPreviewDialog({
+    required this.applicantName,
+    required this.therapistId,
+    required this.token,
+    required this.credentials,
+    required this.repository,
+    required this.onDownloadError,
+  });
+
+  final String applicantName;
+  final String therapistId;
+  final String token;
+  final List<AdminTherapistCredentialModel> credentials;
+  final AdminTherapistCredentialsRepository repository;
+  final ValueChanged<String> onDownloadError;
+
+  @override
+  State<_CredentialPreviewDialog> createState() => _CredentialPreviewDialogState();
+}
+
+class _CredentialPreviewDialogState extends State<_CredentialPreviewDialog> {
+  final Map<String, Future<Uint8List?>> _previewFutures = {};
+
+  bool _isImage(AdminTherapistCredentialModel item) {
+    return item.mimeType.toLowerCase().startsWith('image/');
+  }
+
+  Future<Uint8List?> _loadPreview(AdminTherapistCredentialModel item) {
+    return _previewFutures.putIfAbsent(item.id, () async {
+      if (!_isImage(item)) return null;
+      final bytes = await widget.repository.downloadBytes(
+        token: widget.token,
+        therapistId: widget.therapistId,
+        credentialId: item.id,
+      );
+      return Uint8List.fromList(bytes);
+    });
+  }
+
+  Future<void> _download(AdminTherapistCredentialModel item) async {
+    try {
+      final bytes = await widget.repository.downloadBytes(
+        token: widget.token,
+        therapistId: widget.therapistId,
+        credentialId: item.id,
+      );
+      final blob = html.Blob([bytes], item.mimeType);
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement(href: url)
+        ..download = item.fileName
+        ..style.display = 'none';
+      html.document.body?.children.add(anchor);
+      anchor.click();
+      anchor.remove();
+      html.Url.revokeObjectUrl(url);
+    } catch (e) {
+      widget.onDownloadError(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  void _showImagePreview(AdminTherapistCredentialModel item, Uint8List bytes) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.all(24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 820, maxHeight: 700),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.fileName,
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(18),
+                    child: InteractiveViewer(
+                      child: Image.memory(bytes, fit: BoxFit.contain),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Đóng'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      title: Text(
+        'Chứng chỉ: ${widget.applicantName}',
+        style: const TextStyle(fontWeight: FontWeight.bold),
+      ),
+      content: SizedBox(
+        width: 680,
+        child: widget.credentials.isEmpty
+            ? const Text('Chưa có chứng chỉ nào.')
+            : ListView.separated(
+                shrinkWrap: true,
+                itemCount: widget.credentials.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final item = widget.credentials[index];
+                  return Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.primary.withOpacity(0.08)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (_isImage(item))
+                          FutureBuilder<Uint8List?>(
+                            future: _loadPreview(item),
+                            builder: (context, snapshot) {
+                              Widget child;
+                              if (snapshot.connectionState == ConnectionState.waiting) {
+                                child = const Center(
+                                  child: SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  ),
+                                );
+                              } else if (snapshot.hasData && snapshot.data != null) {
+                                final bytes = snapshot.data!;
+                                child = InkWell(
+                                  onTap: () => _showImagePreview(item, bytes),
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(14),
+                                    child: Image.memory(
+                                      bytes,
+                                      width: 88,
+                                      height: 88,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                child = const Icon(Icons.broken_image_outlined, color: AppColors.textSecondary);
+                              }
+
+                              return Container(
+                                width: 88,
+                                height: 88,
+                                decoration: BoxDecoration(
+                                  color: AppColors.background,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: child,
+                              );
+                            },
+                          )
+                        else
+                          Container(
+                            width: 88,
+                            height: 88,
+                            decoration: BoxDecoration(
+                              color: AppColors.background,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.description_outlined, color: AppColors.primary, size: 30),
+                                SizedBox(height: 6),
+                                Text('PDF/File', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                              ],
+                            ),
+                          ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.fileName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                '${(item.sizeBytes / 1024).toStringAsFixed(1)} KB • ${item.uploadedAt}',
+                                style: const TextStyle(color: AppColors.textSecondary),
+                              ),
+                              const SizedBox(height: 10),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  if (_isImage(item))
+                                    FutureBuilder<Uint8List?>(
+                                      future: _loadPreview(item),
+                                      builder: (context, snapshot) {
+                                        final bytes = snapshot.data;
+                                        return OutlinedButton.icon(
+                                          onPressed: bytes == null ? null : () => _showImagePreview(item, bytes),
+                                          icon: const Icon(Icons.visibility_outlined),
+                                          label: const Text('Xem ảnh'),
+                                        );
+                                      },
+                                    ),
+                                  TextButton(
+                                    onPressed: () => _download(item),
+                                    child: const Text('Tải'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Đóng'),
         ),
       ],
     );
