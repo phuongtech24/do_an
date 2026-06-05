@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../shared/widgets/mindhealth_scaffold.dart';
+import '../../../../theme/app_colors.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../data/models/behavioral_experiment_model.dart';
 import '../../data/models/fear_ladder_item_model.dart';
@@ -32,22 +33,23 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
     }
 
     return MindHealthScaffold(
-      title: 'Fear Ladder',
+      title: 'Lộ trình tiếp xúc',
       body: provider.status == RoadmapStatus.loading && provider.fearLadder.isEmpty
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
           : provider.status == RoadmapStatus.error && provider.fearLadder.isEmpty
               ? Center(child: Text(provider.errorMessage))
               : ListView(
+                  padding: const EdgeInsets.only(bottom: 24),
                   children: [
-                    if (provider.safetyOverlay.active)
-                      Card(
-                        color: const Color(0xFFFFF4E5),
-                        child: ListTile(
-                          leading: const Icon(Icons.health_and_safety_outlined, color: Colors.deepOrange),
-                          title: const Text('Cần thêm hỗ trợ an toàn'),
-                          subtitle: Text(provider.safetyOverlay.message),
-                        ),
-                      ),
+                    if (provider.safetyOverlay.active) ...[
+                      _SafetyBanner(message: provider.safetyOverlay.message),
+                      const SizedBox(height: 16),
+                    ],
+                    _ScreenHero(
+                      totalItems: provider.fearLadder.length,
+                      unlockedItems: provider.fearLadder.where((item) => item.unlocked).length,
+                    ),
+                    const SizedBox(height: 18),
                     _ExperimentCard(
                       experiment: provider.todayExperiment,
                       onStart: provider.todayExperiment == null
@@ -57,16 +59,42 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                           ? null
                           : () => _showDebriefDialog(context, provider.todayExperiment!, token),
                     ),
-                    const SizedBox(height: 16),
-                    const Text('Fear Ladder của bạn', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Thang sợ của bạn',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Đi từ bước dễ hơn tới bước khó hơn. Mỗi lần hoàn thành tốt, hệ thống sẽ mở dần nấc tiếp theo.',
+                      style: TextStyle(color: AppColors.textSecondary, height: 1.45),
+                    ),
+                    const SizedBox(height: 14),
                     if (provider.fearLadder.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 40),
-                        child: Center(child: Text('Chưa có Fear Ladder. Hãy hoàn tất LSAS baseline và mục tiêu trị liệu.')),
+                      Container(
+                        margin: const EdgeInsets.only(top: 28),
+                        padding: const EdgeInsets.all(22),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: AppColors.primary.withOpacity(0.08)),
+                        ),
+                        child: const Text(
+                          'Chưa có thang sợ. Hãy hoàn tất LSAS baseline và chọn mục tiêu trị liệu để hệ thống tạo lộ trình phù hợp.',
+                          style: TextStyle(color: AppColors.textSecondary, height: 1.45),
+                        ),
                       )
                     else
-                      ...provider.fearLadder.map(_FearLadderCard.new),
+                      ...provider.fearLadder.asMap().entries.map(
+                            (entry) => _FearLadderCard(
+                              item: entry.value,
+                              showConnector: entry.key != provider.fearLadder.length - 1,
+                            ),
+                          ),
                   ],
                 ),
     );
@@ -81,30 +109,32 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Bắt đầu Behavioral Experiment'),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: const Text('Bắt đầu bài thực hành'),
           content: SizedBox(
-            width: 420,
+            width: 440,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
                   controller: predictionController,
-                  decoration: const InputDecoration(labelText: 'Prediction'),
+                  decoration: const InputDecoration(labelText: 'Dự đoán điều bạn lo sẽ xảy ra'),
                   maxLines: 2,
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: safetyController,
-                  decoration: const InputDecoration(labelText: 'Safety behaviors cần giảm'),
+                  decoration: const InputDecoration(labelText: 'Hành vi an toàn bạn muốn giảm'),
                   maxLines: 2,
                 ),
                 const SizedBox(height: 12),
-                Text('Mức tin tưởng: ${belief.round()}%'),
+                Text('Mức tin vào dự đoán: ${belief.round()}%'),
                 Slider(
                   value: belief,
                   min: 0,
                   max: 100,
                   divisions: 20,
+                  activeColor: AppColors.primary,
                   onChanged: (value) => setState(() => belief = value),
                 ),
               ],
@@ -112,7 +142,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Hủy')),
-            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Lưu')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Lưu và bắt đầu')),
           ],
         ),
       ),
@@ -143,34 +173,49 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Debrief bài thực hành'),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: const Text('Tổng kết bài thực hành'),
           content: SizedBox(
-            width: 420,
+            width: 440,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
                   controller: executionController,
-                  decoration: const InputDecoration(labelText: 'Execution notes'),
+                  decoration: const InputDecoration(labelText: 'Bạn đã làm như thế nào?'),
                   maxLines: 2,
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: debriefController,
-                  decoration: const InputDecoration(labelText: 'Điều thực sự xảy ra / bài học'),
+                  decoration: const InputDecoration(labelText: 'Điều thực sự xảy ra / bài học rút ra'),
                   maxLines: 3,
                 ),
                 const SizedBox(height: 12),
-                Text('Fear sau bài: ${fear.round()}'),
-                Slider(value: fear, min: 0, max: 3, divisions: 3, onChanged: (value) => setState(() => fear = value)),
-                Text('Avoidance sau bài: ${avoidance.round()}'),
-                Slider(value: avoidance, min: 0, max: 3, divisions: 3, onChanged: (value) => setState(() => avoidance = value)),
+                Text('Mức sợ sau bài: ${fear.round()}'),
+                Slider(
+                  value: fear,
+                  min: 0,
+                  max: 3,
+                  divisions: 3,
+                  activeColor: AppColors.primary,
+                  onChanged: (value) => setState(() => fear = value),
+                ),
+                Text('Mức né tránh sau bài: ${avoidance.round()}'),
+                Slider(
+                  value: avoidance,
+                  min: 0,
+                  max: 3,
+                  divisions: 3,
+                  activeColor: AppColors.primary,
+                  onChanged: (value) => setState(() => avoidance = value),
+                ),
               ],
             ),
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Hủy')),
-            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Lưu')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Lưu tổng kết')),
           ],
         ),
       ),
@@ -188,7 +233,106 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
     );
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(success ? 'Đã lưu debrief và cập nhật Fear Ladder.' : provider.errorMessage)),
+      SnackBar(content: Text(success ? 'Đã lưu tổng kết và cập nhật thang sợ.' : provider.errorMessage)),
+    );
+  }
+}
+
+class _ScreenHero extends StatelessWidget {
+  const _ScreenHero({
+    required this.totalItems,
+    required this.unlockedItems,
+  });
+
+  final int totalItems;
+  final int unlockedItems;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppColors.primary, Color(0xFF159489)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.18),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Thang tiếp xúc cá nhân',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Đã mở $unlockedItems/$totalItems nấc. Hãy đi từng bước nhỏ, đều và thực tế.',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.9),
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            width: 58,
+            height: 58,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.16),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: const Icon(Icons.alt_route_rounded, color: Colors.white, size: 30),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SafetyBanner extends StatelessWidget {
+  const _SafetyBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF4E8),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.warning.withOpacity(0.28)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.health_and_safety_outlined, color: AppColors.warning),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(color: AppColors.textPrimary, height: 1.45),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -206,59 +350,277 @@ class _ExperimentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: experiment == null
-            ? const Text('Hôm nay chưa có bài Behavioral Experiment.')
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Bài thực hành hôm nay', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Text(experiment!.ladderItem.situationText),
-                  const SizedBox(height: 8),
-                  Text('Trạng thái: ${experiment!.status} • Bucket: ${experiment!.ladderItem.bucket}'),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      FilledButton(onPressed: onStart, child: const Text('Bắt đầu')),
-                      const SizedBox(width: 8),
-                      OutlinedButton(onPressed: onDebrief, child: const Text('Debrief')),
-                    ],
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: AppColors.primary.withOpacity(0.08)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: experiment == null
+          ? const Text(
+              'Hôm nay chưa có bài thực hành hành vi. Khi có một nấc đang mở phù hợp, hệ thống sẽ gợi ý tại đây.',
+              style: TextStyle(color: AppColors.textSecondary, height: 1.45),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Bài thực hành hôm nay',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.textPrimary,
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  experiment!.ladderItem.situationText,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _pill(_mapExperimentStatus(experiment!.status)),
+                    _pill(_mapBucket(experiment!.ladderItem.bucket)),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    FilledButton(onPressed: onStart, child: const Text('Bắt đầu')),
+                    const SizedBox(width: 10),
+                    OutlinedButton(onPressed: onDebrief, child: const Text('Tổng kết')),
+                  ],
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _pill(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: AppColors.primary,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
 }
 
 class _FearLadderCard extends StatelessWidget {
-  const _FearLadderCard(this.item);
+  const _FearLadderCard({
+    required this.item,
+    required this.showConnector,
+  });
 
   final FearLadderItemModel item;
+  final bool showConnector;
 
   @override
   Widget build(BuildContext context) {
     final locked = !item.unlocked;
     final mastered = item.status == 'MASTERED';
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: Opacity(
-        opacity: locked ? 0.6 : 1,
-        child: ListTile(
-          leading: CircleAvatar(
-            backgroundColor: mastered ? Colors.green.withOpacity(0.15) : Colors.blue.withOpacity(0.15),
-            child: Text('${item.ladderOrder}'),
+    final accent = mastered
+        ? AppColors.success
+        : locked
+            ? AppColors.textSecondary
+            : AppColors.primary;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 62,
+            child: Column(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: accent.withOpacity(0.12),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: accent.withOpacity(0.18)),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${item.ladderOrder}',
+                      style: TextStyle(
+                        color: accent,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ),
+                ),
+                if (showConnector)
+                  Container(
+                    width: 3,
+                    height: 52,
+                    margin: const EdgeInsets.symmetric(vertical: 6),
+                    decoration: BoxDecoration(
+                      color: accent.withOpacity(0.18),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+              ],
+            ),
           ),
-          title: Text(item.situationText),
-          subtitle: Text(
-            'Fear ${item.currentFearScore}/3 • Avoidance ${item.currentAvoidanceScore}/3 • Bucket ${item.bucket}${item.goalMatch ? ' • Khớp mục tiêu' : ''}',
+          Expanded(
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: locked ? Colors.white.withOpacity(0.85) : Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: accent.withOpacity(0.12)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 14,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Opacity(
+                opacity: locked ? 0.68 : 1,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.situationText,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                              height: 1.35,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        _statusBadge(item),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _metaChip('Mức sợ ${item.currentFearScore}/3'),
+                        _metaChip('Né tránh ${item.currentAvoidanceScore}/3'),
+                        _metaChip(_mapBucket(item.bucket)),
+                        if (item.goalMatch) _metaChip('Khớp mục tiêu'),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
-          trailing: Text(locked ? 'LOCKED' : item.status),
+        ],
+      ),
+    );
+  }
+
+  Widget _statusBadge(FearLadderItemModel item) {
+    final locked = !item.unlocked;
+    final mastered = item.status == 'MASTERED';
+    final label = locked
+        ? 'Đang khóa'
+        : mastered
+            ? 'Đã làm chủ'
+            : 'Đang mở';
+    final color = locked
+        ? AppColors.textSecondary
+        : mastered
+            ? AppColors.success
+            : AppColors.primary;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w700,
+          fontSize: 12,
         ),
       ),
     );
+  }
+
+  Widget _metaChip(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: AppColors.textSecondary,
+          fontWeight: FontWeight.w600,
+          fontSize: 12.5,
+        ),
+      ),
+    );
+  }
+}
+
+String _mapBucket(String bucket) {
+  switch (bucket.toUpperCase()) {
+    case 'EASY':
+      return 'Mức dễ';
+    case 'MEDIUM':
+      return 'Mức vừa';
+    case 'HARD':
+      return 'Mức khó';
+    default:
+      return bucket;
+  }
+}
+
+String _mapExperimentStatus(String status) {
+  switch (status.toUpperCase()) {
+    case 'PLANNED':
+      return 'Đã lên kế hoạch';
+    case 'STARTED':
+      return 'Đang thực hành';
+    case 'COMPLETED':
+      return 'Đã hoàn tất';
+    default:
+      return status;
   }
 }
