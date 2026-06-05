@@ -24,7 +24,7 @@ class MindHealthScaffold extends StatelessWidget {
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
           child: body,
         ),
       ),
@@ -32,4 +32,3 @@ class MindHealthScaffold extends StatelessWidget {
     );
   }
 }
-

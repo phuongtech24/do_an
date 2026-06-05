@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  static const Color primary = Color(0xFF2C3E50); // Dark Blue for Professionalism
-  static const Color secondary = Color(0xFF18BC9C); // Teal for Healthcare
-  static const Color background = Color(0xFFF8F9FA); // Light Gray Background
+  static const Color primary = Color(0xFF0E7A73);
+  static const Color secondary = Color(0xFF63B7AF);
+  static const Color background = Color(0xFFF5FBFA);
   static const Color surface = Colors.white;
-  
-  static const Color textPrimary = Color(0xFF2C3E50);
-  static const Color textSecondary = Color(0xFF7F8C8D);
-  
-  static const Color alert = Color(0xFFE74C3C); // Red for Alerts
-  static const Color warning = Color(0xFFF39C12); // Yellow for Warning
-  static const Color success = Color(0xFF2ECC71); // Green for Success
+
+  static const Color textPrimary = Color(0xFF163B3A);
+  static const Color textSecondary = Color(0xFF6D8482);
+
+  static const Color alert = Color(0xFFD95D5D);
+  static const Color warning = Color(0xFFE7A95B);
+  static const Color success = Color(0xFF2D9D78);
 }
 
 ThemeData buildAppTheme() {
@@ -25,9 +25,15 @@ ThemeData buildAppTheme() {
       error: AppColors.alert,
     ),
     appBarTheme: const AppBarTheme(
-      backgroundColor: AppColors.primary,
-      foregroundColor: Colors.white,
+      backgroundColor: Colors.white,
+      foregroundColor: AppColors.primary,
       elevation: 0,
+      surfaceTintColor: Colors.transparent,
+    ),
+    cardTheme: CardThemeData(
+      color: AppColors.surface,
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     ),
   );
 }
