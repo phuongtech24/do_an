@@ -146,7 +146,7 @@ class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
   }
 }
 
-class _LsasForm extends StatelessWidget {
+class _LsasForm extends StatefulWidget {
   const _LsasForm({
     required this.situations,
     required this.fearScores,
@@ -164,11 +164,40 @@ class _LsasForm extends StatelessWidget {
   final VoidCallback onSubmit;
 
   @override
+  State<_LsasForm> createState() => _LsasFormState();
+}
+
+class _LsasFormState extends State<_LsasForm> {
+  late final ScrollController _scrollController;
+  late List<GlobalKey> _itemKeys;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    _itemKeys = List.generate(widget.situations.length, (_) => GlobalKey());
+  }
+
+  @override
+  void didUpdateWidget(covariant _LsasForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.situations.length != widget.situations.length) {
+      _itemKeys = List.generate(widget.situations.length, (_) => GlobalKey());
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final completed = situations.where((item) {
-      return fearScores.containsKey(item.id) && avoidanceScores.containsKey(item.id);
+    final completed = widget.situations.where((item) {
+      return widget.fearScores.containsKey(item.id) && widget.avoidanceScores.containsKey(item.id);
     }).length;
-    final progress = situations.isEmpty ? 0.0 : completed / situations.length;
+    final progress = widget.situations.isEmpty ? 0.0 : completed / widget.situations.length;
 
     return Column(
       children: [
@@ -181,26 +210,40 @@ class _LsasForm extends StatelessWidget {
         const SizedBox(height: 12),
         LinearProgressIndicator(value: progress, minHeight: 8, borderRadius: BorderRadius.circular(999)),
         const SizedBox(height: 8),
-        Text('$completed/${situations.length} tình huống đã hoàn tất', style: const TextStyle(color: Colors.black54)),
+        Text(
+          '$completed/${widget.situations.length} tình huống đã hoàn tất',
+          style: const TextStyle(color: Colors.black54),
+        ),
+        const SizedBox(height: 12),
+        _LsasQuestionOverview(
+          situations: widget.situations,
+          fearScores: widget.fearScores,
+          avoidanceScores: widget.avoidanceScores,
+          onTapItem: _scrollToItem,
+        ),
         const SizedBox(height: 12),
         Expanded(
           child: ListView.separated(
-            itemCount: situations.length,
+            controller: _scrollController,
+            itemCount: widget.situations.length,
             separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
-              final item = situations[index];
-              return _SituationCard(
-                situation: item,
-                fearScore: fearScores[item.id],
-                avoidanceScore: avoidanceScores[item.id],
-                onFearChanged: (value) {
-                  fearScores[item.id] = value;
-                  onChanged();
-                },
-                onAvoidanceChanged: (value) {
-                  avoidanceScores[item.id] = value;
-                  onChanged();
-                },
+              final item = widget.situations[index];
+              return Container(
+                key: _itemKeys[index],
+                child: _SituationCard(
+                  situation: item,
+                  fearScore: widget.fearScores[item.id],
+                  avoidanceScore: widget.avoidanceScores[item.id],
+                  onFearChanged: (value) {
+                    widget.fearScores[item.id] = value;
+                    widget.onChanged();
+                  },
+                  onAvoidanceChanged: (value) {
+                    widget.avoidanceScores[item.id] = value;
+                    widget.onChanged();
+                  },
+                ),
               );
             },
           ),
@@ -209,8 +252,8 @@ class _LsasForm extends StatelessWidget {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: loading ? null : onSubmit,
-            icon: loading
+            onPressed: widget.loading ? null : widget.onSubmit,
+            icon: widget.loading
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.check_circle_outline_rounded),
             label: const Text('Lưu LSAS và tạo Fear Ladder'),
@@ -223,6 +266,185 @@ class _LsasForm extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Future<void> _scrollToItem(int index) async {
+    if (index < 0 || index >= _itemKeys.length) return;
+    final context = _itemKeys[index].currentContext;
+    if (context == null) return;
+    await Scrollable.ensureVisible(
+      context,
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeInOut,
+      alignment: 0.08,
+    );
+  }
+}
+
+class _LsasQuestionOverview extends StatelessWidget {
+  const _LsasQuestionOverview({
+    required this.situations,
+    required this.fearScores,
+    required this.avoidanceScores,
+    required this.onTapItem,
+  });
+
+  final List<LsasSituationModel> situations;
+  final Map<String, int> fearScores;
+  final Map<String, int> avoidanceScores;
+  final ValueChanged<int> onTapItem;
+
+  @override
+  Widget build(BuildContext context) {
+    final completedCount = situations.where((item) {
+      return fearScores.containsKey(item.id) && avoidanceScores.containsKey(item.id);
+    }).length;
+    final missingCount = situations.length - completedCount;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF0F8B7F).withOpacity(0.08)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.grid_view_rounded, color: Color(0xFF0F8B7F)),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Tổng quan 24 câu hỏi',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                ),
+              ),
+              Text(
+                'Còn thiếu $missingCount câu',
+                style: const TextStyle(
+                  color: Color(0xFF0F8B7F),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Chạm vào số câu để nhảy tới đúng câu đó. Màu xanh là đã chấm đủ Fear và Né tránh.',
+            style: TextStyle(color: Colors.black54, height: 1.4),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: List.generate(situations.length, (index) {
+              final item = situations[index];
+              final hasFear = fearScores.containsKey(item.id);
+              final hasAvoidance = avoidanceScores.containsKey(item.id);
+              final completed = hasFear && hasAvoidance;
+              final partial = hasFear || hasAvoidance;
+
+              return InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () => onTapItem(index),
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: completed
+                        ? const Color(0xFFD7F5EF)
+                        : partial
+                            ? const Color(0xFFFFF1CF)
+                            : const Color(0xFFF2F4F5),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: completed
+                          ? const Color(0xFF0F8B7F)
+                          : partial
+                              ? const Color(0xFFE7A95B)
+                              : Colors.grey.shade300,
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${item.situationNumber}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        color: completed
+                            ? const Color(0xFF0F8B7F)
+                            : partial
+                                ? const Color(0xFF9B6A19)
+                                : Colors.black54,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 8,
+            children: [
+              _LegendChip(
+                color: const Color(0xFFD7F5EF),
+                borderColor: const Color(0xFF0F8B7F),
+                label: 'Đã chấm đủ',
+              ),
+              _LegendChip(
+                color: const Color(0xFFFFF1CF),
+                borderColor: const Color(0xFFE7A95B),
+                label: 'Đã chấm một phần',
+              ),
+              _LegendChip(
+                color: const Color(0xFFF2F4F5),
+                borderColor: Colors.grey.shade300,
+                label: 'Chưa chấm',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LegendChip extends StatelessWidget {
+  const _LegendChip({
+    required this.color,
+    required this.borderColor,
+    required this.label,
+  });
+
+  final Color color;
+  final Color borderColor;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: borderColor),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+      ),
     );
   }
 }
