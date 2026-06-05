@@ -99,7 +99,15 @@ class _TherapistMatchingScreenState extends State<TherapistMatchingScreen> {
                       );
                       if (!mounted) return;
                       if (ok) {
-                        context.go('/home');
+                        final refreshed = await onboarding.loadOnboardingStatus(patientId, token: token);
+                        if (!mounted) return;
+                        if (!refreshed) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(onboarding.errorMessage)),
+                          );
+                          return;
+                        }
+                        context.go(onboarding.nextOnboardingRoute);
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text(onboarding.errorMessage)),

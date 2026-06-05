@@ -23,6 +23,12 @@ class PatientShellScreen extends StatelessWidget {
       });
     }
 
+    if (patientId.isNotEmpty && onboarding.onboardingStatus == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     if (patientId.isNotEmpty && onboarding.onboardingStatus != null && !onboarding.isOnboardingComplete) {
       final nextRoute = onboarding.nextOnboardingRoute;
       WidgetsBinding.instance.addPostFrameCallback((_) {

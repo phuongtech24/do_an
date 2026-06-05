@@ -20,6 +20,8 @@ import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileReposi
 import com.reconnect.mindhealth.modules.clinical.service.IClinicalService;
 import com.reconnect.mindhealth.modules.assessment.enums.LsasSubmissionType;
 import com.reconnect.mindhealth.modules.assessment.repository.LsasSubmissionRepository;
+import com.reconnect.mindhealth.modules.roadmap.enums.PatientGoalStatus;
+import com.reconnect.mindhealth.modules.roadmap.repository.PatientGoalRepository;
 
 import jakarta.persistence.EntityNotFoundException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -35,6 +37,9 @@ public class ClinicalServiceImpl implements IClinicalService {
 
     @Autowired
     private LsasSubmissionRepository lsasSubmissionRepository;
+
+    @Autowired
+    private PatientGoalRepository patientGoalRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -142,7 +147,10 @@ public class ClinicalServiceImpl implements IClinicalService {
                 .orElseThrow(() -> new EntityNotFoundException("Bệnh nhân không tồn tại với ID: " + patientId));
 
         boolean hasBaseline = lsasSubmissionRepository.existsByPatientProfile_IdAndSubmissionType(patientId, LsasSubmissionType.BASELINE);
-        boolean hasGoals = patientProfile.getGoalsJson() != null && !patientProfile.getGoalsJson().trim().isEmpty();
+        boolean hasGoals = !patientGoalRepository
+                .findByPatientProfile_IdAndStatusOrderByCreateDateDesc(patientId, PatientGoalStatus.ACTIVE)
+                .isEmpty()
+                || (patientProfile.getGoalsJson() != null && !patientProfile.getGoalsJson().trim().isEmpty());
         boolean hasPsycho = Boolean.TRUE.equals(patientProfile.getPsychoeducationCompleted());
         boolean hasSelectedTherapist = patientProfile.getTherapist() != null;
 

@@ -145,9 +145,19 @@ class _GoalSettingScreenState extends State<GoalSettingScreen> {
                       }
 
                       if (isLocked) {
-                        await onboardingProvider.loadOnboardingStatus(patientId, token: token);
+                        final ok = await onboardingProvider.loadOnboardingStatus(patientId, token: token);
                         if (!mounted) return;
-                        context.go(onboardingProvider.nextOnboardingRoute);
+                        if (!ok) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(onboardingProvider.errorMessage)),
+                          );
+                          return;
+                        }
+
+                        final nextRoute = onboardingProvider.nextOnboardingRoute == '/goal-setting'
+                            ? '/therapist-matching'
+                            : onboardingProvider.nextOnboardingRoute;
+                        context.go(nextRoute);
                         return;
                       }
 
