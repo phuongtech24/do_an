@@ -34,6 +34,18 @@ public class TherapistProfile extends BaseObject {
     @Column(name = "bio", columnDefinition = "TEXT")
     private String bio;
 
+    @Column(name = "hometown")
+    private String hometown;
+
+    @Column(name = "birth_year")
+    private Integer birthYear;
+
+    @Column(name = "voice_description", columnDefinition = "TEXT")
+    private String voiceDescription;
+
+    @Column(name = "therapy_style", columnDefinition = "TEXT")
+    private String therapyStyle;
+
     @Column(name = "meeting_link")
     private String meetingLink;
 
@@ -81,6 +93,38 @@ public class TherapistProfile extends BaseObject {
 
     public void setBio(String bio) {
         this.bio = bio;
+    }
+
+    public String getHometown() {
+        return hometown;
+    }
+
+    public void setHometown(String hometown) {
+        this.hometown = hometown;
+    }
+
+    public Integer getBirthYear() {
+        return birthYear;
+    }
+
+    public void setBirthYear(Integer birthYear) {
+        this.birthYear = birthYear;
+    }
+
+    public String getVoiceDescription() {
+        return voiceDescription;
+    }
+
+    public void setVoiceDescription(String voiceDescription) {
+        this.voiceDescription = voiceDescription;
+    }
+
+    public String getTherapyStyle() {
+        return therapyStyle;
+    }
+
+    public void setTherapyStyle(String therapyStyle) {
+        this.therapyStyle = therapyStyle;
     }
 
 

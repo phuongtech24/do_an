@@ -94,6 +94,26 @@ class OnboardingRepository {
     }
   }
 
+  Future<TherapistDirectoryItemModel> getTherapistDetail(String therapistId, {String? token}) async {
+    try {
+      final response = await http.get(
+        Uri.parse(ApiConstants.patientTherapistDetail(therapistId)),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      if (json['status'] == 200 && json['data'] != null) {
+        return TherapistDirectoryItemModel.fromJson(json['data'] as Map<String, dynamic>);
+      }
+      throw Exception(json['message'] ?? 'Không thể tải chi tiết chuyên gia');
+    } catch (e) {
+      throw Exception('Lỗi mạng khi tải chi tiết chuyên gia: $e');
+    }
+  }
+
   Future<void> selectTherapist(String patientId, String therapistId, {String? token}) async {
     try {
       final response = await http.post(

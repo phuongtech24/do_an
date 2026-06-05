@@ -78,39 +78,20 @@ class _MainAdminScreenState extends State<MainAdminScreen> {
             ),
             const SizedBox(height: 16),
             const Text(
-              'ReConnect Admin',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w900,
-                fontSize: 22,
-              ),
+              'Quản trị ReConnect',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 22),
             ),
             const SizedBox(height: 8),
             const Text(
-              'Quản trị hồ sơ bệnh nhân, nội dung CBT và điều phối chuyên gia trong cùng một workspace.',
+              'Quản trị hồ sơ bệnh nhân, nội dung CBT và điều phối chuyên gia trong cùng một không gian làm việc.',
               style: TextStyle(color: Colors.white70, height: 1.45),
             ),
             const SizedBox(height: 28),
-            _menuItem(
-              icon: Icons.people_outline,
-              label: 'Hồ sơ bệnh nhân',
-              subtitle: 'Theo dõi hồ sơ và điều phối',
-              index: 0,
-            ),
+            _menuItem(icon: Icons.people_outline, label: 'Hồ sơ bệnh nhân', subtitle: 'Theo dõi hồ sơ và điều phối', index: 0),
             const SizedBox(height: 12),
-            _menuItem(
-              icon: Icons.library_books_outlined,
-              label: 'Kho nội dung CBT',
-              subtitle: 'Quản lý nội dung và flow',
-              index: 1,
-            ),
+            _menuItem(icon: Icons.library_books_outlined, label: 'Kho nội dung CBT', subtitle: 'Quản lý nội dung và flow', index: 1),
             const SizedBox(height: 12),
-            _menuItem(
-              icon: Icons.manage_accounts_outlined,
-              label: 'Quản lý chuyên gia',
-              subtitle: 'Duyệt và theo dõi therapist',
-              index: 2,
-            ),
+            _menuItem(icon: Icons.manage_accounts_outlined, label: 'Quản lý chuyên gia', subtitle: 'Duyệt và theo dõi chuyên gia', index: 2),
             const Spacer(),
             Container(
               padding: const EdgeInsets.all(16),
@@ -183,15 +164,9 @@ class _MainAdminScreenState extends State<MainAdminScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      label,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800),
-                    ),
+                    Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
                     const SizedBox(height: 3),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(color: Colors.white70, fontSize: 12),
-                    ),
+                    Text(subtitle, style: const TextStyle(color: Colors.white70, fontSize: 12)),
                   ],
                 ),
               ),
@@ -203,7 +178,7 @@ class _MainAdminScreenState extends State<MainAdminScreen> {
   }
 
   Widget _buildTopBar() {
-    final labels = ['Hồ sơ bệnh nhân', 'Kho nội dung CBT', 'Quản lý chuyên gia'];
+    const labels = ['Hồ sơ bệnh nhân', 'Kho nội dung CBT', 'Quản lý chuyên gia'];
     return Container(
       margin: const EdgeInsets.fromLTRB(0, 20, 20, 0),
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
@@ -220,11 +195,7 @@ class _MainAdminScreenState extends State<MainAdminScreen> {
               children: [
                 Text(
                   labels[_selectedIndex],
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 24,
-                  ),
+                  style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w900, fontSize: 24),
                 ),
                 const SizedBox(height: 6),
                 const Text(
@@ -246,11 +217,8 @@ class _MainAdminScreenState extends State<MainAdminScreen> {
                 Icon(Icons.circle, size: 10, color: AppColors.success),
                 SizedBox(width: 8),
                 Text(
-                  'System stable',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w800,
-                  ),
+                  'Hệ thống ổn định',
+                  style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800),
                 ),
               ],
             ),

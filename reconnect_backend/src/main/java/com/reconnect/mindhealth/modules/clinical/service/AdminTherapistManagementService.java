@@ -1,6 +1,7 @@
 package com.reconnect.mindhealth.modules.clinical.service;
 
 import java.security.SecureRandom;
+import java.time.Year;
 import java.util.UUID;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -15,9 +16,6 @@ import com.reconnect.mindhealth.modules.clinical.repository.TherapistProfileRepo
 
 import jakarta.persistence.EntityNotFoundException;
 
-/**
- * SRP: Manage therapist account/profile data (edit profile, reset password, lock/unlock handled in AdminUserController).
- */
 @Service
 public class AdminTherapistManagementService {
 
@@ -45,21 +43,33 @@ public class AdminTherapistManagementService {
         if (request != null) {
             if (request.getFullName() != null && !request.getFullName().trim().isEmpty()) {
                 profile.setFullName(request.getFullName().trim());
-                // keep username somewhat aligned for display (email login still used)
-                User u = profile.getUser();
-                if (u != null) {
-                    u.setUsername(profile.getFullName());
-                    userRepository.save(u);
+                User user = profile.getUser();
+                if (user != null) {
+                    user.setUsername(profile.getFullName());
+                    userRepository.save(user);
                 }
             }
+            if (request.getHometown() != null) {
+                profile.setHometown(blankToNull(request.getHometown()));
+            }
+            if (request.getBirthYear() != null) {
+                validateBirthYear(request.getBirthYear());
+                profile.setBirthYear(request.getBirthYear());
+            }
+            if (request.getVoiceDescription() != null) {
+                profile.setVoiceDescription(blankToNull(request.getVoiceDescription()));
+            }
             if (request.getSpecialization() != null) {
-                profile.setSpecialization(request.getSpecialization().trim().isEmpty() ? null : request.getSpecialization().trim());
+                profile.setSpecialization(blankToNull(request.getSpecialization()));
+            }
+            if (request.getTherapyStyle() != null) {
+                profile.setTherapyStyle(blankToNull(request.getTherapyStyle()));
             }
             if (request.getBio() != null) {
-                profile.setBio(request.getBio().trim().isEmpty() ? null : request.getBio().trim());
+                profile.setBio(blankToNull(request.getBio()));
             }
             if (request.getMeetingLink() != null) {
-                profile.setMeetingLink(request.getMeetingLink().trim().isEmpty() ? null : request.getMeetingLink().trim());
+                profile.setMeetingLink(blankToNull(request.getMeetingLink()));
             }
         }
 
@@ -68,7 +78,7 @@ public class AdminTherapistManagementService {
 
     @Transactional
     public String resetTherapistPassword(UUID therapistId, String newPasswordMaybeNull) {
-        User u = userRepository.findById(therapistId)
+        User user = userRepository.findById(therapistId)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy user: " + therapistId));
 
         String newPassword = newPasswordMaybeNull != null ? newPasswordMaybeNull.trim() : "";
@@ -76,17 +86,34 @@ public class AdminTherapistManagementService {
             newPassword = generatePassword(10);
         }
 
-        u.setPasswordHash(passwordEncoder.encode(newPassword));
-        userRepository.save(u);
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
         return newPassword;
     }
 
-    private String generatePassword(int length) {
-        StringBuilder sb = new StringBuilder(length);
-        for (int i = 0; i < length; i++) {
-            sb.append(PW_ALPHABET.charAt(RNG.nextInt(PW_ALPHABET.length())));
+    private void validateBirthYear(Integer birthYear) {
+        if (birthYear == null) {
+            return;
         }
-        return sb.toString();
+        int currentYear = Year.now().getValue();
+        if (birthYear < 1950 || birthYear > currentYear) {
+            throw new IllegalArgumentException("Năm sinh không hợp lệ.");
+        }
+    }
+
+    private String blankToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String generatePassword(int length) {
+        StringBuilder builder = new StringBuilder(length);
+        for (int index = 0; index < length; index++) {
+            builder.append(PW_ALPHABET.charAt(RNG.nextInt(PW_ALPHABET.length())));
+        }
+        return builder.toString();
     }
 }
-

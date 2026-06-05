@@ -129,7 +129,7 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
                     .map((t) => DropdownMenuItem<String>(
                           value: t.therapistId,
                           enabled: !(t.caseloadFull && selectedId != t.therapistId),
-                          child: Text('${t.fullName} • ${t.email} • ${t.caseloadCount}/${t.caseloadLimit}${t.caseloadFull ? " • FULL" : ""}', overflow: TextOverflow.ellipsis),
+                          child: Text('${t.fullName} • ${t.email} • ${t.caseloadCount}/${t.caseloadLimit}${t.caseloadFull ? " • Đã đủ lịch" : ""}', overflow: TextOverflow.ellipsis),
                         ))
                     .toList(),
                 onChanged: (v) => selectedId = v,

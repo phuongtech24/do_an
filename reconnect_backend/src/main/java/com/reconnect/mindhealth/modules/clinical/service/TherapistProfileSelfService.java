@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Year;
 import java.util.Set;
 import java.util.UUID;
 
@@ -25,12 +26,13 @@ import jakarta.persistence.EntityNotFoundException;
 @Service
 public class TherapistProfileSelfService {
 
+    private static final long MAX_AVATAR_SIZE_BYTES = 2L * 1024 * 1024;
+    private static final Set<String> ALLOWED_AVATAR_MIME = Set.of("image/jpeg", "image/png", "image/webp");
+
     private final AuthContextService authContextService;
     private final StorageProperties storageProperties;
     private final TherapistProfileRepository therapistProfileRepository;
     private final AppointmentRepository appointmentRepository;
-    private static final long MAX_AVATAR_SIZE_BYTES = 2L * 1024 * 1024;
-    private static final Set<String> ALLOWED_AVATAR_MIME = Set.of("image/jpeg", "image/png", "image/webp");
 
     public TherapistProfileSelfService(
             AuthContextService authContextService,
@@ -63,8 +65,21 @@ public class TherapistProfileSelfService {
         if (request.getFullName() != null && !request.getFullName().trim().isEmpty()) {
             profile.setFullName(request.getFullName().trim());
         }
+        if (request.getHometown() != null) {
+            profile.setHometown(blankToNull(request.getHometown()));
+        }
+        if (request.getBirthYear() != null) {
+            validateBirthYear(request.getBirthYear());
+            profile.setBirthYear(request.getBirthYear());
+        }
+        if (request.getVoiceDescription() != null) {
+            profile.setVoiceDescription(blankToNull(request.getVoiceDescription()));
+        }
         if (request.getSpecialization() != null) {
             profile.setSpecialization(blankToNull(request.getSpecialization()));
+        }
+        if (request.getTherapyStyle() != null) {
+            profile.setTherapyStyle(blankToNull(request.getTherapyStyle()));
         }
         if (request.getBio() != null) {
             profile.setBio(blankToNull(request.getBio()));
@@ -125,15 +140,29 @@ public class TherapistProfileSelfService {
     }
 
     private String blankToNull(String value) {
-        if (value == null) return null;
+        if (value == null) {
+            return null;
+        }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
     }
 
     private void validateMeetingLink(String link) {
-        if (link == null) return;
+        if (link == null) {
+            return;
+        }
         if (!link.startsWith("https://") && !link.startsWith("http://")) {
-            throw new IllegalArgumentException("Meeting link phải bắt đầu bằng http:// hoặc https://.");
+            throw new IllegalArgumentException("Link tư vấn phải bắt đầu bằng http:// hoặc https://.");
+        }
+    }
+
+    private void validateBirthYear(Integer birthYear) {
+        if (birthYear == null) {
+            return;
+        }
+        int currentYear = Year.now().getValue();
+        if (birthYear < 1950 || birthYear > currentYear) {
+            throw new IllegalArgumentException("Năm sinh không hợp lệ.");
         }
     }
 
@@ -166,8 +195,12 @@ public class TherapistProfileSelfService {
     }
 
     private void deleteOldAvatarIfPossible(String oldAvatarUrl, String newAvatarUrl) {
-        if (oldAvatarUrl == null || oldAvatarUrl.isBlank() || oldAvatarUrl.equals(newAvatarUrl)) return;
-        if (!oldAvatarUrl.startsWith("/uploads/therapist-avatars/")) return;
+        if (oldAvatarUrl == null || oldAvatarUrl.isBlank() || oldAvatarUrl.equals(newAvatarUrl)) {
+            return;
+        }
+        if (!oldAvatarUrl.startsWith("/uploads/therapist-avatars/")) {
+            return;
+        }
         String relPath = oldAvatarUrl.substring("/uploads/".length());
         try {
             Files.deleteIfExists(resolveUnderUploadRoot(relPath));

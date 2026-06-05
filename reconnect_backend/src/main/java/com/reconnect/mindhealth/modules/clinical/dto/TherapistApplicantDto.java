@@ -9,7 +9,11 @@ public class TherapistApplicantDto {
     private UUID therapistId;
     private String fullName;
     private String email;
+    private String hometown;
+    private Integer birthYear;
+    private String voiceDescription;
     private String specialization;
+    private String therapyStyle;
     private String bio;
     private String meetingLink;
     private String avatarUrl;
@@ -31,7 +35,11 @@ public class TherapistApplicantDto {
         if (profile != null) {
             this.therapistId = profile.getId();
             this.fullName = profile.getFullName();
+            this.hometown = profile.getHometown();
+            this.birthYear = profile.getBirthYear();
+            this.voiceDescription = profile.getVoiceDescription();
             this.specialization = profile.getSpecialization();
+            this.therapyStyle = profile.getTherapyStyle();
             this.bio = profile.getBio();
             this.meetingLink = profile.getMeetingLink();
             this.avatarUrl = profile.getAvatarUrl();
@@ -74,12 +82,44 @@ public class TherapistApplicantDto {
         this.email = email;
     }
 
+    public String getHometown() {
+        return hometown;
+    }
+
+    public void setHometown(String hometown) {
+        this.hometown = hometown;
+    }
+
+    public Integer getBirthYear() {
+        return birthYear;
+    }
+
+    public void setBirthYear(Integer birthYear) {
+        this.birthYear = birthYear;
+    }
+
+    public String getVoiceDescription() {
+        return voiceDescription;
+    }
+
+    public void setVoiceDescription(String voiceDescription) {
+        this.voiceDescription = voiceDescription;
+    }
+
     public String getSpecialization() {
         return specialization;
     }
 
     public void setSpecialization(String specialization) {
         this.specialization = specialization;
+    }
+
+    public String getTherapyStyle() {
+        return therapyStyle;
+    }
+
+    public void setTherapyStyle(String therapyStyle) {
+        this.therapyStyle = therapyStyle;
     }
 
     public String getBio() {

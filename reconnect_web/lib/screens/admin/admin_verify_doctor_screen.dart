@@ -93,9 +93,14 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
                   therapistId: x.therapistId,
                   fullName: x.fullName,
                   email: x.email,
+                  hometown: x.hometown,
+                  birthYear: x.birthYear,
+                  voiceDescription: x.voiceDescription,
                   specialization: x.specialization,
+                  therapyStyle: x.therapyStyle,
                   bio: x.bio,
                   meetingLink: x.meetingLink,
+                  avatarUrl: x.avatarUrl,
                   approvalStatus: status,
                   credentialCount: x.credentialCount,
                   active: x.active,
@@ -151,9 +156,14 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
                     therapistId: x.therapistId,
                     fullName: x.fullName,
                     email: x.email,
+                    hometown: x.hometown,
+                    birthYear: x.birthYear,
+                    voiceDescription: x.voiceDescription,
                     specialization: x.specialization,
+                    therapyStyle: x.therapyStyle,
                     bio: x.bio,
                     meetingLink: x.meetingLink,
+                    avatarUrl: x.avatarUrl,
                     approvalStatus: x.approvalStatus,
                     credentialCount: x.credentialCount,
                     active: updated.isActive,
@@ -217,27 +227,51 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
     if (token == null || token.isEmpty) return;
 
     final fullNameCtrl = TextEditingController(text: item.fullName);
+    final hometownCtrl = TextEditingController(text: item.hometown ?? '');
+    final birthYearCtrl = TextEditingController(text: item.birthYear?.toString() ?? '');
+    final voiceDescriptionCtrl = TextEditingController(text: item.voiceDescription ?? '');
     final specializationCtrl = TextEditingController(text: item.specialization ?? '');
+    final therapyStyleCtrl = TextEditingController(text: item.therapyStyle ?? '');
     final meetingLinkCtrl = TextEditingController(text: item.meetingLink ?? '');
     final bioCtrl = TextEditingController(text: item.bio ?? '');
 
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Chỉnh sửa hồ sơ bác sĩ'),
+        title: const Text('Chỉnh sửa hồ sơ chuyên gia'),
         content: SizedBox(
-          width: 520,
-          child: Column(
+          width: 620,
+          child: SingleChildScrollView(
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(controller: fullNameCtrl, decoration: const InputDecoration(labelText: 'Họ tên')),
               const SizedBox(height: 10),
+              TextField(controller: hometownCtrl, decoration: const InputDecoration(labelText: 'Quê quán / khu vực')),
+              const SizedBox(height: 10),
+              TextField(
+                controller: birthYearCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Năm sinh'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: voiceDescriptionCtrl,
+                decoration: const InputDecoration(labelText: 'Giọng nói'),
+              ),
+              const SizedBox(height: 10),
               TextField(controller: specializationCtrl, decoration: const InputDecoration(labelText: 'Chuyên môn')),
               const SizedBox(height: 10),
-              TextField(controller: meetingLinkCtrl, decoration: const InputDecoration(labelText: 'Meeting link')),
+              TextField(
+                controller: therapyStyleCtrl,
+                decoration: const InputDecoration(labelText: 'Phong cách trị liệu'),
+              ),
               const SizedBox(height: 10),
-              TextField(controller: bioCtrl, decoration: const InputDecoration(labelText: 'Bio'), maxLines: 3),
+              TextField(controller: meetingLinkCtrl, decoration: const InputDecoration(labelText: 'Link tư vấn')),
+              const SizedBox(height: 10),
+              TextField(controller: bioCtrl, decoration: const InputDecoration(labelText: 'Giới thiệu'), maxLines: 3),
             ],
+          ),
           ),
         ),
         actions: [
@@ -259,7 +293,11 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
         token: token,
         therapistId: item.therapistId,
         fullName: fullNameCtrl.text.trim(),
+        hometown: hometownCtrl.text.trim(),
+        birthYear: int.tryParse(birthYearCtrl.text.trim()),
+        voiceDescription: voiceDescriptionCtrl.text.trim(),
         specialization: specializationCtrl.text.trim(),
+        therapyStyle: therapyStyleCtrl.text.trim(),
         meetingLink: meetingLinkCtrl.text.trim(),
         bio: bioCtrl.text.trim(),
       );
@@ -547,27 +585,30 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
                           ],
                         ),
                         subtitle: Text(
-                          'Email: ${doc.email}${doc.specialization == null ? '' : ' • ${doc.specialization}'} • Chứng chỉ: ${doc.credentialCount}',
+                          'Email: ${doc.email}'
+                          '${doc.specialization == null || doc.specialization!.isEmpty ? '' : ' • ${doc.specialization}'}'
+                          '${doc.hometown == null || doc.hometown!.isEmpty ? '' : ' • ${doc.hometown}'}'
+                          ' • Chứng chỉ: ${doc.credentialCount}',
                         ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             OutlinedButton(
                               onPressed: _loading ? null : () => _showCredentialsDialog(doc),
-                              child: const Text('XEM CC'),
+                              child: const Text('Xem chứng chỉ'),
                             ),
                             const SizedBox(width: 8),
                             if (isPending) ...[
                               ElevatedButton(
                                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
                                 onPressed: _loading ? null : () => _setApproval(doc, 'ACTIVE'),
-                                child: const Text('DUYỆT', style: TextStyle(color: Colors.white)),
+                                child: const Text('Duyệt', style: TextStyle(color: Colors.white)),
                               ),
                               const SizedBox(width: 8),
                               ElevatedButton(
                                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.alert),
                                 onPressed: _loading ? null : () => _setApproval(doc, 'REJECTED'),
-                                child: const Text('TỪ CHỐI', style: TextStyle(color: Colors.white)),
+                                child: const Text('Từ chối', style: TextStyle(color: Colors.white)),
                               ),
                               const SizedBox(width: 8),
                             ],

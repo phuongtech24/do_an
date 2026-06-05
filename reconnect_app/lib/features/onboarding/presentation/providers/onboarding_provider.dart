@@ -16,6 +16,7 @@ class OnboardingProvider extends ChangeNotifier {
   OnboardingStatusModel? _onboardingStatus;
   List<TherapistDirectoryItemModel> _therapists = const [];
   String? _selectedTherapistId;
+  TherapistDirectoryItemModel? _selectedTherapistDetail;
 
   OnboardingStatus get status => _status;
   String get errorMessage => _errorMessage;
@@ -24,6 +25,7 @@ class OnboardingProvider extends ChangeNotifier {
   OnboardingStatusModel? get onboardingStatus => _onboardingStatus;
   List<TherapistDirectoryItemModel> get therapists => _therapists;
   String? get selectedTherapistId => _selectedTherapistId;
+  TherapistDirectoryItemModel? get selectedTherapistDetail => _selectedTherapistDetail;
   bool get isOnboardingComplete => _onboardingStatus?.isComplete == true;
   String get nextOnboardingRoute => _onboardingStatus?.nextRoute ?? '/lsas';
 
@@ -121,6 +123,18 @@ class OnboardingProvider extends ChangeNotifier {
       _errorMessage = e.toString().replaceAll('Exception: ', '');
       notifyListeners();
       return false;
+    }
+  }
+
+  Future<TherapistDirectoryItemModel?> loadTherapistDetail(String therapistId, {String? token}) async {
+    try {
+      _selectedTherapistDetail = await _repository.getTherapistDetail(therapistId, token: token);
+      notifyListeners();
+      return _selectedTherapistDetail;
+    } catch (e) {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      rethrow;
     }
   }
 

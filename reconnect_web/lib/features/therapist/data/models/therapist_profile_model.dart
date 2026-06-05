@@ -2,7 +2,11 @@ class TherapistProfileModel {
   final String therapistId;
   final String fullName;
   final String email;
+  final String? hometown;
+  final int? birthYear;
+  final String? voiceDescription;
   final String? specialization;
+  final String? therapyStyle;
   final String? bio;
   final String? meetingLink;
   final String? avatarUrl;
@@ -13,7 +17,11 @@ class TherapistProfileModel {
     required this.therapistId,
     required this.fullName,
     required this.email,
+    required this.hometown,
+    required this.birthYear,
+    required this.voiceDescription,
     required this.specialization,
+    required this.therapyStyle,
     required this.bio,
     required this.meetingLink,
     required this.avatarUrl,
@@ -31,7 +39,11 @@ class TherapistProfileModel {
       therapistId: json['therapistId']?.toString() ?? '',
       fullName: json['fullName']?.toString() ?? '',
       email: json['email']?.toString() ?? '',
+      hometown: nullableString(json['hometown']),
+      birthYear: (json['birthYear'] as num?)?.toInt(),
+      voiceDescription: nullableString(json['voiceDescription']),
       specialization: nullableString(json['specialization']),
+      therapyStyle: nullableString(json['therapyStyle']),
       bio: nullableString(json['bio']),
       meetingLink: nullableString(json['meetingLink']),
       avatarUrl: nullableString(json['avatarUrl']),

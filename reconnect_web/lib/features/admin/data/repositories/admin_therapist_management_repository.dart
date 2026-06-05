@@ -8,7 +8,11 @@ class AdminTherapistManagementRepository {
     required String token,
     required String therapistId,
     String? fullName,
+    String? hometown,
+    int? birthYear,
+    String? voiceDescription,
     String? specialization,
+    String? therapyStyle,
     String? bio,
     String? meetingLink,
   }) async {
@@ -17,7 +21,11 @@ class AdminTherapistManagementRepository {
       headers: {'Authorization': 'Bearer $token'},
       body: {
         'fullName': fullName,
+        'hometown': hometown,
+        'birthYear': birthYear,
+        'voiceDescription': voiceDescription,
         'specialization': specialization,
+        'therapyStyle': therapyStyle,
         'bio': bio,
         'meetingLink': meetingLink,
       },
@@ -46,4 +54,3 @@ class AdminTherapistManagementRepository {
     return (res.data?['newPassword'] ?? '').toString();
   }
 }
-

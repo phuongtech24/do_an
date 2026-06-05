@@ -33,6 +33,7 @@ class ApiConstants {
   static const String patientGoals = '$baseUrl/patient/goals';
   static const String patientTherapists = '$baseUrl/patient/therapists';
   static const String selectTherapist = '$baseUrl/patient/therapist-selection';
+  static String patientTherapistDetail(String id) => '$baseUrl/patient/therapists/$id';
 
   // Roadmap Endpoints
   static const String getDailyQuests = '$baseUrl/roadmap/daily';

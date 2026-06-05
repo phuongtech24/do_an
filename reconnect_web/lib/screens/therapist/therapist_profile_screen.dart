@@ -6,14 +6,14 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/config/api_config.dart';
 import '../../core/auth/auth_provider.dart';
+import '../../core/config/api_config.dart';
 import '../../features/therapist/data/models/therapist_credential_model.dart';
 import '../../features/therapist/data/models/therapist_profile_model.dart';
 import '../../features/therapist/data/repositories/therapist_credential_repository.dart';
 import '../../features/therapist/data/repositories/therapist_profile_repository.dart';
 import '../../theme/app_colors.dart';
-import '../../screens/auth/therapist_login_screen.dart';
+import '../auth/therapist_login_screen.dart';
 
 class TherapistProfileScreen extends StatefulWidget {
   const TherapistProfileScreen({super.key});
@@ -25,9 +25,14 @@ class TherapistProfileScreen extends StatefulWidget {
 class _TherapistProfileScreenState extends State<TherapistProfileScreen> {
   final TherapistProfileRepository _repo = TherapistProfileRepository();
   final TherapistCredentialRepository _credentialRepo = TherapistCredentialRepository();
+
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _hometownController = TextEditingController();
+  final TextEditingController _birthYearController = TextEditingController();
+  final TextEditingController _voiceDescriptionController = TextEditingController();
   final TextEditingController _specializationController = TextEditingController();
+  final TextEditingController _therapyStyleController = TextEditingController();
   final TextEditingController _bioController = TextEditingController();
   final TextEditingController _meetingLinkController = TextEditingController();
 
@@ -36,7 +41,6 @@ class _TherapistProfileScreenState extends State<TherapistProfileScreen> {
   bool _saving = false;
   bool _credentialLoading = false;
   bool _avatarUploading = false;
-  bool _isAcceptingNewPatients = true;
   String? _error;
   String? _avatarUrl;
   List<TherapistCredentialModel> _credentials = [];
@@ -53,7 +57,11 @@ class _TherapistProfileScreenState extends State<TherapistProfileScreen> {
   void dispose() {
     _fullNameController.dispose();
     _emailController.dispose();
+    _hometownController.dispose();
+    _birthYearController.dispose();
+    _voiceDescriptionController.dispose();
     _specializationController.dispose();
+    _therapyStyleController.dispose();
     _bioController.dispose();
     _meetingLinkController.dispose();
     super.dispose();
@@ -86,7 +94,11 @@ class _TherapistProfileScreenState extends State<TherapistProfileScreen> {
   void _applyProfile(TherapistProfileModel profile) {
     _fullNameController.text = profile.fullName;
     _emailController.text = profile.email;
+    _hometownController.text = profile.hometown ?? '';
+    _birthYearController.text = profile.birthYear?.toString() ?? '';
+    _voiceDescriptionController.text = profile.voiceDescription ?? '';
     _specializationController.text = profile.specialization ?? '';
+    _therapyStyleController.text = profile.therapyStyle ?? '';
     _bioController.text = profile.bio ?? '';
     _meetingLinkController.text = profile.meetingLink ?? '';
     setState(() => _avatarUrl = profile.avatarUrl);
@@ -96,9 +108,15 @@ class _TherapistProfileScreenState extends State<TherapistProfileScreen> {
     final token = Provider.of<AuthProvider>(context, listen: false).token;
     if (token == null || token.isEmpty) return;
 
-    final link = _meetingLinkController.text.trim();
-    if (link.isNotEmpty && !link.startsWith('https://') && !link.startsWith('http://')) {
-      setState(() => _error = 'Meeting link phải bắt đầu bằng http:// hoặc https://.');
+    final meetingLink = _meetingLinkController.text.trim();
+    if (meetingLink.isNotEmpty && !meetingLink.startsWith('https://') && !meetingLink.startsWith('http://')) {
+      setState(() => _error = 'Link tư vấn phải bắt đầu bằng http:// hoặc https://.');
+      return;
+    }
+
+    final birthYear = _birthYearController.text.trim();
+    if (birthYear.isNotEmpty && int.tryParse(birthYear) == null) {
+      setState(() => _error = 'Năm sinh phải là số hợp lệ.');
       return;
     }
 
@@ -111,14 +129,21 @@ class _TherapistProfileScreenState extends State<TherapistProfileScreen> {
       final saved = await _repo.updateMyProfile(
         token: token,
         fullName: _fullNameController.text.trim(),
+        hometown: _hometownController.text.trim(),
+        birthYear: birthYear,
+        voiceDescription: _voiceDescriptionController.text.trim(),
         specialization: _specializationController.text.trim(),
+        therapyStyle: _therapyStyleController.text.trim(),
         bio: _bioController.text.trim(),
-        meetingLink: link,
+        meetingLink: meetingLink,
       );
       if (!mounted) return;
       _applyProfile(saved);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã cập nhật hồ sơ thành công.'), backgroundColor: AppColors.success),
+        const SnackBar(
+          content: Text('Đã cập nhật hồ sơ chuyên gia.'),
+          backgroundColor: AppColors.success,
+        ),
       );
     } catch (e) {
       if (!mounted) return;
@@ -152,7 +177,10 @@ class _TherapistProfileScreenState extends State<TherapistProfileScreen> {
       if (!mounted) return;
       _applyProfile(saved);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã cập nhật ảnh đại diện.'), backgroundColor: AppColors.success),
+        const SnackBar(
+          content: Text('Đã cập nhật ảnh đại diện.'),
+          backgroundColor: AppColors.success,
+        ),
       );
     } catch (e) {
       if (!mounted) return;
@@ -186,7 +214,10 @@ class _TherapistProfileScreenState extends State<TherapistProfileScreen> {
       await _reloadCredentials(token);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Upload chứng chỉ thành công.'), backgroundColor: AppColors.success),
+        const SnackBar(
+          content: Text('Đã tải lên chứng chỉ thành công.'),
+          backgroundColor: AppColors.success,
+        ),
       );
     } catch (e) {
       if (!mounted) return;
@@ -200,6 +231,7 @@ class _TherapistProfileScreenState extends State<TherapistProfileScreen> {
   Future<void> _downloadCredential(TherapistCredentialModel item) async {
     final token = Provider.of<AuthProvider>(context, listen: false).token;
     if (token == null || token.isEmpty) return;
+
     try {
       final bytes = await _credentialRepo.downloadBytes(token: token, credentialId: item.id);
       final blob = html.Blob([bytes], item.mimeType);
@@ -225,7 +257,7 @@ class _TherapistProfileScreenState extends State<TherapistProfileScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Xóa chứng chỉ?'),
-        content: Text('Bạn có chắc muốn xóa file "${item.fileName}" không? Nếu xóa nhầm, hãy upload lại file đúng.'),
+        content: Text('Bạn có chắc muốn xóa file "${item.fileName}" không?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Hủy')),
           ElevatedButton(
@@ -295,11 +327,9 @@ class _TherapistProfileScreenState extends State<TherapistProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Hồ sơ & Cài đặt Chuyên gia', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
-        foregroundColor: AppColors.primary,
-        elevation: 1,
+        title: const Text('Hồ sơ chuyên gia', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             tooltip: 'Tải lại hồ sơ',
@@ -314,22 +344,21 @@ class _TherapistProfileScreenState extends State<TherapistProfileScreen> {
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
                 child: Container(
-                  constraints: const BoxConstraints(maxWidth: 960),
+                  constraints: const BoxConstraints(maxWidth: 1120),
                   padding: const EdgeInsets.all(28),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.grey.shade200),
-                    boxShadow: const [BoxShadow(color: Color(0x11000000), blurRadius: 18, offset: Offset(0, 8))],
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(color: AppColors.primary.withOpacity(0.08)),
+                    boxShadow: const [
+                      BoxShadow(color: Color(0x11000000), blurRadius: 18, offset: Offset(0, 8)),
+                    ],
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SizedBox(
-                        width: 260,
-                        child: _buildProfileSummary(),
-                      ),
-                      const SizedBox(width: 36),
+                      SizedBox(width: 300, child: _buildProfileSummary()),
+                      const SizedBox(width: 32),
                       Expanded(child: _buildForm()),
                     ],
                   ),
@@ -341,7 +370,6 @@ class _TherapistProfileScreenState extends State<TherapistProfileScreen> {
 
   Widget _buildProfileSummary() {
     final displayName = _fullNameController.text.trim().isEmpty ? 'Chuyên gia' : _fullNameController.text.trim();
-    final initial = displayName.substring(0, 1).toUpperCase();
     final avatar = _publicUrl(_avatarUrl);
 
     return Column(
@@ -354,7 +382,10 @@ class _TherapistProfileScreenState extends State<TherapistProfileScreen> {
               backgroundColor: AppColors.primary,
               backgroundImage: avatar == null ? null : NetworkImage(avatar),
               child: avatar == null
-                  ? Text(initial, style: const TextStyle(fontSize: 52, color: Colors.white, fontWeight: FontWeight.bold))
+                  ? Text(
+                      displayName.substring(0, 1).toUpperCase(),
+                      style: const TextStyle(fontSize: 52, color: Colors.white, fontWeight: FontWeight.bold),
+                    )
                   : null,
             ),
             Material(
@@ -364,34 +395,50 @@ class _TherapistProfileScreenState extends State<TherapistProfileScreen> {
                 tooltip: 'Đổi ảnh đại diện',
                 onPressed: _avatarUploading ? null : _pickAndUploadAvatar,
                 icon: _avatarUploading
-                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
                     : const Icon(Icons.camera_alt, color: Colors.white),
               ),
             ),
           ],
         ),
         const SizedBox(height: 18),
-        Text(displayName, textAlign: TextAlign.center, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.primary)),
+        Text(
+          displayName,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.primary),
+        ),
         const SizedBox(height: 8),
-        Text(_specializationController.text.trim().isEmpty ? 'Chưa cập nhật chuyên môn' : _specializationController.text.trim(),
-            textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary)),
+        Text(
+          _specializationController.text.trim().isEmpty ? 'Chưa cập nhật chuyên môn' : _specializationController.text.trim(),
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: AppColors.textSecondary),
+        ),
         const SizedBox(height: 24),
-        const Divider(),
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: const Icon(Icons.email_outlined, color: AppColors.textSecondary),
-          title: Text(_emailController.text.isEmpty ? 'Chưa có email' : _emailController.text),
-        ),
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: Icon(
-            _meetingLinkController.text.trim().isEmpty ? Icons.link_off : Icons.link,
-            color: _meetingLinkController.text.trim().isEmpty ? AppColors.alert : AppColors.success,
-          ),
-          title: Text(_meetingLinkController.text.trim().isEmpty ? 'Chưa có link tư vấn' : 'Đã có link tư vấn'),
-        ),
+        _summaryTile(Icons.location_on_outlined, 'Quê quán', _safeText(_hometownController.text)),
+        _summaryTile(Icons.cake_outlined, 'Năm sinh', _safeText(_birthYearController.text)),
+        _summaryTile(Icons.record_voice_over_outlined, 'Giọng nói', _safeText(_voiceDescriptionController.text)),
+        _summaryTile(Icons.email_outlined, 'Email', _safeText(_emailController.text)),
+        _summaryTile(Icons.link_outlined, 'Link tư vấn', _safeText(_meetingLinkController.text)),
       ],
     );
+  }
+
+  Widget _summaryTile(IconData icon, String label, String value) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(icon, color: AppColors.textSecondary),
+      title: Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+      subtitle: Text(value),
+    );
+  }
+
+  String _safeText(String value) {
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? 'Chưa cập nhật' : trimmed;
   }
 
   String? _publicUrl(String? path) {
@@ -404,10 +451,10 @@ class _TherapistProfileScreenState extends State<TherapistProfileScreen> {
   Widget _buildCredentialsSection() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -420,12 +467,15 @@ class _TherapistProfileScreenState extends State<TherapistProfileScreen> {
               OutlinedButton.icon(
                 onPressed: _credentialLoading ? null : _pickAndUploadCredential,
                 icon: const Icon(Icons.upload_file, size: 18),
-                label: Text(_credentialLoading ? 'Đang xử lý...' : 'Upload chứng chỉ'),
+                label: Text(_credentialLoading ? 'Đang xử lý...' : 'Tải lên chứng chỉ'),
               ),
             ],
           ),
           const SizedBox(height: 6),
-          const Text('Chấp nhận PDF/JPG/PNG ≤ 5MB. Nếu file sai, hãy xóa rồi upload lại.', style: TextStyle(fontSize: 12, color: Colors.grey)),
+          const Text(
+            'Chấp nhận PDF/JPG/PNG dung lượng tối đa 5MB. Nếu file sai, hãy xóa rồi tải lên lại.',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
           const SizedBox(height: 12),
           if (_credentialLoading && _credentials.isEmpty)
             const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator()))
@@ -434,7 +484,7 @@ class _TherapistProfileScreenState extends State<TherapistProfileScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(10)),
-              child: const Text('Chưa có chứng chỉ nào. Admin chỉ duyệt ACTIVE khi đã có ít nhất 1 chứng chỉ.'),
+              child: const Text('Chưa có chứng chỉ nào. Hãy bổ sung ít nhất 1 chứng chỉ để admin dễ xác minh.'),
             )
           else
             ListView.separated(
@@ -480,74 +530,74 @@ class _TherapistProfileScreenState extends State<TherapistProfileScreen> {
             width: double.infinity,
             margin: const EdgeInsets.only(bottom: 16),
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: AppColors.alert.withOpacity(0.08), borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(
+              color: AppColors.alert.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Text(_error!, style: const TextStyle(color: AppColors.alert)),
           ),
-        const Text('Thông tin hiển thị', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _fullNameController,
-          decoration: InputDecoration(
-            labelText: 'Họ tên chuyên gia',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-          onChanged: (_) => setState(() {}),
+        const Text('Thông tin hiển thị với bệnh nhân', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        const SizedBox(height: 14),
+        Wrap(
+          spacing: 14,
+          runSpacing: 14,
+          children: [
+            _buildField(_fullNameController, 'Họ tên chuyên gia', width: 340),
+            _buildField(_hometownController, 'Quê quán / khu vực', width: 240),
+            _buildField(_birthYearController, 'Năm sinh', width: 160),
+          ],
         ),
         const SizedBox(height: 14),
-        TextField(
-          controller: _specializationController,
-          decoration: InputDecoration(
-            labelText: 'Chuyên môn',
-            hintText: 'VD: CBT, lo âu, trầm cảm, hikikomori...',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-          onChanged: (_) => setState(() {}),
+        _buildField(
+          _voiceDescriptionController,
+          'Giọng nói',
+          hintText: 'Ví dụ: giọng Bắc nhẹ, ấm, chậm rãi',
+          width: double.infinity,
         ),
         const SizedBox(height: 14),
-        TextField(
-          controller: _bioController,
+        Wrap(
+          spacing: 14,
+          runSpacing: 14,
+          children: [
+            _buildField(
+              _specializationController,
+              'Chuyên môn',
+              hintText: 'Ví dụ: CBT, lo âu xã hội, trầm cảm...',
+              width: 320,
+            ),
+            _buildField(
+              _therapyStyleController,
+              'Phong cách trị liệu',
+              hintText: 'Ví dụ: nhẹ nhàng, thực tế, nhiều bài tập',
+              width: 320,
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        _buildField(
+          _bioController,
+          'Giới thiệu bản thân',
+          hintText: 'Viết ngắn gọn để bệnh nhân hiểu cách bạn đồng hành.',
           maxLines: 5,
-          decoration: InputDecoration(
-            labelText: 'Lời tựa giới thiệu',
-            hintText: 'Nhập thông tin giới thiệu bản thân...',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
+          width: double.infinity,
         ),
         const SizedBox(height: 24),
         const Text('Link phòng tư vấn', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         const SizedBox(height: 8),
-        TextField(
-          controller: _meetingLinkController,
-          decoration: InputDecoration(
-            hintText: 'VD: https://meet.google.com/abc-xyz',
-            prefixIcon: const Icon(Icons.link),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-          onChanged: (_) => setState(() {}),
+        _buildField(
+          _meetingLinkController,
+          '',
+          hintText: 'Ví dụ: https://meet.google.com/abc-xyz',
+          prefixIcon: const Icon(Icons.link),
+          width: double.infinity,
         ),
         const SizedBox(height: 6),
         const Text(
-          'Link này sẽ được gắn vào các lịch hẹn mới. Khi lưu, hệ thống cũng tự bổ sung link cho lịch BOOKED đang thiếu link.',
+          'Link này sẽ được gắn vào các lịch hẹn mới và hỗ trợ đồng bộ cho các lịch đang thiếu link.',
           style: TextStyle(fontSize: 12, color: Colors.grey),
         ),
         const SizedBox(height: 24),
         _buildCredentialsSection(),
-        const SizedBox(height: 24),
-        const Text('Trạng thái nhận bệnh nhân', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        const SizedBox(height: 10),
-        Container(
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade300),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: SwitchListTile(
-            title: const Text('Đang nhận bệnh nhân mới', style: TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: const Text('MVP hiện chỉ lưu hồ sơ và link tư vấn; trạng thái này để demo UI.'),
-            value: _isAcceptingNewPatients,
-            activeColor: AppColors.success,
-            onChanged: (value) => setState(() => _isAcceptingNewPatients = value),
-          ),
-        ),
         const SizedBox(height: 28),
         Row(
           mainAxisAlignment: MainAxisAlignment.end,
@@ -569,14 +619,45 @@ class _TherapistProfileScreenState extends State<TherapistProfileScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
               ),
               icon: _saving
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
                   : const Icon(Icons.save, color: Colors.white),
-              label: Text(_saving ? 'Đang lưu...' : 'Lưu thay đổi', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              label: Text(
+                _saving ? 'Đang lưu...' : 'Lưu thay đổi',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
               onPressed: _saving ? null : _saveProfile,
             ),
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildField(
+    TextEditingController controller,
+    String label, {
+    String? hintText,
+    Widget? prefixIcon,
+    int maxLines = 1,
+    double width = 320,
+  }) {
+    return SizedBox(
+      width: width,
+      child: TextField(
+        controller: controller,
+        maxLines: maxLines,
+        onChanged: (_) => setState(() {}),
+        decoration: InputDecoration(
+          labelText: label.isEmpty ? null : label,
+          hintText: hintText,
+          prefixIcon: prefixIcon,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+      ),
     );
   }
 }

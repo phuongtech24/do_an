@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -54,6 +55,15 @@ public class PatientJourneyController {
     public ResponseEntity<ApiResponse<List<TherapistDirectoryItemDto>>> therapists() {
         try {
             return ResponseEntity.ok(ApiResponse.success("OK", therapistAssignmentService.listSelectableTherapists()));
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @GetMapping("/therapists/{therapistId}")
+    public ResponseEntity<ApiResponse<TherapistDirectoryItemDto>> therapistDetail(@PathVariable UUID therapistId) {
+        try {
+            return ResponseEntity.ok(ApiResponse.success("OK", therapistAssignmentService.getSelectableTherapist(therapistId)));
         } catch (Exception e) {
             return ResponseEntity.ok(ApiResponse.error(e.getMessage()));
         }
