@@ -144,12 +144,14 @@ public class ClinicalServiceImpl implements IClinicalService {
         boolean hasBaseline = lsasSubmissionRepository.existsByPatientProfile_IdAndSubmissionType(patientId, LsasSubmissionType.BASELINE);
         boolean hasGoals = patientProfile.getGoalsJson() != null && !patientProfile.getGoalsJson().trim().isEmpty();
         boolean hasPsycho = Boolean.TRUE.equals(patientProfile.getPsychoeducationCompleted());
+        boolean hasSelectedTherapist = patientProfile.getTherapist() != null;
 
         OnboardingStatusDto dto = new OnboardingStatusDto();
         dto.setPatientId(patientId);
         dto.setHasBaselineLsas(hasBaseline);
         dto.setHasGoals(hasGoals);
         dto.setHasCompletedPsychoeducation(hasPsycho);
+        dto.setHasSelectedTherapist(hasSelectedTherapist);
         return dto;
     }
 }

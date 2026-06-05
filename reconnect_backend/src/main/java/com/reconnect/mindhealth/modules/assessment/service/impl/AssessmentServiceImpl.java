@@ -2,7 +2,9 @@ package com.reconnect.mindhealth.modules.assessment.service.impl;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -66,10 +68,12 @@ public class AssessmentServiceImpl implements IAssessmentService {
     @Transactional
     public LsasSubmissionDto submitLsas(LsasSubmissionDto dto) {
         PatientProfile patient = patientProfileRepository.findById(dto.getPatientId())
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy bệnh nhân: " + dto.getPatientId()));
+                .orElseThrow(() -> new EntityNotFoundException("KhÃ´ng tÃ¬m tháº¥y bá»‡nh nhÃ¢n: " + dto.getPatientId()));
+
         if (dto.getAnswers() == null || dto.getAnswers().size() != 24) {
-            throw new IllegalArgumentException("LSAS cần đủ 24 câu trả lời.");
+            throw new IllegalArgumentException("LSAS cáº§n Ä‘á»§ 24 cÃ¢u tráº£ lá»i.");
         }
+        validateUniqueSituations(dto.getAnswers());
 
         boolean hasBaseline = lsasSubmissionRepository.existsByPatientProfile_IdAndSubmissionType(
                 patient.getId(), LsasSubmissionType.BASELINE);
@@ -90,7 +94,7 @@ public class AssessmentServiceImpl implements IAssessmentService {
         List<LsasAnswer> answers = new ArrayList<>();
         for (LsasAnswerRequestDto answerDto : dto.getAnswers()) {
             LsasSituation situation = lsasSituationRepository.findById(answerDto.getSituationId())
-                    .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy tình huống LSAS."));
+                    .orElseThrow(() -> new EntityNotFoundException("KhÃ´ng tÃ¬m tháº¥y tÃ¬nh huá»‘ng LSAS."));
             int fear = normalizeLsasScore(answerDto.getFearScore());
             int avoidance = normalizeLsasScore(answerDto.getAvoidanceScore());
             LsasAnswer answer = new LsasAnswer();
@@ -114,6 +118,9 @@ public class AssessmentServiceImpl implements IAssessmentService {
         if (patient.getCurrentCycleStartDate() == null || type == LsasSubmissionType.BASELINE) {
             patient.setCurrentCycleStartDate(LocalDateTime.now());
         }
+        if (saved.getTotalScore() != null && saved.getTotalScore() >= 95) {
+            patient.setStatus(com.reconnect.mindhealth.modules.clinical.enums.Status.WARNING);
+        }
         patientProfileRepository.save(patient);
 
         if (type == LsasSubmissionType.BASELINE) {
@@ -122,14 +129,14 @@ public class AssessmentServiceImpl implements IAssessmentService {
 
         log.info("LSAS submitted patientId={}, type={}, fearTotal={}, avoidanceTotal={}, total={}",
                 patient.getId(), type, fearTotal, avoidanceTotal, saved.getTotalScore());
-        return new LsasSubmissionDto(saved);
+        return toSubmissionDto(saved);
     }
 
     @Override
     @Transactional(readOnly = true)
     public boolean isLsasOnCoolDown(UUID patientId) {
         PatientProfile patient = patientProfileRepository.findById(patientId)
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy bệnh nhân: " + patientId));
+                .orElseThrow(() -> new EntityNotFoundException("KhÃ´ng tÃ¬m tháº¥y bá»‡nh nhÃ¢n: " + patientId));
         if (patient.getLastLsasDate() == null) {
             return false;
         }
@@ -140,10 +147,10 @@ public class AssessmentServiceImpl implements IAssessmentService {
     @Transactional(readOnly = true)
     public List<LsasSubmissionDto> getLsasHistory(UUID patientId) {
         patientProfileRepository.findById(patientId)
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy bệnh nhân: " + patientId));
+                .orElseThrow(() -> new EntityNotFoundException("KhÃ´ng tÃ¬m tháº¥y bá»‡nh nhÃ¢n: " + patientId));
         return lsasSubmissionRepository.findByPatientProfile_IdOrderByCreateDateDesc(patientId)
                 .stream()
-                .map(LsasSubmissionDto::new)
+                .map(this::toSubmissionDto)
                 .toList();
     }
 
@@ -151,7 +158,7 @@ public class AssessmentServiceImpl implements IAssessmentService {
     @Transactional
     public UserMoodDto saveUserMood(UserMoodDto dto) {
         PatientProfile patient = patientProfileRepository.findById(dto.getPatientId())
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy bệnh nhân: " + dto.getPatientId()));
+                .orElseThrow(() -> new EntityNotFoundException("KhÃ´ng tÃ¬m tháº¥y bá»‡nh nhÃ¢n: " + dto.getPatientId()));
         UserMood userMood = new UserMood();
         userMood.setPatientProfile(patient);
         userMood.setMoodScore(dto.getMoodScore());
@@ -159,10 +166,44 @@ public class AssessmentServiceImpl implements IAssessmentService {
         return new UserMoodDto(userMoodRepository.save(userMood));
     }
 
+    private void validateUniqueSituations(List<LsasAnswerRequestDto> answers) {
+        Set<UUID> seen = new HashSet<>();
+        for (LsasAnswerRequestDto answer : answers) {
+            if (answer.getSituationId() == null) {
+                throw new IllegalArgumentException("Thiáº¿u situationId trong cÃ¢u tráº£ lá»i LSAS.");
+            }
+            if (!seen.add(answer.getSituationId())) {
+                throw new IllegalArgumentException("LSAS khÃ´ng Ä‘Æ°á»£c chá»©a situation trÃ¹ng láº·p.");
+            }
+        }
+    }
+
     private int normalizeLsasScore(Integer score) {
         if (score == null) {
-            return 0;
+            throw new IllegalArgumentException("Fear/Avoidance score khÃ´ng Ä‘Æ°á»£c Ä‘á»ƒ trá»‘ng.");
         }
-        return Math.max(0, Math.min(3, score));
+        if (score < 0 || score > 3) {
+            throw new IllegalArgumentException("Fear/Avoidance score pháº£i náº±m trong khoáº£ng 0-3.");
+        }
+        return score;
+    }
+
+    private LsasSubmissionDto toSubmissionDto(LsasSubmission submission) {
+        LsasSubmissionDto dto = new LsasSubmissionDto(submission);
+        dto.setSeverityBand(resolveSeverityBand(submission.getTotalScore()));
+        dto.setClinicalAttention(submission.getTotalScore() != null && submission.getTotalScore() >= 95);
+        dto.setNextEligibleAt(submission.getUnlockedAt());
+        return dto;
+    }
+
+    private String resolveSeverityBand(Integer totalScore) {
+        int safeScore = totalScore == null ? 0 : totalScore;
+        if (safeScore >= 95) {
+            return "VERY_SEVERE";
+        }
+        if (safeScore >= 55) {
+            return "MODERATE_TO_SEVERE";
+        }
+        return "MILD";
     }
 }

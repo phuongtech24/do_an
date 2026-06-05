@@ -19,6 +19,7 @@ class _BookingCalendarScreenState extends State<BookingCalendarScreen> {
   final DateTime _selectedDate = DateTime.now();
   DateTime? _selectedSlotStartAt;
   bool _isAnonymous = true;
+  int _durationMinutes = 50;
   bool _loaded = false;
 
   @override
@@ -65,12 +66,19 @@ class _BookingCalendarScreenState extends State<BookingCalendarScreen> {
     final telehealth = Provider.of<TelehealthProvider>(context, listen: false);
     if (!telehealth.isAssigned) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(telehealth.assignmentMessage.isNotEmpty ? telehealth.assignmentMessage : 'Bạn chưa được gán bác sĩ phụ trách.')),
+        SnackBar(content: Text(telehealth.assignmentMessage.isNotEmpty ? telehealth.assignmentMessage : 'Bạn chưa chọn chuyên gia phù hợp.')),
       );
       return;
     }
 
-    final appointment = await telehealth.book(patientId, _selectedSlotStartAt!, _isAnonymous, token: token);
+    final appointment = await telehealth.book(
+      patientId,
+      _selectedSlotStartAt!,
+      _isAnonymous,
+      durationMinutes: _durationMinutes,
+      purpose: _durationMinutes == 60 ? 'INITIAL_ASSESSMENT' : (_durationMinutes == 90 ? 'BEHAVIORAL_EXPERIMENT' : 'CBT_SESSION'),
+      token: token,
+    );
     if (!mounted) return;
 
     if (appointment == null) {
@@ -81,13 +89,12 @@ class _BookingCalendarScreenState extends State<BookingCalendarScreen> {
     }
 
     final timeText = DateFormat('dd/MM/yyyy HH:mm').format(appointment.startAt);
-
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Đặt lịch thành công'),
         content: Text(
-          'Ca khám của bạn đã được chốt vào:\n$timeText.\n\nLink phòng tư vấn sẽ hiển thị trong Lịch hẹn của tôi.',
+          'Buổi CBT của bạn đã được chốt vào:\n$timeText.\n\nDuration: $_durationMinutes phút.\nLink phòng tư vấn sẽ hiển thị trong Lịch hẹn của tôi.',
         ),
         actions: [
           TextButton(
@@ -117,10 +124,7 @@ class _BookingCalendarScreenState extends State<BookingCalendarScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Chọn lịch khám'),
-        elevation: 0,
-      ),
+      appBar: AppBar(title: const Text('Đặt lịch CBT')),
       body: Consumer<TelehealthProvider>(
         builder: (context, telehealth, _) {
           if (telehealth.status == TelehealthStatus.loading && telehealth.assignmentStatus == null) {
@@ -130,7 +134,7 @@ class _BookingCalendarScreenState extends State<BookingCalendarScreen> {
           if (!telehealth.isAssigned) {
             final message = telehealth.assignmentMessage.isNotEmpty
                 ? telehealth.assignmentMessage
-                : 'Bạn chưa được gán bác sĩ phụ trách. Vui lòng chờ Admin gán bác sĩ để đặt lịch.';
+                : 'Bạn chưa chọn chuyên gia phù hợp để bắt đầu đặt lịch CBT.';
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
@@ -142,17 +146,9 @@ class _BookingCalendarScreenState extends State<BookingCalendarScreen> {
                     Text(message, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.alert, fontSize: 16)),
                     const SizedBox(height: 16),
                     ElevatedButton.icon(
-                      onPressed: patientId.isEmpty
-                          ? null
-                          : () async {
-                              await telehealth.loadAssignmentStatus(patientId, token: token);
-                              if (!mounted) return;
-                              if (telehealth.isAssigned) {
-                                await telehealth.loadSlots(patientId, _selectedDate, token: token);
-                              }
-                            },
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Tải lại'),
+                      onPressed: () => context.go('/therapist-matching'),
+                      icon: const Icon(Icons.people_outline),
+                      label: const Text('Chọn chuyên gia'),
                     ),
                   ],
                 ),
@@ -160,7 +156,7 @@ class _BookingCalendarScreenState extends State<BookingCalendarScreen> {
             );
           }
 
-          final therapistName = telehealth.therapistName.isNotEmpty ? telehealth.therapistName : 'Bác sĩ phụ trách';
+          final therapistName = telehealth.therapistName.isNotEmpty ? telehealth.therapistName : 'Chuyên gia đồng hành';
           final availableSlots = telehealth.slots.where((slot) => slot.isAvailable).toList();
 
           return SingleChildScrollView(
@@ -184,12 +180,9 @@ class _BookingCalendarScreenState extends State<BookingCalendarScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              therapistName,
-                              style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-                            ),
+                            Text(therapistName, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
                             const SizedBox(height: 6),
-                            const Text('Chọn khung giờ trống để đặt buổi tư vấn online.', style: TextStyle(color: Colors.white70)),
+                            const Text('Chọn khung giờ và duration phù hợp cho buổi CBT của bạn.', style: TextStyle(color: Colors.white70)),
                           ],
                         ),
                       ),
@@ -216,8 +209,21 @@ class _BookingCalendarScreenState extends State<BookingCalendarScreen> {
                           onSelected: (slot) => setState(() => _selectedSlotStartAt = slot.startAt),
                         ),
                       const SizedBox(height: 22),
-                      const Text('Quyền riêng tư', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                      const Text('Duration', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
                       const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: [45, 50, 60, 90].map((minutes) {
+                          final selected = _durationMinutes == minutes;
+                          return ChoiceChip(
+                            label: Text('$minutes phút'),
+                            selected: selected,
+                            onSelected: (_) => setState(() => _durationMinutes = minutes),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 22),
                       Card(
                         elevation: 0,
                         color: AppColors.surface,
@@ -228,11 +234,11 @@ class _BookingCalendarScreenState extends State<BookingCalendarScreen> {
                         child: SwitchListTile(
                           value: _isAnonymous,
                           onChanged: (value) => setState(() => _isAnonymous = value),
-                          title: const Text('Giao tiếp ẩn danh'),
+                          title: const Text('Giữ nickname/ẩn danh'),
                           subtitle: Text(
                             _isAnonymous
-                                ? 'Therapist chỉ thấy nickname; thông tin thật được giữ kín.'
-                                : 'Therapist có thể thấy thông tin thật nếu hệ thống cho phép.',
+                                ? 'Therapist ưu tiên nickname để bạn thoải mái hơn khi bắt đầu.'
+                                : 'Therapist có thể thấy thêm thông tin thật nếu hệ thống cho phép.',
                           ),
                         ),
                       ),
@@ -245,6 +251,17 @@ class _BookingCalendarScreenState extends State<BookingCalendarScreen> {
                           style: ElevatedButton.styleFrom(backgroundColor: AppColors.alert, foregroundColor: Colors.white),
                           child: const Text('XÁC NHẬN ĐẶT CA', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                         ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: patientId.isEmpty
+                            ? null
+                            : () async {
+                                await telehealth.loadAssignmentStatus(patientId, token: token);
+                                if (!mounted || !telehealth.isAssigned) return;
+                                await telehealth.loadSlots(patientId, _selectedDate, token: token);
+                              },
+                        child: const Text('Tải lại slot'),
                       ),
                     ],
                   ),
@@ -294,4 +311,3 @@ class _SlotGrid extends StatelessWidget {
     );
   }
 }
-

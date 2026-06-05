@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
 import '../../../../shared/widgets/mindhealth_scaffold.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/onboarding_provider.dart';
@@ -13,46 +14,29 @@ class GoalSettingScreen extends StatefulWidget {
 }
 
 class _GoalSettingScreenState extends State<GoalSettingScreen> {
-  final List<String> _suggestedGoals = [
-    'Bớt lo lắng về tương lai',
-    'Cải thiện chất lượng giấc ngủ',
-    'Gặp gỡ bạn bè nhiều hơn',
-    'Hoàn thành công việc đúng hạn',
-    'Kiểm soát cơn nóng giận',
-    'Dành thời gian chăm sóc bản thân',
-    'Giảm bớt suy nghĩ tiêu cực'
+  static const List<_GoalOption> _goalOptions = [
+    _GoalOption(
+      goalType: 'SOCIAL_INTERACTION',
+      title: 'Tự tin kết bạn, mở rộng quan hệ',
+      subtitle: 'Ưu tiên các tình huống giao tiếp, làm quen, trò chuyện và duy trì kết nối.',
+      icon: Icons.people_outline,
+    ),
+    _GoalOption(
+      goalType: 'PERFORMANCE',
+      title: 'Thể hiện tốt hơn trong công việc/học tập',
+      subtitle: 'Ưu tiên thuyết trình, phát biểu, trả lời trước đám đông và các tình huống áp lực hiệu suất.',
+      icon: Icons.campaign_outlined,
+    ),
+    _GoalOption(
+      goalType: 'GENERAL',
+      title: 'Tự tin trong mọi tình huống hàng ngày',
+      subtitle: 'Kết hợp cả giao tiếp xã hội và tình huống hiệu suất để tạo lộ trình tổng quát.',
+      icon: Icons.self_improvement_outlined,
+    ),
   ];
 
-  final Set<String> _selectedGoals = {};
-  final TextEditingController _customGoalController = TextEditingController();
+  String? _selectedGoalType;
   bool _loadedFromServer = false;
-
-  void _toggleGoal(String goal) {
-    if (_isLocked) return;
-    setState(() {
-      if (_selectedGoals.contains(goal)) {
-        _selectedGoals.remove(goal);
-      } else if (_selectedGoals.length < 5) {
-        _selectedGoals.add(goal);
-      }
-    });
-  }
-
-  void _addCustomGoal() {
-    if (_isLocked) return;
-    final text = _customGoalController.text.trim();
-    if (text.isNotEmpty && _selectedGoals.length < 5) {
-      setState(() {
-        _selectedGoals.add(text);
-        _customGoalController.clear();
-      });
-    }
-  }
-
-  bool get _isLocked {
-    final onboardingProvider = Provider.of<OnboardingProvider>(context, listen: false);
-    return onboardingProvider.savedGoals.isNotEmpty;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,28 +44,32 @@ class _GoalSettingScreenState extends State<GoalSettingScreen> {
     final patientId = auth.loginResponse?.user.id ?? '';
     final token = auth.loginResponse?.token;
     final onboardingProvider = Provider.of<OnboardingProvider>(context);
-    final isLocked = onboardingProvider.savedGoals.isNotEmpty;
+    final isLocked = onboardingProvider.savedGoalType != null;
 
     if (!_loadedFromServer && patientId.isNotEmpty) {
       _loadedFromServer = true;
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         final ok = await onboardingProvider.loadGoals(patientId, token: token);
-        if (!mounted) return;
-        if (ok) {
-          setState(() {
-            _selectedGoals
-              ..clear()
-              ..addAll(onboardingProvider.savedGoals.take(5));
-          });
-        }
+        if (!mounted || !ok) return;
+        setState(() => _selectedGoalType = onboardingProvider.savedGoalType);
       });
     }
 
     return MindHealthScaffold(
-      title: 'Thiết lập Mục tiêu',
+      title: 'Mục tiêu trị liệu',
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const Text(
+            'Điều gì bạn muốn cải thiện nhất?',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Chọn 1 mục tiêu thân thiện để hệ thống ưu tiên Fear Ladder và bài Behavioral Experiment phù hợp.',
+            style: TextStyle(color: Colors.grey),
+          ),
+          const SizedBox(height: 20),
           if (isLocked)
             Container(
               width: double.infinity,
@@ -90,114 +78,90 @@ class _GoalSettingScreenState extends State<GoalSettingScreen> {
               decoration: BoxDecoration(
                 color: Colors.green.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.green.withOpacity(0.25)),
+                border: Border.all(color: Colors.green.withOpacity(0.24)),
               ),
-              child: const Row(
-                children: [
-                  Icon(Icons.lock, color: Colors.green),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Bạn đã thiết lập mục tiêu trị liệu rồi. Màn hình này chỉ để xem lại.',
-                      style: TextStyle(fontWeight: FontWeight.w600),
+              child: const Text(
+                'Mục tiêu đã được lưu. Bạn vẫn có thể xem lại trước khi tiếp tục.',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          Expanded(
+            child: ListView.separated(
+              itemCount: _goalOptions.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final option = _goalOptions[index];
+                final selected = _selectedGoalType == option.goalType;
+                return InkWell(
+                  borderRadius: BorderRadius.circular(18),
+                  onTap: isLocked ? null : () => setState(() => _selectedGoalType = option.goalType),
+                  child: Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: selected ? const Color(0xFF6C63FF).withOpacity(0.08) : Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: selected ? const Color(0xFF6C63FF) : Colors.grey.shade300,
+                        width: selected ? 2 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: const Color(0xFF6C63FF).withOpacity(0.12),
+                          child: Icon(option.icon, color: const Color(0xFF6C63FF)),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(option.title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                              const SizedBox(height: 6),
+                              Text(option.subtitle, style: const TextStyle(color: Colors.black54, height: 1.4)),
+                            ],
+                          ),
+                        ),
+                        if (selected) const Icon(Icons.check_circle, color: Color(0xFF6C63FF)),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            ),
-          const Text(
-            'Bạn muốn đạt được điều gì?',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Hãy chọn từ 3 đến 5 mục tiêu cụ thể để AI thiết kế lộ trình phù hợp nhất cho bạn.',
-            style: TextStyle(color: Colors.grey),
-          ),
-          const SizedBox(height: 24),
-          
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _suggestedGoals.map((goal) {
-              final isSelected = _selectedGoals.contains(goal);
-              return FilterChip(
-                label: Text(goal),
-                selected: isSelected,
-                onSelected: isLocked ? null : (val) => _toggleGoal(goal),
-                selectedColor: const Color(0xFF6C63FF).withOpacity(0.2),
-                checkmarkColor: const Color(0xFF6C63FF),
-              );
-            }).toList(),
-          ),
-          
-          const SizedBox(height: 16),
-          if (!isLocked)
-            TextField(
-              controller: _customGoalController,
-              decoration: InputDecoration(
-                hintText: 'Nhập mục tiêu riêng của bạn...',
-                suffixIcon: IconButton(
-                  onPressed: _addCustomGoal,
-                  icon: const Icon(Icons.add_circle, color: Color(0xFF6C63FF)),
-                ),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              onSubmitted: (_) => _addCustomGoal(),
-            ),
-          
-          const Spacer(),
-          
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.info_outline, color: Colors.blue),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Đã chọn: ${_selectedGoals.length}/5 mục tiêu',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
+                );
+              },
             ),
           ),
-          
-          const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: (onboardingProvider.status != OnboardingStatus.loading) &&
-                      (isLocked || _selectedGoals.length >= 3)
+              onPressed: onboardingProvider.status != OnboardingStatus.loading &&
+                      (isLocked || _selectedGoalType != null)
                   ? () async {
                       if (patientId.isEmpty) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Không tìm thấy phiên đăng nhập. Vui lòng đăng nhập lại.')),
-                          );
-                        }
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Không tìm thấy phiên đăng nhập.')),
+                        );
                         return;
                       }
 
                       if (isLocked) {
-                        context.go('/home');
+                        context.go('/psycho-education');
                         return;
                       }
 
-                      final goalsList = _selectedGoals.toList(growable: false);
-                      final ok = await onboardingProvider.saveGoals(patientId, goalsList, token: token);
+                      final selected = _goalOptions.firstWhere((goal) => goal.goalType == _selectedGoalType);
+                      final ok = await onboardingProvider.saveGoal(
+                        patientId,
+                        selected.goalType,
+                        selected.title,
+                        token: token,
+                      );
                       if (!mounted) return;
-
                       if (ok) {
                         context.go('/psycho-education');
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Lỗi: ${onboardingProvider.errorMessage}')),
+                          SnackBar(content: Text(onboardingProvider.errorMessage)),
                         );
                       }
                     }
@@ -212,11 +176,25 @@ class _GoalSettingScreenState extends State<GoalSettingScreen> {
                       width: 18,
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
-                  : Text(isLocked ? 'Về Trang chủ' : 'Tiếp tục'),
+                  : Text(isLocked ? 'Tiếp tục' : 'Lưu mục tiêu'),
             ),
           ),
         ],
       ),
     );
   }
+}
+
+class _GoalOption {
+  final String goalType;
+  final String title;
+  final String subtitle;
+  final IconData icon;
+
+  const _GoalOption({
+    required this.goalType,
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+  });
 }

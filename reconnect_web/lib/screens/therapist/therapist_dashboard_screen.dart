@@ -210,13 +210,15 @@ class _TherapistDashboardScreenState extends State<TherapistDashboardScreen> {
           'id': patient.patientId,
           'isAnonymous': true,
           'status': isWarning ? 'Cảnh báo' : 'Ổn định',
-          'lsasBaseline': 0,
-          'lsasCurrent': 0,
+          'lsasBaseline': patient.baselineLsasScore,
+          'lsasCurrent': patient.currentLsasScore,
           'moodHistory': [50, 50, 50, 50, 50, 50, 50],
           'hasRedFlag': patient.isRedFlagActive,
           'avatar': Icons.person,
           'color': isWarning ? Colors.red : Colors.blue,
           'riskScore': patient.currentRiskScore,
+          'primaryGoal': patient.primaryGoal,
+          'therapistName': patient.therapistName,
         };
         Navigator.push(
           context,

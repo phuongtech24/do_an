@@ -161,7 +161,7 @@ class _PsychoeducationScreenState extends State<PsychoeducationScreen> {
                       if (!mounted) return;
                       setState(() => _isSubmitting = false);
                       if (ok) {
-                        context.go('/home');
+                        context.go('/therapist-matching');
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(

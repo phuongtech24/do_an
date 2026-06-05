@@ -69,10 +69,6 @@ public class ClinicalController {
         }
     }
 
-    /**
-     * GET /api/clinical/therapist-assignment-status?patientId=...
-     * Dùng để UI patient gating: đã được gán bác sĩ phụ trách chưa.
-     */
     @GetMapping("/therapist-assignment-status")
     public ResponseEntity<ApiResponse<TherapistAssignmentStatusDto>> getTherapistAssignmentStatus(@RequestParam UUID patientId) {
         try {
@@ -87,8 +83,7 @@ public class ClinicalController {
                         false,
                         null,
                         null,
-                        "Bạn chưa được gán bác sĩ phụ trách. Vui lòng chờ Admin gán bác sĩ để đặt lịch."
-                );
+                        "Bạn chưa chọn chuyên gia. Hãy chọn therapist phù hợp để bắt đầu đặt lịch CBT.");
                 return ResponseEntity.ok(ApiResponse.success("OK", dto));
             }
 
@@ -102,12 +97,10 @@ public class ClinicalController {
                     true,
                     patient.getTherapist().getId(),
                     therapistName,
-                    "OK"
-            );
+                    "Bạn đã có chuyên gia đồng hành.");
             return ResponseEntity.ok(ApiResponse.success("OK", dto));
         } catch (Exception e) {
             return ResponseEntity.ok(ApiResponse.error("Lỗi khi kiểm tra bác sĩ phụ trách: " + e.getMessage()));
         }
     }
 }
-

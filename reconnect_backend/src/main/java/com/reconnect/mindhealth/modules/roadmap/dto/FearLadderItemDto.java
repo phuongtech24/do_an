@@ -20,6 +20,9 @@ public class FearLadderItemDto {
     private FearLadderBucket bucket;
     private Integer ladderOrder;
     private FearLadderStatus status;
+    private Boolean goalMatch;
+    private Boolean unlocked;
+    private java.util.Date masteredAt;
 
     public FearLadderItemDto() {
     }
@@ -63,4 +66,10 @@ public class FearLadderItemDto {
     public void setLadderOrder(Integer ladderOrder) { this.ladderOrder = ladderOrder; }
     public FearLadderStatus getStatus() { return status; }
     public void setStatus(FearLadderStatus status) { this.status = status; }
+    public Boolean getGoalMatch() { return goalMatch; }
+    public void setGoalMatch(Boolean goalMatch) { this.goalMatch = goalMatch; }
+    public Boolean getUnlocked() { return unlocked; }
+    public void setUnlocked(Boolean unlocked) { this.unlocked = unlocked; }
+    public java.util.Date getMasteredAt() { return masteredAt; }
+    public void setMasteredAt(java.util.Date masteredAt) { this.masteredAt = masteredAt; }
 }

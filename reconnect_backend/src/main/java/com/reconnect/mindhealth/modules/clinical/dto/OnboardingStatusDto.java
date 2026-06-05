@@ -7,6 +7,7 @@ public class OnboardingStatusDto {
     private boolean hasBaselineLsas;
     private boolean hasGoals;
     private boolean hasCompletedPsychoeducation;
+    private boolean hasSelectedTherapist;
 
     public OnboardingStatusDto() {
     }
@@ -41,5 +42,13 @@ public class OnboardingStatusDto {
 
     public void setHasCompletedPsychoeducation(boolean hasCompletedPsychoeducation) {
         this.hasCompletedPsychoeducation = hasCompletedPsychoeducation;
+    }
+
+    public boolean isHasSelectedTherapist() {
+        return hasSelectedTherapist;
+    }
+
+    public void setHasSelectedTherapist(boolean hasSelectedTherapist) {
+        this.hasSelectedTherapist = hasSelectedTherapist;
     }
 }

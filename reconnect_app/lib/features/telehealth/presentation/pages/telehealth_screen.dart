@@ -34,28 +34,40 @@ class _TelehealthScreenState extends State<TelehealthScreen> {
   @override
   Widget build(BuildContext context) {
     return MindHealthScaffold(
-      title: 'UC10 - Telehealth',
+      title: 'Telehealth CBT',
       body: Consumer<TelehealthProvider>(
         builder: (context, telehealth, _) {
           final assigned = telehealth.isAssigned;
           final bannerText = assigned
-              ? (telehealth.therapistName.isNotEmpty ? 'Bác sĩ phụ trách: ${telehealth.therapistName}' : 'Bạn đã được gán bác sĩ phụ trách.')
+              ? (telehealth.therapistName.isNotEmpty
+                  ? 'Chuyên gia đồng hành: ${telehealth.therapistName}'
+                  : 'Bạn đã có chuyên gia đồng hành.')
               : (telehealth.assignmentMessage.isNotEmpty
                   ? telehealth.assignmentMessage
-                  : 'Bạn chưa được gán bác sĩ phụ trách. Vui lòng chờ Admin gán bác sĩ để đặt lịch.');
+                  : 'Bạn chưa chọn chuyên gia phù hợp để bắt đầu đặt lịch CBT.');
 
           return ListView(
             children: [
               Card(
                 child: ListTile(
-                  leading: Icon(assigned ? Icons.verified_user_outlined : Icons.warning_amber_rounded, color: assigned ? Colors.teal : Colors.deepOrange),
-                  title: Text(assigned ? 'Telehealth sẵn sàng' : 'Chưa được gán bác sĩ'),
+                  leading: Icon(
+                    assigned ? Icons.verified_user_outlined : Icons.warning_amber_rounded,
+                    color: assigned ? Colors.teal : Colors.deepOrange,
+                  ),
+                  title: Text(assigned ? 'Telehealth sẵn sàng' : 'Bạn chưa chọn chuyên gia'),
                   subtitle: Text(bannerText),
                 ),
               ),
+              if (!assigned)
+                FeatureCard(
+                  title: 'Chọn chuyên gia phù hợp',
+                  subtitle: 'Xem danh sách therapist ACTIVE và chọn người bạn thấy hợp nhất',
+                  icon: Icons.people_alt_outlined,
+                  onTap: () => context.push('/therapist-matching'),
+                ),
               FeatureCard(
-                title: 'Đặt lịch khám',
-                subtitle: assigned ? 'Chọn khung giờ trống' : 'Cần được Admin gán bác sĩ trước',
+                title: 'Đặt lịch kham',
+                subtitle: assigned ? 'Chọn khung giờ CBT còn trống' : 'Cần chọn chuyên gia trước',
                 icon: Icons.schedule_outlined,
                 onTap: assigned
                     ? () => context.push('/telehealth/booking')
@@ -66,16 +78,14 @@ class _TelehealthScreenState extends State<TelehealthScreen> {
                       },
               ),
               FeatureCard(
-                title: 'Lịch sử đặt khám',
-                subtitle: 'Xem các ca khám đã đặt',
+                title: 'Lịch sử đặt kham',
+                subtitle: 'Xem các ca kham đã đặt',
                 icon: Icons.history,
-                onTap: () {
-                  context.push('/telehealth/my-appointments');
-                },
+                onTap: () => context.push('/telehealth/my-appointments'),
               ),
               FeatureCard(
                 title: 'Chế độ danh tính',
-                subtitle: 'FR6.4 - chọn chia sẻ tên thật hoặc ẩn danh',
+                subtitle: 'Chọn chia sẻ nickname hoặc danh tính thật khi vào buổi CBT',
                 icon: Icons.verified_user_outlined,
                 trailing: Switch(
                   value: true,
@@ -89,4 +99,3 @@ class _TelehealthScreenState extends State<TelehealthScreen> {
     );
   }
 }
-

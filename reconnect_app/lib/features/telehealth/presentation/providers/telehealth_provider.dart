@@ -56,7 +56,14 @@ class TelehealthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<AppointmentModel?> book(String patientId, DateTime startAt, bool isAnonymous, {String? token}) async {
+  Future<AppointmentModel?> book(
+    String patientId,
+    DateTime startAt,
+    bool isAnonymous, {
+    required int durationMinutes,
+    String purpose = 'CBT_SESSION',
+    String? token,
+  }) async {
     _status = TelehealthStatus.loading;
     _errorMessage = '';
     notifyListeners();
@@ -66,6 +73,8 @@ class TelehealthProvider extends ChangeNotifier {
         patientId,
         startAt: startAt,
         isAnonymous: isAnonymous,
+        durationMinutes: durationMinutes,
+        purpose: purpose,
         token: token,
       );
       _status = TelehealthStatus.success;

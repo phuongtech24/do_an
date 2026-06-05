@@ -16,6 +16,9 @@ public class LsasSubmissionDto {
     private Integer avoidanceTotal;
     private Integer totalScore;
     private LocalDateTime unlockedAt;
+    private LocalDateTime nextEligibleAt;
+    private String severityBand;
+    private Boolean clinicalAttention;
     private List<LsasAnswerRequestDto> answers = new ArrayList<>();
 
     public LsasSubmissionDto() {
@@ -29,6 +32,7 @@ public class LsasSubmissionDto {
         this.avoidanceTotal = entity.getAvoidanceTotal();
         this.totalScore = entity.getTotalScore();
         this.unlockedAt = entity.getUnlockedAt();
+        this.nextEligibleAt = entity.getUnlockedAt();
     }
 
     public UUID getId() { return id; }
@@ -45,6 +49,12 @@ public class LsasSubmissionDto {
     public void setTotalScore(Integer totalScore) { this.totalScore = totalScore; }
     public LocalDateTime getUnlockedAt() { return unlockedAt; }
     public void setUnlockedAt(LocalDateTime unlockedAt) { this.unlockedAt = unlockedAt; }
+    public LocalDateTime getNextEligibleAt() { return nextEligibleAt; }
+    public void setNextEligibleAt(LocalDateTime nextEligibleAt) { this.nextEligibleAt = nextEligibleAt; }
+    public String getSeverityBand() { return severityBand; }
+    public void setSeverityBand(String severityBand) { this.severityBand = severityBand; }
+    public Boolean getClinicalAttention() { return clinicalAttention; }
+    public void setClinicalAttention(Boolean clinicalAttention) { this.clinicalAttention = clinicalAttention; }
     public List<LsasAnswerRequestDto> getAnswers() { return answers; }
     public void setAnswers(List<LsasAnswerRequestDto> answers) { this.answers = answers; }
 }

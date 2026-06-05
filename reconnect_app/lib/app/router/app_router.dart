@@ -23,6 +23,7 @@ import '../../features/telehealth/my_appointments_screen.dart';
 import '../../features/telehealth/presentation/pages/telehealth_screen.dart';
 import '../../features/onboarding/presentation/pages/goal_setting_screen.dart';
 import '../../features/onboarding/presentation/pages/psycho_education_screen.dart';
+import '../../features/onboarding/presentation/pages/therapist_matching_screen.dart';
 
 class AppRouter {
   static final GlobalKey<NavigatorState> _rootNavigatorKey =
@@ -137,6 +138,11 @@ class AppRouter {
         path: '/psycho-education',
         name: 'psycho-education',
         builder: (context, state) => const PsychoeducationScreen(),
+      ),
+      GoRoute(
+        path: '/therapist-matching',
+        name: 'therapist-matching',
+        builder: (context, state) => const TherapistMatchingScreen(),
       ),
       GoRoute(
         path: '/agenda-setting',

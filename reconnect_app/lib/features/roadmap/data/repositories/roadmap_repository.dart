@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 
 import '../../../../core/constants/api_constants.dart';
+import '../models/behavioral_experiment_model.dart';
+import '../models/fear_ladder_item_model.dart';
 import '../models/patient_quest_model.dart';
 import '../models/roadmap_safety_overlay_model.dart';
 import '../models/verify_quest_proof_result.dart';
@@ -37,6 +39,113 @@ class RoadmapRepository {
       } else {
         throw Exception(json['message'] ?? 'Không thể tải nhiệm vụ hôm nay');
       }
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  Future<List<FearLadderItemModel>> getFearLadder(String patientId, {String? token}) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiConstants.fearLadder}?patientId=$patientId'),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      _handleHttpError(response, 'tải Fear Ladder');
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      if (json['status'] == 200 && json['data'] != null) {
+        final list = json['data'] as List<dynamic>;
+        return list.map((e) => FearLadderItemModel.fromJson(e as Map<String, dynamic>)).toList();
+      }
+      throw Exception(json['message'] ?? 'Không thể tải Fear Ladder');
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  Future<BehavioralExperimentModel?> getTodayExperiment(String patientId, {String? token}) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiConstants.behavioralExperimentToday}?patientId=$patientId'),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      _handleHttpError(response, 'tải bài Behavioral Experiment');
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      if (json['status'] == 200 && json['data'] != null) {
+        return BehavioralExperimentModel.fromJson(json['data'] as Map<String, dynamic>);
+      }
+      return null;
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  Future<BehavioralExperimentModel> startBehavioralExperiment(
+    String id, {
+    required String prediction,
+    required int predictionBelief,
+    required String safetyBehaviorsJson,
+    String? token,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse(ApiConstants.startBehavioralExperiment(id)),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'prediction': prediction,
+          'predictionBelief': predictionBelief,
+          'safetyBehaviorsJson': safetyBehaviorsJson,
+        }),
+      );
+      _handleHttpError(response, 'bắt đầu Behavioral Experiment');
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      if (json['status'] == 200 && json['data'] != null) {
+        return BehavioralExperimentModel.fromJson(json['data'] as Map<String, dynamic>);
+      }
+      throw Exception(json['message'] ?? 'Không thể bắt đầu bài thực hành');
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  Future<BehavioralExperimentModel> debriefBehavioralExperiment(
+    String id, {
+    required String executionNotes,
+    required String debrief,
+    required int postFearScore,
+    required int postAvoidanceScore,
+    String? token,
+  }) async {
+    try {
+      final response = await http.patch(
+        Uri.parse(ApiConstants.debriefBehavioralExperiment(id)),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'executionNotes': executionNotes,
+          'debrief': debrief,
+          'postFearScore': postFearScore,
+          'postAvoidanceScore': postAvoidanceScore,
+        }),
+      );
+      _handleHttpError(response, 'debrief Behavioral Experiment');
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      if (json['status'] == 200 && json['data'] != null) {
+        return BehavioralExperimentModel.fromJson(json['data'] as Map<String, dynamic>);
+      }
+      throw Exception(json['message'] ?? 'Không thể lưu debrief');
     } catch (e) {
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }

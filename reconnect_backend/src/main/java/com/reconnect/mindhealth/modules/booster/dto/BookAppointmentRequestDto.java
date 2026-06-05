@@ -7,6 +7,8 @@ public class BookAppointmentRequestDto {
     private UUID patientId;
     private LocalDateTime startAt;
     private Boolean isAnonymous = true;
+    private Integer durationMinutes;
+    private com.reconnect.mindhealth.modules.booster.enums.AppointmentPurpose purpose;
 
     public BookAppointmentRequestDto() {
     }
@@ -34,5 +36,20 @@ public class BookAppointmentRequestDto {
     public void setIsAnonymous(Boolean isAnonymous) {
         this.isAnonymous = isAnonymous;
     }
-}
 
+    public Integer getDurationMinutes() {
+        return durationMinutes;
+    }
+
+    public void setDurationMinutes(Integer durationMinutes) {
+        this.durationMinutes = durationMinutes;
+    }
+
+    public com.reconnect.mindhealth.modules.booster.enums.AppointmentPurpose getPurpose() {
+        return purpose;
+    }
+
+    public void setPurpose(com.reconnect.mindhealth.modules.booster.enums.AppointmentPurpose purpose) {
+        this.purpose = purpose;
+    }
+}

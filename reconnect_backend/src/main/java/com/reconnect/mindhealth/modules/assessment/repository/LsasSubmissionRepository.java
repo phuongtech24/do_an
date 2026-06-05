@@ -12,6 +12,7 @@ public interface LsasSubmissionRepository extends JpaRepository<LsasSubmission, 
     boolean existsByPatientProfile_IdAndSubmissionType(UUID patientId, LsasSubmissionType submissionType);
 
     LsasSubmission findTopByPatientProfile_IdOrderByCreateDateDesc(UUID patientId);
+    LsasSubmission findTopByPatientProfile_IdAndSubmissionTypeOrderByCreateDateAsc(UUID patientId, LsasSubmissionType submissionType);
 
     List<LsasSubmission> findByPatientProfile_IdOrderByCreateDateDesc(UUID patientId);
 }

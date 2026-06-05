@@ -69,6 +69,8 @@ class TelehealthRepository {
     String patientId, {
     required DateTime startAt,
     required bool isAnonymous,
+    required int durationMinutes,
+    String purpose = 'CBT_SESSION',
     String? token,
   }) async {
     try {
@@ -82,6 +84,8 @@ class TelehealthRepository {
           'patientId': patientId,
           'startAt': startAt.toIso8601String(),
           'isAnonymous': isAnonymous,
+          'durationMinutes': durationMinutes,
+          'purpose': purpose,
         }),
       );
 
@@ -122,4 +126,3 @@ class TelehealthRepository {
     }
   }
 }
-

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 
+import '../../data/models/behavioral_experiment_model.dart';
+import '../../data/models/fear_ladder_item_model.dart';
 import '../../data/models/patient_quest_model.dart';
 import '../../data/models/roadmap_safety_overlay_model.dart';
 import '../../data/models/verify_quest_proof_result.dart';
@@ -15,6 +17,8 @@ class RoadmapProvider extends ChangeNotifier {
   String _errorMessage = '';
   List<PatientQuestModel> _dailyQuests = [];
   List<PatientQuestModel> _questHistory = [];
+  List<FearLadderItemModel> _fearLadder = [];
+  BehavioralExperimentModel? _todayExperiment;
   bool _historyLoading = false;
   RoadmapSafetyOverlayModel _safetyOverlay = RoadmapSafetyOverlayModel.inactive;
 
@@ -22,8 +26,92 @@ class RoadmapProvider extends ChangeNotifier {
   String get errorMessage => _errorMessage;
   List<PatientQuestModel> get dailyQuests => _dailyQuests;
   List<PatientQuestModel> get questHistory => _questHistory;
+  List<FearLadderItemModel> get fearLadder => _fearLadder;
+  BehavioralExperimentModel? get todayExperiment => _todayExperiment;
   bool get historyLoading => _historyLoading;
   RoadmapSafetyOverlayModel get safetyOverlay => _safetyOverlay;
+
+  Future<void> loadJourney(String patientId, {String? token}) async {
+    _status = RoadmapStatus.loading;
+    _errorMessage = '';
+    notifyListeners();
+
+    try {
+      final ladderFuture = _repository.getFearLadder(patientId, token: token);
+      final experimentFuture = _repository.getTodayExperiment(patientId, token: token);
+      final overlayFuture = _repository.getSafetyOverlay(patientId, token: token);
+      _fearLadder = await ladderFuture;
+      _todayExperiment = await experimentFuture;
+      _safetyOverlay = await overlayFuture;
+      _status = RoadmapStatus.success;
+    } catch (e) {
+      _status = RoadmapStatus.error;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+    }
+    notifyListeners();
+  }
+
+  Future<bool> startTodayExperiment({
+    required String experimentId,
+    required String prediction,
+    required int predictionBelief,
+    required String safetyBehaviorsJson,
+    String? token,
+  }) async {
+    _status = RoadmapStatus.loading;
+    _errorMessage = '';
+    notifyListeners();
+
+    try {
+      _todayExperiment = await _repository.startBehavioralExperiment(
+        experimentId,
+        prediction: prediction,
+        predictionBelief: predictionBelief,
+        safetyBehaviorsJson: safetyBehaviorsJson,
+        token: token,
+      );
+      _status = RoadmapStatus.success;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _status = RoadmapStatus.error;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> debriefTodayExperiment({
+    required String experimentId,
+    required String executionNotes,
+    required String debrief,
+    required int postFearScore,
+    required int postAvoidanceScore,
+    String? token,
+  }) async {
+    _status = RoadmapStatus.loading;
+    _errorMessage = '';
+    notifyListeners();
+
+    try {
+      _todayExperiment = await _repository.debriefBehavioralExperiment(
+        experimentId,
+        executionNotes: executionNotes,
+        debrief: debrief,
+        postFearScore: postFearScore,
+        postAvoidanceScore: postAvoidanceScore,
+        token: token,
+      );
+      _status = RoadmapStatus.success;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _status = RoadmapStatus.error;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
 
   Future<void> loadDailyQuests(String patientId, {String? token}) async {
     _status = RoadmapStatus.loading;
