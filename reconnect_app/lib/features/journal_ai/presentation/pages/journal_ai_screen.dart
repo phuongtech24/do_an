@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../shared/widgets/mindhealth_scaffold.dart';
+import '../../../../theme/app_colors.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../data/models/journal_model.dart';
 import '../providers/journal_provider.dart';
@@ -19,15 +20,13 @@ class _JournalAiScreenState extends State<JournalAiScreen> {
   @override
   void initState() {
     super.initState();
-    // Tự động tải danh sách nhật ký của bệnh nhân khi mở màn hình
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final auth = Provider.of<AuthProvider>(context, listen: false);
       final patientId = auth.loginResponse?.user.id ?? '';
       final token = auth.loginResponse?.token;
 
       if (patientId.isNotEmpty) {
-        Provider.of<JournalProvider>(context, listen: false)
-            .loadJournals(patientId, token: token);
+        Provider.of<JournalProvider>(context, listen: false).loadJournals(patientId, token: token);
       }
     });
   }
@@ -42,40 +41,38 @@ class _JournalAiScreenState extends State<JournalAiScreen> {
     return MindHealthScaffold(
       title: 'Nhật ký & Trợ lý AI CBT',
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          context.push('/agenda-setting');
-        },
-        icon: const Icon(Icons.edit_note, size: 24),
+        onPressed: () => context.push('/agenda-setting'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.edit_note_rounded),
         label: const Text(
           'Viết nhật ký mới',
-          style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5),
+          style: TextStyle(fontWeight: FontWeight.w800),
         ),
-        backgroundColor: const Color(0xFF6C63FF),
-        foregroundColor: Colors.white,
-        elevation: 4,
       ),
       body: RefreshIndicator(
+        color: AppColors.primary,
         onRefresh: () async {
           if (patientId.isNotEmpty) {
             await journalProvider.loadJournals(patientId, token: token);
           }
         },
-        color: const Color(0xFF6C63FF),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.only(bottom: 88),
           children: [
-            const _JournalRiskBanner(),
-            const SizedBox(height: 20),
+            const _JournalHeroBanner(),
+            const SizedBox(height: 22),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Lịch sử Nhật ký CBT',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                const Expanded(
+                  child: Text(
+                    'Lịch sử nhật ký CBT',
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ),
                 TextButton.icon(
@@ -84,190 +81,192 @@ class _JournalAiScreenState extends State<JournalAiScreen> {
                       journalProvider.loadJournals(patientId, token: token);
                     }
                   },
-                  icon: const Icon(Icons.refresh, size: 16, color: Color(0xFF6C63FF)),
+                  icon: const Icon(Icons.refresh_rounded, size: 18, color: AppColors.primary),
                   label: const Text(
                     'Tải lại',
-                    style: TextStyle(color: Color(0xFF6C63FF), fontWeight: FontWeight.bold),
+                    style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-
-            // PHẦN HIỂN THỊ DANH SÁCH LỊCH SỬ NHẬT KÝ
+            const SizedBox(height: 12),
             if (journalProvider.status == JournalProviderStatus.loading)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 40),
-                child: Center(
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6C63FF)),
-                  ),
-                ),
+                child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
               )
             else if (journalProvider.status == JournalProviderStatus.error)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 40),
-                child: Column(
-                  children: [
-                    const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Lỗi: ${journalProvider.errorMessage}',
-                      style: const TextStyle(color: Colors.redAccent),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              )
+              _buildErrorState(journalProvider.errorMessage)
             else if (journalProvider.journals.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 60),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.menu_book_outlined,
-                      size: 64,
-                      color: Colors.grey[300],
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Chưa có bài nhật ký nào',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Hãy bấm nút "Viết nhật ký mới" để ghi lại và phản biện cảm xúc tiêu cực cùng AI.',
-                      style: TextStyle(fontSize: 13, color: Colors.grey[500]),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              )
+              _buildEmptyState()
             else
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: journalProvider.journals.length,
-                itemBuilder: (context, index) {
-                  final j = journalProvider.journals[index];
-                  return _buildJournalCard(context, j);
-                },
-              ),
-            const SizedBox(height: 80), // Cách khoảng trống cho FAB
+              ...journalProvider.journals.map((journal) => _buildJournalCard(context, journal)),
           ],
         ),
       ),
     );
   }
 
-  // ======================================================
-  // VẼ THẺ NHẬT KÝ (RẼ NHÁNH GIAO DIỆN)
-  // ======================================================
-  Widget _buildJournalCard(BuildContext context, JournalModel journal) {
-    final isThoughtRecord = journal.journalType == 'THOUGHT_RECORD';
-    final dateStr = _formatDateTime(journal.createDate);
-
+  Widget _buildErrorState(String message) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isThoughtRecord 
-              ? const Color(0xFFFFF3CD) // Màu vàng ấm cho Thought Record
-              : const Color(0xFFD1E7DD), // Màu xanh mát cho Credit List
-          width: 1.5,
-        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.alert.withOpacity(0.18)),
+      ),
+      child: Column(
+        children: [
+          const Icon(Icons.error_outline_rounded, size: 44, color: AppColors.alert),
+          const SizedBox(height: 12),
+          Text(
+            'Không tải được nhật ký.\n$message',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.alert, height: 1.45),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: AppColors.primary.withOpacity(0.08)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 68,
+            height: 68,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(22),
+            ),
+            child: const Icon(Icons.menu_book_outlined, color: AppColors.primary, size: 34),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Chưa có bài nhật ký nào',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Hãy bấm “Viết nhật ký mới” để ghi lại tình huống, suy nghĩ và phản hồi cân bằng cùng AI.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppColors.textSecondary, height: 1.45),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildJournalCard(BuildContext context, JournalModel journal) {
+    final isThoughtRecord = journal.journalType == 'THOUGHT_RECORD';
+    final accent = isThoughtRecord ? AppColors.warning : AppColors.success;
+    final background = isThoughtRecord ? const Color(0xFFFFF7EA) : const Color(0xFFEAF8F0);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: accent.withOpacity(0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(24),
           onTap: () => _showJournalDetails(context, journal),
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(18),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Icon rẽ nhánh đại diện
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  width: 54,
+                  height: 54,
                   decoration: BoxDecoration(
-                    color: isThoughtRecord 
-                        ? const Color(0xFFFFF8E1) 
-                        : const Color(0xFFE8F5E9),
-                    shape: BoxShape.circle,
+                    color: background,
+                    borderRadius: BorderRadius.circular(18),
                   ),
                   child: Icon(
-                    isThoughtRecord ? Icons.psychology : Icons.star_rounded,
-                    color: isThoughtRecord 
-                        ? const Color(0xFFFFB300) 
-                        : const Color(0xFF2E7D32),
-                    size: 24,
+                    isThoughtRecord ? Icons.psychology_alt_outlined : Icons.favorite_border_rounded,
+                    color: accent,
+                    size: 26,
                   ),
                 ),
-                const SizedBox(width: 16),
-                
-                // Nội dung tóm tắt
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            isThoughtRecord ? 'Nhật ký Suy nghĩ' : 'Ghi nhận Tiến bộ',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: isThoughtRecord 
-                                  ? const Color(0xFFB78103) 
-                                  : const Color(0xFF1E4620),
+                          Expanded(
+                            child: Text(
+                              isThoughtRecord ? 'Nhật ký suy nghĩ' : 'Ghi nhận tiến bộ',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: accent,
+                              ),
                             ),
                           ),
+                          const SizedBox(width: 12),
                           Text(
-                            dateStr,
-                            style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                            _formatDateTime(journal.createDate),
+                            style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 8),
                       Text(
-                        isThoughtRecord 
+                        isThoughtRecord
                             ? (journal.situation ?? 'Không có tình huống')
                             : (journal.content ?? 'Không có nội dung'),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black87,
-                          height: 1.3,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                          height: 1.4,
                         ),
                       ),
                       if (isThoughtRecord) ...[
-                        const SizedBox(height: 8),
-                        Row(
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
                           children: [
                             _buildMiniBadge(
                               'Cảm xúc: ${journal.emotion ?? "Lo âu"} (${journal.emotionScore ?? 0}%)',
                               const Color(0xFFF8D7DA),
                               const Color(0xFF842029),
                             ),
-                            const SizedBox(width: 8),
                             _buildMiniBadge(
                               'Chấm lại: ${journal.reRatedScore ?? 0}%',
                               const Color(0xFFD1E7DD),
@@ -289,95 +288,96 @@ class _JournalAiScreenState extends State<JournalAiScreen> {
 
   Widget _buildMiniBadge(String text, Color bgColor, Color textColor) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.bold,
+          fontSize: 11.5,
+          fontWeight: FontWeight.w700,
           color: textColor,
         ),
       ),
     );
   }
 
-  // ======================================================
-  // HIỂN THỊ HỘP THOẠI CHI TIẾT NHẬT KÝ (Stunning Custom Dialog)
-  // ======================================================
   void _showJournalDetails(BuildContext context, JournalModel journal) {
     final isThoughtRecord = journal.journalType == 'THOUGHT_RECORD';
-    final dateStr = _formatDateTime(journal.createDate);
 
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
         child: Container(
+          constraints: const BoxConstraints(maxWidth: 640, maxHeight: 720),
           padding: const EdgeInsets.all(24),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
               Row(
                 children: [
-                  Icon(
-                    isThoughtRecord ? Icons.psychology : Icons.star_rounded,
-                    color: isThoughtRecord ? const Color(0xFFFFB300) : const Color(0xFF2E7D32),
-                    size: 28,
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: isThoughtRecord ? AppColors.warning.withOpacity(0.14) : AppColors.success.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Icon(
+                      isThoughtRecord ? Icons.psychology_alt_outlined : Icons.favorite_border_rounded,
+                      color: isThoughtRecord ? AppColors.warning : AppColors.success,
+                    ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          isThoughtRecord ? 'Chi tiết Nhật ký 6 bước' : 'Chi tiết Ghi nhận nỗ lực',
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          isThoughtRecord ? 'Chi tiết nhật ký 6 bước' : 'Chi tiết ghi nhận nỗ lực',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textPrimary,
+                          ),
                         ),
+                        const SizedBox(height: 4),
                         Text(
-                          dateStr,
-                          style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                          _formatDateTime(journal.createDate),
+                          style: const TextStyle(color: AppColors.textSecondary),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
+                    icon: const Icon(Icons.close_rounded),
                   ),
                 ],
               ),
-              const Divider(height: 24, thickness: 1),
-
-              // Body content
+              const SizedBox(height: 18),
+              const Divider(height: 1),
+              const SizedBox(height: 18),
               Expanded(
                 child: SingleChildScrollView(
-                  child: isThoughtRecord 
-                      ? _buildThoughtRecordDetailBody(journal)
-                      : _buildCreditListDetailBody(journal),
+                  child: isThoughtRecord ? _buildThoughtRecordDetailBody(journal) : _buildCreditListDetailBody(journal),
                 ),
               ),
-
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () => Navigator.pop(context),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6C63FF),
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: const Text(
-                    'Đóng lại',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
+                  child: const Text('Đóng lại'),
                 ),
               ),
             ],
@@ -387,136 +387,166 @@ class _JournalAiScreenState extends State<JournalAiScreen> {
     );
   }
 
-  // Giao diện chi tiết Nhật ký 6 bước (CBT Workflow)
-  Widget _buildThoughtRecordDetailBody(JournalModel j) {
+  Widget _buildThoughtRecordDetailBody(JournalModel journal) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildDetailStepItem('1', 'Tình huống thực tế', j.situation ?? 'Không rõ'),
-        _buildDetailStepItem('2', 'Suy nghĩ tự động tiêu cực', j.automaticThought ?? 'Không rõ'),
-        _buildDetailStepItem('3', 'Cảm xúc ban đầu', '${j.emotion ?? "Lo âu"} - ${j.emotionScore ?? 0}%'),
-        _buildDetailStepItem('4', 'Lỗi tư duy được nhận diện', 'Nhân viên AI Gemini đã hỗ trợ phân tích và chỉ ra các khuôn mẫu tư duy tiêu cực.'),
-        _buildDetailStepItem('5', 'Suy nghĩ phản biện thực tế', j.adaptiveResponse ?? 'Chưa lập luận phản biện'),
-        _buildDetailStepItem('6', 'Đánh giá lại cảm xúc', 'Cường độ cảm xúc tiêu cực giảm xuống chỉ còn: ${j.reRatedScore ?? 0}%', isLast: true),
-      ],
-    );
-  }
-
-  // Giao diện chi tiết Ghi nhận nỗ lực
-  Widget _buildCreditListDetailBody(JournalModel j) {
-    return Column(
-      children: [
-        const SizedBox(height: 20),
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: const Color(0xFFE8F5E9),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFC8E6C9)),
-          ),
-          child: Column(
-            children: [
-              const Icon(Icons.emoji_events, size: 48, color: Colors.amber),
-              const SizedBox(height: 16),
-              const Text(
-                'Chúc mừng bạn đã ghi nhận nỗ lực!',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF2E7D32)),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                j.content ?? 'Không có nội dung',
-                style: const TextStyle(fontSize: 16, height: 1.4, fontWeight: FontWeight.w500, color: Colors.black87),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
+        _buildDetailStepItem('1', 'Tình huống thực tế', journal.situation ?? 'Không rõ'),
+        _buildDetailStepItem('2', 'Suy nghĩ tự động tiêu cực', journal.automaticThought ?? 'Không rõ'),
+        _buildDetailStepItem(
+          '3',
+          'Cảm xúc ban đầu',
+          '${journal.emotion ?? "Lo âu"} - ${journal.emotionScore ?? 0}%',
         ),
-        const SizedBox(height: 20),
+        _buildDetailStepItem(
+          '4',
+          'Lỗi tư duy được nhận diện',
+          (journal.distortions != null && journal.distortions!.isNotEmpty)
+              ? journal.distortions!.join(', ')
+              : 'AI đã hỗ trợ nhận diện các khuôn mẫu tư duy tiêu cực nổi bật.',
+        ),
+        _buildDetailStepItem('5', 'Suy nghĩ phản biện thực tế', journal.adaptiveResponse ?? 'Chưa có phản hồi cân bằng'),
+        _buildDetailStepItem(
+          '6',
+          'Đánh giá lại cảm xúc',
+          'Cường độ cảm xúc tiêu cực giảm xuống còn ${journal.reRatedScore ?? 0}%.',
+          isLast: true,
+        ),
       ],
     );
   }
 
-  Widget _buildDetailStepItem(String num, String stepTitle, String content, {bool isLast = false}) {
+  Widget _buildCreditListDetailBody(JournalModel journal) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEAF8F0),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.success.withOpacity(0.2)),
+      ),
+      child: Column(
+        children: [
+          const Icon(Icons.emoji_events_outlined, size: 48, color: AppColors.success),
+          const SizedBox(height: 14),
+          const Text(
+            'Bạn đã ghi nhận một nỗ lực đáng quý',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            journal.content ?? 'Không có nội dung',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 16,
+              height: 1.5,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailStepItem(String number, String title, String content, {bool isLast = false}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Column(
           children: [
             Container(
-              width: 24,
-              height: 24,
+              width: 28,
+              height: 28,
               alignment: Alignment.center,
               decoration: const BoxDecoration(
-                color: Color(0xFF6C63FF),
+                color: AppColors.primary,
                 shape: BoxShape.circle,
               ),
               child: Text(
-                num,
-                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                number,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
+                ),
               ),
             ),
             if (!isLast)
               Container(
                 width: 2,
-                height: 48,
-                color: const Color(0xFF6C63FF).withOpacity(0.3),
+                height: 52,
+                color: AppColors.primary.withOpacity(0.22),
               ),
           ],
         ),
         const SizedBox(width: 16),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                stepTitle,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black54),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                content,
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87),
-              ),
-              const SizedBox(height: 16),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  content,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],
     );
   }
 
-  // Hàm chuyển đổi DateTime sang định dạng dễ đọc tiếng Việt
   String _formatDateTime(String? dateStr) {
-    if (dateStr == null) return '';
+    if (dateStr == null || dateStr.isEmpty) return '';
     try {
       final dateTime = DateTime.parse(dateStr).toLocal();
       return DateFormat('HH:mm - dd/MM/yyyy').format(dateTime);
-    } catch (e) {
+    } catch (_) {
       return dateStr;
     }
   }
 }
 
-class _JournalRiskBanner extends StatelessWidget {
-  const _JournalRiskBanner();
+class _JournalHeroBanner extends StatelessWidget {
+  const _JournalHeroBanner();
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF6C63FF), Color(0xFF8B84FF)],
+          colors: [AppColors.primary, Color(0xFF159489)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF6C63FF).withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: AppColors.primary.withOpacity(0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -527,30 +557,34 @@ class _JournalRiskBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Nhật ký Trị liệu Nhận thức',
+                  'Nhật ký trị liệu nhận thức',
                   style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 24,
                     color: Colors.white,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Text(
-                  'Cố vấn AI đồng hành cùng bạn nhận diện Lỗi tư duy và phản biện thực tế theo chuẩn CBT quốc tế.',
+                  'AI đồng hành cùng bạn nhận diện lỗi tư duy và phản biện thực tế theo chuẩn CBT quốc tế.',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 14,
                     color: Colors.white.withOpacity(0.9),
-                    height: 1.3,
+                    height: 1.45,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          const Icon(
-            Icons.auto_awesome,
-            size: 40,
-            color: Colors.white,
+          const SizedBox(width: 12),
+          Container(
+            width: 58,
+            height: 58,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.16),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 30),
           ),
         ],
       ),
