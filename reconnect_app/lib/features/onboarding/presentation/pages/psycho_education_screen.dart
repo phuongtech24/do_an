@@ -161,7 +161,9 @@ class _PsychoeducationScreenState extends State<PsychoeducationScreen> {
                       if (!mounted) return;
                       setState(() => _isSubmitting = false);
                       if (ok) {
-                        context.go('/therapist-matching');
+                        await onboardingProvider.loadOnboardingStatus(patientId, token: token);
+                        if (!mounted) return;
+                        context.go(onboardingProvider.nextOnboardingRoute);
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(

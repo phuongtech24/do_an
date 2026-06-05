@@ -23,13 +23,11 @@ class OnboardingStatusModel {
     );
   }
 
-  bool get isComplete =>
-      hasBaselineLsas && hasGoals && hasCompletedPsychoeducation && hasSelectedTherapist;
+  bool get isComplete => hasBaselineLsas && hasGoals && hasSelectedTherapist;
 
   String get nextRoute {
     if (!hasBaselineLsas) return '/lsas';
     if (!hasGoals) return '/goal-setting';
-    if (!hasCompletedPsychoeducation) return '/psycho-education';
     if (!hasSelectedTherapist) return '/therapist-matching';
     return '/home';
   }

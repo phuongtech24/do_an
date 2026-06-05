@@ -145,7 +145,9 @@ class _GoalSettingScreenState extends State<GoalSettingScreen> {
                       }
 
                       if (isLocked) {
-                        context.go('/psycho-education');
+                        await onboardingProvider.loadOnboardingStatus(patientId, token: token);
+                        if (!mounted) return;
+                        context.go(onboardingProvider.nextOnboardingRoute);
                         return;
                       }
 
@@ -158,7 +160,7 @@ class _GoalSettingScreenState extends State<GoalSettingScreen> {
                       );
                       if (!mounted) return;
                       if (ok) {
-                        context.go('/psycho-education');
+                        context.go(onboardingProvider.nextOnboardingRoute);
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text(onboardingProvider.errorMessage)),
