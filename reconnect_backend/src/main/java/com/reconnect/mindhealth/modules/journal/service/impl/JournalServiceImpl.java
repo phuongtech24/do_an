@@ -63,12 +63,20 @@ public class JournalServiceImpl implements IJournalService {
             Map<String, Object> contentMap = new HashMap<>();
             if (dto.getJournalType() == JournalType.THOUGHT_RECORD) {
                 contentMap.put("situation", dto.getSituation());
+                contentMap.put("worstPrediction", dto.getWorstPrediction());
                 contentMap.put("automaticThought", dto.getAutomaticThought());
                 contentMap.put("emotion", dto.getEmotion());
                 contentMap.put("emotionScore", dto.getEmotionScore());
+                contentMap.put("bodySymptoms", dto.getBodySymptoms());
+                contentMap.put("selfFocusThought", dto.getSelfFocusThought());
+                contentMap.put("negativeSelfImage", dto.getNegativeSelfImage());
+                contentMap.put("safetyBehaviors", dto.getSafetyBehaviors());
                 contentMap.put("distortions", dto.getDistortions());
                 contentMap.put("adaptiveResponse", dto.getAdaptiveResponse());
+                contentMap.put("safetyBehaviorCommitment", dto.getSafetyBehaviorCommitment());
                 contentMap.put("reRatedScore", dto.getReRatedScore());
+                contentMap.put("reRatedBeliefScore", dto.getReRatedBeliefScore());
+                contentMap.put("behavioralExperimentIdea", dto.getBehavioralExperimentIdea());
             } else if (dto.getJournalType() == JournalType.CREDIT_LIST) {
                 contentMap.put("content", dto.getContent());
             }
@@ -189,9 +197,14 @@ public class JournalServiceImpl implements IJournalService {
                 if (contentMap != null) {
                     if (entity.getJournalType() == JournalType.THOUGHT_RECORD) {
                         dto.setSituation((String) contentMap.get("situation"));
+                        dto.setWorstPrediction((String) contentMap.get("worstPrediction"));
                         dto.setAutomaticThought((String) contentMap.get("automaticThought"));
                         dto.setEmotion((String) contentMap.get("emotion"));
                         dto.setEmotionScore((Integer) contentMap.get("emotionScore"));
+                        dto.setBodySymptoms(readStringList(contentMap.get("bodySymptoms")));
+                        dto.setSelfFocusThought((String) contentMap.get("selfFocusThought"));
+                        dto.setNegativeSelfImage((String) contentMap.get("negativeSelfImage"));
+                        dto.setSafetyBehaviors(readStringList(contentMap.get("safetyBehaviors")));
                         Object distortions = contentMap.get("distortions");
                         if (distortions instanceof List<?> list) {
                             List<String> codes = new ArrayList<>();
@@ -206,7 +219,10 @@ public class JournalServiceImpl implements IJournalService {
                             dto.setDistortions(codes);
                         }
                         dto.setAdaptiveResponse((String) contentMap.get("adaptiveResponse"));
+                        dto.setSafetyBehaviorCommitment((String) contentMap.get("safetyBehaviorCommitment"));
                         dto.setReRatedScore((Integer) contentMap.get("reRatedScore"));
+                        dto.setReRatedBeliefScore((Integer) contentMap.get("reRatedBeliefScore"));
+                        dto.setBehavioralExperimentIdea((String) contentMap.get("behavioralExperimentIdea"));
                     } else if (entity.getJournalType() == JournalType.CREDIT_LIST) {
                         dto.setContent((String) contentMap.get("content"));
                     }
@@ -216,5 +232,22 @@ public class JournalServiceImpl implements IJournalService {
             }
         }
         return dto;
+    }
+
+    private List<String> readStringList(Object value) {
+        if (!(value instanceof List<?> list)) {
+            return null;
+        }
+        List<String> result = new ArrayList<>();
+        for (Object item : list) {
+            if (item == null) {
+                continue;
+            }
+            String text = String.valueOf(item).trim();
+            if (!text.isBlank()) {
+                result.add(text);
+            }
+        }
+        return result.isEmpty() ? null : result;
     }
 }

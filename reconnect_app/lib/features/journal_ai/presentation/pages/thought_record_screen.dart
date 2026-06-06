@@ -1,144 +1,134 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+
 import 'package:reconnect_app/features/auth/presentation/providers/auth_provider.dart';
 import 'package:reconnect_app/features/journal_ai/data/models/journal_model.dart';
 import 'package:reconnect_app/features/journal_ai/presentation/providers/cognitive_distortions_provider.dart';
 import 'package:reconnect_app/features/journal_ai/presentation/providers/guided_discovery_provider.dart';
 import 'package:reconnect_app/features/journal_ai/presentation/providers/journal_provider.dart';
 import 'package:reconnect_app/shared/widgets/therapy_guide_card.dart';
+import 'package:reconnect_app/theme/app_colors.dart';
 
 class ThoughtRecordScreen extends StatefulWidget {
   final String? agenda;
-  const ThoughtRecordScreen({super.key, this.agenda});
+  final int? initialAnxietyScore;
+  final int? initialAvoidanceUrgeScore;
+  final int? initialAnticipatoryAnxietyScore;
+  final int? initialPostEventRuminationScore;
+
+  const ThoughtRecordScreen({
+    super.key,
+    this.agenda,
+    this.initialAnxietyScore,
+    this.initialAvoidanceUrgeScore,
+    this.initialAnticipatoryAnxietyScore,
+    this.initialPostEventRuminationScore,
+  });
 
   @override
   State<ThoughtRecordScreen> createState() => _ThoughtRecordScreenState();
 }
 
 class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
+  static const _bodySymptomOptions = [
+    'Tim đập nhanh',
+    'Run tay hoặc giọng',
+    'Mặt nóng hoặc đỏ',
+    'Khó thở',
+    'Căng cứng cơ thể',
+    'Đầu óc trống rỗng',
+  ];
+
+  static const _safetyBehaviorOptions = [
+    'Tránh giao tiếp bằng mắt',
+    'Nói thật nhanh cho xong',
+    'Chuẩn bị quá kỹ từng câu',
+    'Im lặng để không bị chú ý',
+    'Nhìn điện thoại để né tránh',
+    'Rời khỏi tình huống sớm',
+  ];
+
   final PageController _pageController = PageController();
   final TextEditingController _situationController = TextEditingController();
+  final TextEditingController _worstPredictionController = TextEditingController();
   final TextEditingController _thoughtController = TextEditingController();
+  final TextEditingController _selfFocusController = TextEditingController();
+  final TextEditingController _negativeImageController = TextEditingController();
   final TextEditingController _adaptiveResponseController = TextEditingController();
+  final TextEditingController _behaviorExperimentController = TextEditingController();
+  final TextEditingController _customBodySymptomController = TextEditingController();
+  final TextEditingController _customSafetyBehaviorController = TextEditingController();
+
   int _currentStep = 0;
   bool _guidedDiscoveryRequested = false;
   bool _distortionsRequested = false;
-  late final String _initialSituation;
-  late final String _initialEmotionLabel;
+
+  late String _situation;
+  String _worstPrediction = '';
+  String _thought = '';
+  String _emotionLabel = 'Lo âu';
+  double _belief = 50;
+  double _intensity = 50;
+  double _finalBelief = 30;
+  double _finalIntensity = 30;
+  String _selfFocusThought = '';
+  String _negativeSelfImage = '';
+  String _adaptiveResponse = '';
+  String _selectedCommitment = '';
+  bool _saveAsCopingCard = true;
+  final List<String> _selectedBodySymptoms = [];
+  final List<String> _selectedSafetyBehaviors = [];
+  List<String> _selectedDistortions = [];
+
+  final List<Map<String, String>> _distortions = const [
+    {'code': 'ALL_OR_NOTHING', 'label': 'Trắng đen'},
+    {'code': 'CATASTROPHIZING', 'label': 'Thảm hoạ hoá'},
+    {'code': 'DISQUALIFYING_POSITIVE', 'label': 'Bác bỏ điều tích cực'},
+    {'code': 'EMOTIONAL_REASONING', 'label': 'Lập luận theo cảm xúc'},
+    {'code': 'LABELING', 'label': 'Dán nhãn bản thân'},
+    {'code': 'MENTAL_FILTER', 'label': 'Chỉ nhìn mặt tiêu cực'},
+    {'code': 'MIND_READING', 'label': 'Đọc suy nghĩ người khác'},
+    {'code': 'OVERGENERALIZATION', 'label': 'Khái quát hoá quá mức'},
+    {'code': 'PERSONALIZATION', 'label': 'Cá nhân hoá'},
+    {'code': 'SHOULD_MUST', 'label': 'Áp lực phải / nên'},
+    {'code': 'TUNNEL_VISION', 'label': 'Tầm nhìn đường hầm'},
+  ];
 
   @override
   void initState() {
     super.initState();
-    _initialSituation = widget.agenda ?? '';
-    _initialEmotionLabel = _emotionLabel;
-    _situation = _initialSituation;
+    _situation = widget.agenda ?? '';
     _situationController.text = _situation;
+    _intensity = (widget.initialAnxietyScore ?? 50).toDouble().clamp(0, 100);
   }
 
   @override
   void dispose() {
     _pageController.dispose();
     _situationController.dispose();
+    _worstPredictionController.dispose();
     _thoughtController.dispose();
+    _selfFocusController.dispose();
+    _negativeImageController.dispose();
     _adaptiveResponseController.dispose();
+    _behaviorExperimentController.dispose();
+    _customBodySymptomController.dispose();
+    _customSafetyBehaviorController.dispose();
     super.dispose();
   }
 
-  // Data
-  late String _situation;
-  String _thought = '';
-  double _belief = 50;
-  String _emotionLabel = 'Lo âu';
-  double _intensity = 50;
-  List<String> _selectedDistortions = []; // distortion codes
-  String _adaptiveResponse = '';
-  double _finalBelief = 30;
-  double _finalIntensity = 30;
-  bool _saveAsCopingCard = true;
-
-  final List<Map<String, String>> _distortions = [
-    {'code': 'ALL_OR_NOTHING', 'label': 'Suy nghĩ trắng - đen'},
-    {'code': 'CATASTROPHIZING', 'label': 'Thảm họa hóa (Catastrophizing)'},
-    {'code': 'DISQUALIFYING_POSITIVE', 'label': 'Bác bỏ/Đánh giá thấp điều tích cực'},
-    {'code': 'EMOTIONAL_REASONING', 'label': 'Lập luận bằng cảm xúc'},
-    {'code': 'LABELING', 'label': 'Dán nhãn (Labeling)'},
-    {'code': 'MAGNIFICATION_MINIMIZATION', 'label': 'Phóng đại tiêu cực / Thu nhỏ tích cực'},
-    {'code': 'MENTAL_FILTER', 'label': 'Lọc bằng trí óc'},
-    {'code': 'MIND_READING', 'label': 'Đọc tâm trí (Mind Reading)'},
-    {'code': 'OVERGENERALIZATION', 'label': 'Khái quát hóa quá mức'},
-    {'code': 'PERSONALIZATION', 'label': 'Cá nhân hóa'},
-    {'code': 'SHOULD_MUST', 'label': 'Câu lệnh "Phải" / "Nên"'},
-    {'code': 'TUNNEL_VISION', 'label': 'Tầm nhìn hình ống'},
-  ];
-
   void _nextStep() {
     if (_currentStep < 5) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+      _pageController.nextPage(duration: const Duration(milliseconds: 280), curve: Curves.easeInOut);
     } else {
       _finish();
     }
   }
 
   void _previousStep() {
-    if (_currentStep <= 0) return;
-    _pageController.previousPage(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
-  }
-
-  bool _hasDraftChanges() {
-    return _situation.trim() != _initialSituation.trim() ||
-        _thought.trim().isNotEmpty ||
-        _emotionLabel != _initialEmotionLabel ||
-        _belief.toInt() != 50 ||
-        _intensity.toInt() != 50 ||
-        _selectedDistortions.isNotEmpty ||
-        _adaptiveResponse.trim().isNotEmpty ||
-        _finalBelief.toInt() != 30 ||
-        _finalIntensity.toInt() != 30 ||
-        !_saveAsCopingCard;
-  }
-
-  Future<bool> _confirmDiscardDraft() async {
-    final discard = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Bỏ bản nháp nhật ký?'),
-        content: const Text(
-          'Nội dung bạn đang nhập chưa được lưu. Nếu thoát, hệ thống sẽ không tạo nhật ký và không lưu dữ liệu này.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Ở lại'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              'Bỏ bản nháp',
-              style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
-    );
-    return discard ?? false;
-  }
-
-  void _resetAiDraftState() {
-    Provider.of<CognitiveDistortionsProvider>(context, listen: false).reset();
-    Provider.of<GuidedDiscoveryProvider>(context, listen: false).reset();
-  }
-
-  void _exitJournal() {
-    _resetAiDraftState();
-    context.go('/home');
+    if (_currentStep == 0) return;
+    _pageController.previousPage(duration: const Duration(milliseconds: 280), curve: Curves.easeInOut);
   }
 
   Future<void> _handleBackIntent() async {
@@ -146,25 +136,24 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
       _previousStep();
       return;
     }
-
-    if (!_hasDraftChanges()) {
-      _exitJournal();
-      return;
+    _resetAiDraftState();
+    if (mounted) {
+      context.go('/home');
     }
-
-    final discard = await _confirmDiscardDraft();
-    if (!mounted || !discard) return;
-    _exitJournal();
   }
 
-  void _finish() async {
-    // 1. Hiển thị Loading Dialog
+  void _resetAiDraftState() {
+    Provider.of<CognitiveDistortionsProvider>(context, listen: false).reset();
+    Provider.of<GuidedDiscoveryProvider>(context, listen: false).reset();
+  }
+
+  Future<void> _finish() async {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
+      builder: (_) => const Center(
         child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6C63FF)),
+          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
         ),
       ),
     );
@@ -176,45 +165,31 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
       final model = JournalModel(
         patientId: auth.loginResponse?.user.id ?? '',
         journalType: 'THOUGHT_RECORD',
-        situation: _situation,
-        automaticThought: _thought,
+        situation: _situation.trim(),
+        worstPrediction: _worstPrediction.trim(),
+        automaticThought: _thought.trim(),
         emotion: _emotionLabel,
         emotionScore: _intensity.toInt(),
+        bodySymptoms: _effectiveBodySymptoms,
+        selfFocusThought: _selfFocusThought.trim(),
+        negativeSelfImage: _negativeSelfImage.trim(),
+        safetyBehaviors: _effectiveSafetyBehaviors,
         distortions: _selectedDistortions.isEmpty ? null : _selectedDistortions,
-        adaptiveResponse: _adaptiveResponse,
+        adaptiveResponse: _adaptiveResponse.trim(),
+        safetyBehaviorCommitment: _selectedCommitment.trim().isEmpty ? null : _selectedCommitment.trim(),
         reRatedScore: _finalIntensity.toInt(),
+        reRatedBeliefScore: _finalBelief.toInt(),
+        behavioralExperimentIdea: _behaviorExperimentController.text.trim().isEmpty
+            ? null
+            : _behaviorExperimentController.text.trim(),
       );
 
       final success = await journalProvider.saveNewJournal(model, token: auth.loginResponse?.token);
       final savedJournal = journalProvider.selectedJournal;
 
-      // Đóng Loading Dialog
       if (mounted) Navigator.pop(context);
 
-      if (success) {
-        // Hiển thị Dialog thành công
-        if (mounted) {
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (context) => AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: const Text('Hoàn thành Nhật ký', style: TextStyle(fontWeight: FontWeight.bold)),
-              content: Text(_successMessage(savedJournal)),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context); // Đóng Dialog thành công
-                    context.go('/home'); // Quay lại trang chủ
-                  },
-                  child: const Text('Trở về Trang chủ', style: TextStyle(color: Color(0xFF6C63FF), fontWeight: FontWeight.bold)),
-                ),
-              ],
-            ),
-          );
-        }
-      } else {
-        // Hiển thị thông báo lỗi
+      if (!success || !mounted) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -223,9 +198,29 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
             ),
           );
         }
+        return;
       }
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: const Text('Đã lưu Thought Record', style: TextStyle(fontWeight: FontWeight.w800)),
+          content: Text(_successMessage(savedJournal)),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                context.go('/home');
+              },
+              child: const Text('Về trang chủ'),
+            ),
+          ],
+        ),
+      );
     } catch (e) {
-      if (mounted) Navigator.pop(context); // Đóng Loading Dialog
+      if (mounted) Navigator.pop(context);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -243,14 +238,31 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
     final riskLine = aiRisk == null
         ? 'AI Risk: chưa có dữ liệu.'
         : aiRisk >= 70
-            ? 'AI Risk: $aiRisk/100 - đã bật Red Flag để chuyên gia theo dõi.'
+            ? 'AI Risk: $aiRisk/100 - hệ thống đã bật theo dõi ưu tiên.'
             : 'AI Risk: $aiRisk/100.';
-    final severityLine =
-        severity == null || severity.isEmpty ? '' : '\nMức AI: $severity.';
+    final severityLine = severity == null || severity.isEmpty ? '' : '\nMức AI: $severity.';
     final baseMessage = _saveAsCopingCard
-        ? 'Bạn đã hoàn thành bản ghi nhận thức. Một Thẻ đối phó mới đã được thêm vào kho lưu trữ.'
-        : 'Bạn đã hoàn thành bản ghi nhận thức. Cảm xúc của bạn đã dịu đi đáng kể.';
+        ? 'Bạn đã hoàn thành nhật ký lo âu xã hội. Phản hồi cân bằng này có thể dùng như một thẻ đối phó.'
+        : 'Bạn đã hoàn thành nhật ký lo âu xã hội và có thêm một góc nhìn thực tế hơn.';
     return '$baseMessage\n\n$riskLine$severityLine';
+  }
+
+  List<String>? get _effectiveBodySymptoms {
+    final values = [..._selectedBodySymptoms];
+    final custom = _customBodySymptomController.text.trim();
+    if (custom.isNotEmpty) {
+      values.add(custom);
+    }
+    return values.isEmpty ? null : values;
+  }
+
+  List<String>? get _effectiveSafetyBehaviors {
+    final values = [..._selectedSafetyBehaviors];
+    final custom = _customSafetyBehaviorController.text.trim();
+    if (custom.isNotEmpty) {
+      values.add(custom);
+    }
+    return values.isEmpty ? null : values;
   }
 
   @override
@@ -262,168 +274,164 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
         await _handleBackIntent();
       },
       child: Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: _handleBackIntent,
-        ),
-        title: const Text('Nhật ký Suy nghĩ 6 bước', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        foregroundColor: Colors.black87,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Center(
-              child: Text(
-                'Bước ${_currentStep + 1}/6',
-                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF6C63FF)),
-              ),
-            ),
+        backgroundColor: const Color(0xFFF4FBFA),
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: _handleBackIntent,
           ),
-        ],
-      ),
-      body: Column(
-        children: [
-          LinearProgressIndicator(
-            value: (_currentStep + 1) / 6,
-            backgroundColor: Colors.grey[200],
-            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF6C63FF)),
-          ),
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              onPageChanged: (v) {
-                setState(() => _currentStep = v);
-                if (v == 3 && !_distortionsRequested) {
-                  _distortionsRequested = true;
-                  final auth = Provider.of<AuthProvider>(context, listen: false);
-                  final cd = Provider.of<CognitiveDistortionsProvider>(context, listen: false);
-                  cd
-                      .detect(
-                        situation: _situation.isEmpty ? 'N/A' : _situation,
-                        automaticThought: _thought.isEmpty ? 'N/A' : _thought,
-                        token: auth.loginResponse?.token,
-                      )
-                      .then((_) {
-                    if (!mounted) return;
-                    final suggested = cd.distortions;
-                    if (suggested.isEmpty) return;
-                    setState(() {
-                      for (final code in suggested) {
-                        if (!_selectedDistortions.contains(code)) {
-                          _selectedDistortions.add(code);
-                        }
-                      }
-                      if (_selectedDistortions.length > 3) {
-                        _selectedDistortions = _selectedDistortions.sublist(0, 3);
-                      }
-                    });
-                  });
-                }
-                if (v == 4 && !_guidedDiscoveryRequested) {
-                  _guidedDiscoveryRequested = true;
-                  final auth = Provider.of<AuthProvider>(context, listen: false);
-                  final gd = Provider.of<GuidedDiscoveryProvider>(context, listen: false);
-                  gd.fetchQuestions(
-                    situation: _situation.isEmpty ? 'N/A' : _situation,
-                    automaticThought: _thought.isEmpty ? 'N/A' : _thought,
-                    emotion: _emotionLabel,
-                    token: auth.loginResponse?.token,
-                  );
-                }
-              },
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                _buildStep1(),
-                _buildStep2(),
-                _buildStep3(),
-                _buildStep4(),
-                _buildStep5(),
-                _buildStep6(),
-              ],
-            ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              if (_currentStep > 0)
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: _previousStep,
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text('Bước trước'),
-                  ),
-                ),
-              if (_currentStep > 0) const SizedBox(width: 16),
-              Expanded(
-                flex: 2,
-                child: ElevatedButton(
-                  onPressed: _nextStep,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6C63FF),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: Text(
-                    _currentStep == 5 ? 'Lưu kết quả' : 'Tiếp tục',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
+          title: const Text('Nhật ký lo âu xã hội'),
+          backgroundColor: Colors.white,
+          foregroundColor: AppColors.textPrimary,
+          elevation: 0,
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 18),
+              child: Center(
+                child: Text(
+                  'Bước ${_currentStep + 1}/6',
+                  style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w800),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-      ),
-      ),
-    );
-  }
-  Widget _buildStep1() {
-    return _buildStepContainer(
-      title: 'Bước 1: Tình huống',
-      description: 'Điều gì đã thực sự xảy ra? Bạn đang ở đâu, với ai?',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (widget.agenda != null)
-            Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.amber[50],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.amber[200]!),
-              ),
-              child: Row(
+        body: Column(
+          children: [
+            LinearProgressIndicator(
+              value: (_currentStep + 1) / 6,
+              minHeight: 6,
+              backgroundColor: AppColors.primary.withOpacity(0.1),
+              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+            ),
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                physics: const NeverScrollableScrollPhysics(),
+                onPageChanged: (value) {
+                  setState(() => _currentStep = value);
+                  if (value == 3 && !_distortionsRequested) {
+                    _distortionsRequested = true;
+                    _requestDistortions();
+                  }
+                  if (value == 4 && !_guidedDiscoveryRequested) {
+                    _guidedDiscoveryRequested = true;
+                    _requestGuidedDiscovery();
+                  }
+                },
                 children: [
-                  const Icon(Icons.push_pin, size: 16, color: Colors.amber),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Vấn đề ưu tiên hôm nay: ${widget.agenda}',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                    ),
-                  ),
+                  _buildStep1(),
+                  _buildStep2(),
+                  _buildStep3(),
+                  _buildStep4(),
+                  _buildStep5(),
+                  _buildStep6(),
                 ],
               ),
             ),
-          TextField(
-            maxLines: 5,
-            controller: _situationController,
-            onChanged: (v) => _situation = v,
-            decoration: InputDecoration(
-              hintText: 'VD: Bạn thân không trả lời tin nhắn của tôi suốt 2 tiếng...',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ],
+        ),
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: Row(
+              children: [
+                if (_currentStep > 0)
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _previousStep,
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      child: const Text('Quay lại'),
+                    ),
+                  ),
+                if (_currentStep > 0) const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: ElevatedButton(
+                    onPressed: _nextStep,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: Text(_currentStep == 5 ? 'Lưu kết quả' : 'Tiếp tục'),
+                  ),
+                ),
+              ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _requestDistortions() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final provider = Provider.of<CognitiveDistortionsProvider>(context, listen: false);
+    await provider.detect(
+      situation: _situation.isEmpty ? 'N/A' : _situation,
+      automaticThought: _thought.isEmpty ? 'N/A' : _thought,
+      token: auth.loginResponse?.token,
+    );
+    if (!mounted) return;
+    final suggested = provider.distortions;
+    if (suggested.isEmpty) return;
+    setState(() {
+      for (final code in suggested) {
+        if (!_selectedDistortions.contains(code)) {
+          _selectedDistortions.add(code);
+        }
+      }
+      if (_selectedDistortions.length > 3) {
+        _selectedDistortions = _selectedDistortions.sublist(0, 3);
+      }
+    });
+  }
+
+  Future<void> _requestGuidedDiscovery() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final provider = Provider.of<GuidedDiscoveryProvider>(context, listen: false);
+    await provider.fetchQuestions(
+      situation: _situation.isEmpty ? 'N/A' : _situation,
+      automaticThought: _thought.isEmpty ? 'N/A' : _thought,
+      emotion: _emotionLabel,
+      moodScore: widget.initialAnxietyScore,
+      token: auth.loginResponse?.token,
+    );
+  }
+
+  Widget _buildStep1() {
+    return _buildStepContainer(
+      title: 'Tình huống & dự đoán tệ nhất',
+      description: 'Ghi lại sự kiện xã hội thực tế và điều tệ nhất bạn sợ sẽ xảy ra.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (widget.agenda != null && widget.agenda!.trim().isNotEmpty)
+            _buildPinnedCard('Tình huống ưu tiên hôm nay', widget.agenda!),
+          _buildTextField(
+            controller: _situationController,
+            label: 'Tình huống thực tế',
+            hint: 'Ví dụ: Mình phải phát biểu trong buổi họp nhóm chiều nay.',
+            minLines: 3,
+            maxLines: 5,
+            onChanged: (value) => _situation = value,
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _worstPredictionController,
+            label: 'Dự đoán tệ nhất',
+            hint: 'Ví dụ: Mọi người sẽ thấy mình ngớ ngẩn và đánh giá mình kém.',
+            minLines: 3,
+            maxLines: 4,
+            onChanged: (value) => _worstPrediction = value,
+          ),
+          const SizedBox(height: 16),
+          _buildCheckInSnapshot(),
         ],
       ),
     );
@@ -431,34 +439,31 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
 
   Widget _buildStep2() {
     return _buildStepContainer(
-      title: 'Bước 2: Suy nghĩ tự động',
-      description: 'Ý tưởng nào lóe lên trong đầu bạn ngay lúc đó?',
+      title: 'Suy nghĩ tự động',
+      description: 'Bắt đúng câu vừa loé lên trong đầu bạn lúc ấy và chấm mức tin vào suy nghĩ đó.',
       child: Column(
         children: [
           const TherapyGuideCard(
-            title: 'Bắt suy nghĩ tự động',
-            message:
-                'Hãy ghi câu vừa lóe lên trong đầu bạn, càng gần nguyên văn càng tốt. Đây là bước giúp mình nhìn rõ suy nghĩ đang kéo cảm xúc đi xuống.',
+            title: 'Mẹo nhỏ',
+            message: 'Càng ghi gần nguyên văn câu trong đầu bạn thì phần phản biện phía sau càng hữu ích.',
             icon: Icons.psychology_outlined,
-            accentColor: Color(0xFF6C63FF),
+            accentColor: AppColors.primary,
           ),
-          TextField(
-            maxLines: 3,
+          const SizedBox(height: 16),
+          _buildTextField(
             controller: _thoughtController,
-            onChanged: (v) => _thought = v,
-            decoration: InputDecoration(
-              hintText: 'VD: Họ chắc chắn đang ghét mình và muốn cắt đứt liên lạc.',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            ),
+            label: 'Suy nghĩ tự động',
+            hint: 'Ví dụ: Chắc chắn mình sẽ nói hỏng và mọi người sẽ chê cười.',
+            minLines: 3,
+            maxLines: 4,
+            onChanged: (value) => _thought = value,
           ),
-          const SizedBox(height: 24),
-          Text('Bạn tin vào suy nghĩ này đến mức nào? (${_belief.toInt()}%)'),
-          Slider(
+          const SizedBox(height: 20),
+          _buildSliderCard(
+            title: 'Mức tin vào suy nghĩ này',
+            valueLabel: '${_belief.toInt()}%',
             value: _belief,
-            min: 0,
-            max: 100,
-            activeColor: const Color(0xFF6C63FF),
-            onChanged: (v) => setState(() => _belief = v),
+            onChanged: (value) => setState(() => _belief = value),
           ),
         ],
       ),
@@ -467,26 +472,60 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
 
   Widget _buildStep3() {
     return _buildStepContainer(
-      title: 'Bước 3: Cảm xúc',
-      description: 'Bạn cảm thấy thế nào và mức độ mãnh liệt ra sao?',
+      title: 'Cảm xúc, cơ thể & self-focus',
+      description: 'Nhìn rõ lo âu biểu hiện thế nào trong cảm xúc, cơ thể và hình ảnh tiêu cực về bản thân.',
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           DropdownButtonFormField<String>(
             value: _emotionLabel,
-            items: ['Lo âu', 'Buồn bã', 'Giận dữ', 'Tội lỗi', 'Tuyệt vọng']
-                .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+            items: const ['Lo âu', 'Xấu hổ', 'Buồn bã', 'Giận dữ', 'Thất vọng']
+                .map((item) => DropdownMenuItem(value: item, child: Text(item)))
                 .toList(),
-            onChanged: (v) => setState(() => _emotionLabel = v!),
-            decoration: const InputDecoration(border: OutlineInputBorder()),
+            decoration: InputDecoration(
+              labelText: 'Cảm xúc nổi bật',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+            onChanged: (value) => setState(() => _emotionLabel = value ?? 'Lo âu'),
           ),
-          const SizedBox(height: 24),
-          Text('Cường độ cảm xúc: (${_intensity.toInt()}%)'),
-          Slider(
+          const SizedBox(height: 18),
+          _buildSliderCard(
+            title: 'Cường độ cảm xúc hiện tại',
+            valueLabel: '${_intensity.toInt()}%',
             value: _intensity,
-            min: 0,
-            max: 100,
-            activeColor: Colors.redAccent,
-            onChanged: (v) => setState(() => _intensity = v),
+            onChanged: (value) => setState(() => _intensity = value),
+          ),
+          const SizedBox(height: 18),
+          const Text('Triệu chứng cơ thể', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+          const SizedBox(height: 10),
+          _buildSelectableWrap(
+            options: _bodySymptomOptions,
+            selected: _selectedBodySymptoms,
+          ),
+          const SizedBox(height: 12),
+          _buildTextField(
+            controller: _customBodySymptomController,
+            label: 'Triệu chứng khác (nếu có)',
+            hint: 'Ví dụ: Đau bụng, đổ mồ hôi tay...',
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _selfFocusController,
+            label: 'Bạn đang chú ý vào điều gì ở bản thân?',
+            hint: 'Ví dụ: Mình chỉ chăm chăm xem giọng có run không.',
+            minLines: 2,
+            maxLines: 3,
+            onChanged: (value) => _selfFocusThought = value,
+          ),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _negativeImageController,
+            label: 'Hình ảnh tiêu cực về bản thân xuất hiện là gì?',
+            hint: 'Ví dụ: Mình tưởng tượng mình đứng lúng túng, mặt đỏ và ai cũng nhìn.',
+            minLines: 2,
+            maxLines: 3,
+            onChanged: (value) => _negativeSelfImage = value,
           ),
         ],
       ),
@@ -494,152 +533,120 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
   }
 
   Widget _buildStep4() {
-    final cd = Provider.of<CognitiveDistortionsProvider>(context);
+    final provider = Provider.of<CognitiveDistortionsProvider>(context);
     return _buildStepContainer(
-      title: 'Bước 4: Nhận diện Lỗi tư duy',
-      description: 'AI Gemini tự động phân tích các khuôn mẫu tư duy của bạn.',
+      title: 'Hành vi an toàn & lỗi tư duy',
+      description: 'Tìm các cách né tránh tinh vi mà bạn dùng để bớt lo và xem AI gợi ý lỗi tư duy nào đang nổi bật.',
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildAIChatBubble(
-            (cd.hint != null && cd.hint!.isNotEmpty)
-                ? cd.hint!
-                : 'Dựa trên suy nghĩ "$_thought", mình gợi ý bạn có thể đang mắc một số lỗi tư duy sau:',
+          const Text('Hành vi an toàn bạn đã dùng', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+          const SizedBox(height: 10),
+          _buildSelectableWrap(
+            options: _safetyBehaviorOptions,
+            selected: _selectedSafetyBehaviors,
           ),
           const SizedBox(height: 12),
-          const TherapyGuideCard(
-            title: 'AI chỉ gợi ý',
-            message:
-                'Gemini có thể gợi ý 1–3 lỗi tư duy, nhưng bạn vẫn là người tự xác nhận lỗi nào phù hợp nhất với trải nghiệm của mình.',
-            icon: Icons.fact_check_outlined,
-            accentColor: Color(0xFF6C63FF),
+          _buildTextField(
+            controller: _customSafetyBehaviorController,
+            label: 'Hành vi an toàn khác',
+            hint: 'Ví dụ: Mình học thuộc nguyên câu trước khi nói.',
+            onChanged: (_) => setState(() {}),
           ),
-          if (cd.status == CognitiveDistortionsStatus.loading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: LinearProgressIndicator(),
-            ),
-          if (cd.status == CognitiveDistortionsStatus.error)
-            _buildAIChatBubble(
-              'AI đang bận, bạn có thể tự tick 1–3 lỗi tư duy phù hợp. (${cd.errorMessage})',
-              isSecondary: true,
-            ),
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _distortions.length,
-            itemBuilder: (context, index) {
-              final code = _distortions[index]['code'] ?? '';
-              final label = _distortions[index]['label'] ?? code;
-              final isSelected = _selectedDistortions.contains(code);
-              return CheckboxListTile(
-                title: Text(label, style: const TextStyle(fontSize: 14)),
-                value: isSelected,
-                activeColor: const Color(0xFF6C63FF),
-                onChanged: (v) {
-                  setState(() {
-                    if (v!) {
-                      if (!_selectedDistortions.contains(code)) {
-                        _selectedDistortions.add(code);
-                      }
-                      if (_selectedDistortions.length > 3) {
-                        _selectedDistortions = _selectedDistortions.sublist(0, 3);
-                      }
-                    } else {
-                      _selectedDistortions.remove(code);
+          const SizedBox(height: 18),
+          _buildAiBubble(
+            provider.hint?.isNotEmpty == true
+                ? provider.hint!
+                : 'Dựa trên suy nghĩ bạn vừa ghi, hệ thống đang gợi ý một vài lỗi tư duy phổ biến để bạn đối chiếu.',
+          ),
+          if (provider.status == CognitiveDistortionsStatus.loading) ...[
+            const SizedBox(height: 12),
+            const LinearProgressIndicator(),
+          ],
+          if (provider.status == CognitiveDistortionsStatus.error) ...[
+            const SizedBox(height: 10),
+            _buildAiBubble('AI đang bận, bạn vẫn có thể tự chọn 1–3 lỗi tư duy phù hợp.', secondary: true),
+          ],
+          const SizedBox(height: 12),
+          ..._distortions.map((item) {
+            final code = item['code'] ?? '';
+            final label = item['label'] ?? code;
+            return CheckboxListTile(
+              value: _selectedDistortions.contains(code),
+              activeColor: AppColors.primary,
+              controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: EdgeInsets.zero,
+              title: Text(label),
+              onChanged: (selected) {
+                setState(() {
+                  if (selected == true) {
+                    if (!_selectedDistortions.contains(code)) {
+                      _selectedDistortions.add(code);
                     }
-                  });
-                },
-              );
-            },
-          ),
+                    if (_selectedDistortions.length > 3) {
+                      _selectedDistortions = _selectedDistortions.sublist(0, 3);
+                    }
+                  } else {
+                    _selectedDistortions.remove(code);
+                  }
+                });
+              },
+            );
+          }),
         ],
       ),
     );
   }
 
   Widget _buildStep5() {
-    final gd = Provider.of<GuidedDiscoveryProvider>(context);
-    final questions = gd.questions.isNotEmpty
-        ? gd.questions
+    final provider = Provider.of<GuidedDiscoveryProvider>(context);
+    final questions = provider.questions.isNotEmpty
+        ? provider.questions
         : const [
-            'Bằng chứng nào cho thấy suy nghĩ này là ĐÚNG? Và bằng chứng nào cho thấy nó có thể SAI?',
-            'Có cách giải thích nào khác (ít tiêu cực hơn) cho tình huống này không?',
+            'Bằng chứng nào cho thấy dự đoán này chắc chắn đúng? Có bằng chứng nào đi ngược lại không?',
+            'Nếu một người bạn thân ở cùng tình huống này, bạn sẽ nói gì với họ?',
+            'Mình có đang chú ý quá nhiều vào cảm giác trong người nên quên quan sát dữ liệu bên ngoài không?',
           ];
 
     return _buildStepContainer(
-      title: 'Bước 5: Khám phá cùng AI (Guided Discovery)',
-      description: 'AI Gemini sẽ cùng bạn phản biện suy nghĩ tiêu cực này.',
+      title: 'Phản biện thực tế',
+      description: 'Dùng câu hỏi Socratic để viết lại phản hồi cân bằng hơn và chọn 1 hành vi an toàn sẽ giảm bớt.',
       child: Column(
-        children: [
-          _buildAIChatBubble(
-            'Để đánh giá tính xác thực của suy nghĩ "$_thought", hãy thử trả lời câu hỏi này nhé:',
-          ),
-          const SizedBox(height: 12),
-          const TherapyGuideCard(
-            title: 'Câu hỏi Socratic',
-            message:
-                'Các câu hỏi này giúp bạn kiểm tra suy nghĩ bằng bằng chứng và góc nhìn khác. Chúng không nhằm phán xét bạn đúng hay sai.',
-            icon: Icons.help_outline,
-            accentColor: Color(0xFF6C63FF),
-          ),
-          if (gd.status == GuidedDiscoveryStatus.loading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: LinearProgressIndicator(),
-            ),
-          if (gd.status == GuidedDiscoveryStatus.error)
-            _buildAIChatBubble(
-              'AI đang bận, tạm dùng câu hỏi gợi ý mặc định. (${gd.errorMessage})',
-              isSecondary: true,
-            ),
-          for (final q in questions) _buildAIChatBubble(q, isSecondary: true),
-          const SizedBox(height: 24),
-          TextField(
-            maxLines: 5,
-            controller: _adaptiveResponseController,
-            onChanged: (v) => _adaptiveResponse = v,
-            decoration: InputDecoration(
-              hintText: 'Nhập câu trả lời thực tế và khách quan hơn của bạn...',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-          const SizedBox(height: 16),
-          _buildAIChatBubble(
-            'Lời khuyên của bạn dành cho một người bạn thân nếu họ cũng gặp tình huống này là gì?',
-            isSecondary: true,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAIChatBubble(String text, {bool isSecondary = false}) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: isSecondary ? Colors.blue[50] : const Color(0xFF6C63FF).withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16).copyWith(topLeft: const Radius.circular(0)),
-        border: Border.all(color: isSecondary ? Colors.blue[100]! : const Color(0xFF6C63FF).withOpacity(0.2)),
-      ),
-      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            isSecondary ? Icons.help_outline : Icons.auto_awesome, 
-            color: isSecondary ? Colors.blue : const Color(0xFF6C63FF), 
-            size: 20
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                fontSize: 14, 
-                color: isSecondary ? Colors.blue[900] : const Color(0xFF6C63FF),
-                fontStyle: isSecondary ? FontStyle.normal : FontStyle.italic,
-              ),
+          _buildAiBubble('Hãy thử trả lời các câu hỏi sau để kiểm tra lại dự đoán tệ nhất của mình.'),
+          const SizedBox(height: 12),
+          if (provider.status == GuidedDiscoveryStatus.loading) const LinearProgressIndicator(),
+          if (provider.status == GuidedDiscoveryStatus.error)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: _buildAiBubble('AI đang bận, mình dùng bộ câu hỏi chuẩn CBT để bạn tiếp tục nhé.', secondary: true),
             ),
+          const SizedBox(height: 12),
+          ...questions.map((question) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _buildAiBubble(question, secondary: true),
+              )),
+          const SizedBox(height: 16),
+          _buildTextField(
+            controller: _adaptiveResponseController,
+            label: 'Phản hồi cân bằng hơn',
+            hint: 'Ví dụ: Mình có thể lo thật, nhưng điều đó không có nghĩa là mọi người sẽ đánh giá mình tệ.',
+            minLines: 4,
+            maxLines: 6,
+            onChanged: (value) => _adaptiveResponse = value,
+          ),
+          const SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            value: _selectedCommitment.isEmpty ? null : _selectedCommitment,
+            decoration: InputDecoration(
+              labelText: 'Hôm nay bạn sẽ giảm bớt hành vi an toàn nào?',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+            items: (_effectiveSafetyBehaviors ?? const <String>[])
+                .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+                .toList(),
+            onChanged: (value) => setState(() => _selectedCommitment = value ?? ''),
           ),
         ],
       ),
@@ -648,58 +655,271 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
 
   Widget _buildStep6() {
     return _buildStepContainer(
-      title: 'Bước 6: Kết quả',
-      description: 'Sau khi suy nghĩ lại, hãy đánh giá lại niềm tin của bạn.',
+      title: 'Đánh giá lại & bước tiếp theo',
+      description: 'Chấm lại mức tin, cảm xúc và nếu muốn hãy viết một ý tưởng Behavioral Experiment ngắn.',
       child: Column(
         children: [
-          const TherapyGuideCard(
-            title: 'Phản hồi thích nghi',
-            message:
-                'Câu trả lời cân bằng hơn có thể trở thành Thẻ đối phó để bạn đọc lại khi cảm xúc xấu quay lại.',
-            icon: Icons.card_membership_outlined,
-            accentColor: Color(0xFF6C63FF),
-          ),
-          Text('Niềm tin vào suy nghĩ cũ giờ còn: (${_finalBelief.toInt()}%)'),
-          Slider(
+          _buildSliderCard(
+            title: 'Bây giờ bạn còn tin vào suy nghĩ cũ bao nhiêu?',
+            valueLabel: '${_finalBelief.toInt()}%',
             value: _finalBelief,
-            min: 0,
-            max: 100,
-            activeColor: const Color(0xFF6C63FF),
-            onChanged: (v) => setState(() => _finalBelief = v),
+            onChanged: (value) => setState(() => _finalBelief = value),
           ),
-          const SizedBox(height: 24),
-          Text('Cường độ cảm xúc hiện tại: (${_finalIntensity.toInt()}%)'),
-          Slider(
+          const SizedBox(height: 18),
+          _buildSliderCard(
+            title: 'Cường độ cảm xúc hiện tại',
+            valueLabel: '${_finalIntensity.toInt()}%',
             value: _finalIntensity,
-            min: 0,
-            max: 100,
-            activeColor: Colors.green,
-            onChanged: (v) => setState(() => _finalIntensity = v),
+            onChanged: (value) => setState(() => _finalIntensity = value),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 18),
+          _buildTextField(
+            controller: _behaviorExperimentController,
+            label: 'Một bước thực hành nhỏ bạn muốn thử',
+            hint: 'Ví dụ: Trong cuộc họp tới, mình sẽ nói chậm hơn và giữ giao tiếp mắt 2–3 giây.',
+            minLines: 3,
+            maxLines: 4,
+          ),
+          const SizedBox(height: 12),
           SwitchListTile(
-            title: const Text('Lưu thành Thẻ đối phó', style: TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: const Text('Phản ứng mới này sẽ được lưu vào kho vũ khí tinh thần của bạn.'),
             value: _saveAsCopingCard,
-            activeColor: const Color(0xFF6C63FF),
-            onChanged: (v) => setState(() => _saveAsCopingCard = v),
+            activeColor: AppColors.primary,
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Lưu phản hồi này làm thẻ đối phó'),
+            subtitle: const Text('Để bạn đọc lại khi lo âu quay trở lại.'),
+            onChanged: (value) => setState(() => _saveAsCopingCard = value),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildStepContainer({required String title, required String description, required Widget child}) {
+  Widget _buildStepContainer({
+    required String title,
+    required String description,
+    required Widget child,
+  }) {
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87)),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 18,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
+                const SizedBox(height: 8),
+                Text(description, style: const TextStyle(height: 1.45, color: AppColors.textSecondary)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: SingleChildScrollView(
+              child: child,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    ValueChanged<String>? onChanged,
+    int minLines = 1,
+    int maxLines = 1,
+  }) {
+    return TextField(
+      controller: controller,
+      onChanged: onChanged,
+      minLines: minLines,
+      maxLines: maxLines,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        alignLabelWithHint: maxLines > 1,
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(18)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide(color: AppColors.primary.withOpacity(0.12)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSliderCard({
+    required String title,
+    required String valueLabel,
+    required double value,
+    required ValueChanged<double> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.primary.withOpacity(0.12)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(title, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+              ),
+              Text(valueLabel, style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.primary)),
+            ],
+          ),
+          Slider(
+            value: value,
+            min: 0,
+            max: 100,
+            divisions: 100,
+            activeColor: AppColors.primary,
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectableWrap({
+    required List<String> options,
+    required List<String> selected,
+  }) {
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: options.map((item) {
+        final isSelected = selected.contains(item);
+        return FilterChip(
+          label: Text(item),
+          selected: isSelected,
+          selectedColor: AppColors.primary.withOpacity(0.14),
+          checkmarkColor: AppColors.primary,
+          labelStyle: TextStyle(
+            color: isSelected ? AppColors.primary : AppColors.textPrimary,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+          ),
+          side: BorderSide(color: isSelected ? AppColors.primary : AppColors.primary.withOpacity(0.16)),
+          onSelected: (value) {
+            setState(() {
+              if (value) {
+                selected.add(item);
+              } else {
+                selected.remove(item);
+              }
+            });
+          },
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildAiBubble(String text, {bool secondary = false}) {
+    final background = secondary ? const Color(0xFFF4FAFF) : AppColors.primary.withOpacity(0.08);
+    final border = secondary ? const Color(0xFFD7EAFB) : AppColors.primary.withOpacity(0.16);
+    final iconColor = secondary ? const Color(0xFF3B82F6) : AppColors.primary;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(secondary ? Icons.help_outline_rounded : Icons.auto_awesome_rounded, color: iconColor),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(height: 1.45, color: AppColors.textPrimary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPinnedCard(String title, String content) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8E8),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFF3D98B)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.push_pin_rounded, color: Color(0xFFC99100)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
+                const SizedBox(height: 4),
+                Text(content, style: const TextStyle(height: 1.4, color: AppColors.textPrimary)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCheckInSnapshot() {
+    final values = [
+      widget.initialAnxietyScore,
+      widget.initialAvoidanceUrgeScore,
+      widget.initialAnticipatoryAnxietyScore,
+      widget.initialPostEventRuminationScore,
+    ];
+    if (values.every((item) => item == null)) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Tóm tắt từ Daily Check-in', style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
           const SizedBox(height: 8),
-          Text(description, style: const TextStyle(color: Colors.grey)),
-          const SizedBox(height: 32),
-          Expanded(child: SingleChildScrollView(child: child)),
+          Text(
+            'Lo âu ${widget.initialAnxietyScore ?? 0}/100 • '
+            'Né tránh ${widget.initialAvoidanceUrgeScore ?? 0}/100 • '
+            'Lo âu dự kiến ${widget.initialAnticipatoryAnxietyScore ?? 0}/8 • '
+            'Nhai lại ${widget.initialPostEventRuminationScore ?? 0}/8',
+            style: const TextStyle(height: 1.4, color: AppColors.textSecondary),
+          ),
         ],
       ),
     );

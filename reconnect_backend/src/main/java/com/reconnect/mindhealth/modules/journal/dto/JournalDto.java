@@ -1,15 +1,12 @@
 package com.reconnect.mindhealth.modules.journal.dto;
 
-import java.util.UUID;
 import java.util.List;
+import java.util.UUID;
+
 import com.reconnect.mindhealth.common.dto.BaseObjectDto;
 import com.reconnect.mindhealth.modules.journal.entity.Journal;
 import com.reconnect.mindhealth.modules.journal.enums.JournalType;
 
-/**
- * Data Transfer Object for Journal logs.
- * Offers flattened fields for easy parsing on Flutter frontend.
- */
 public class JournalDto extends BaseObjectDto {
 
     private UUID patientId;
@@ -19,16 +16,22 @@ public class JournalDto extends BaseObjectDto {
     private List<String> aiRiskDistortions;
     private String aiRiskReason;
 
-    // Thought Record fields
     private String situation;
+    private String worstPrediction;
     private String automaticThought;
     private String emotion;
     private Integer emotionScore;
-    private String adaptiveResponse;
-    private Integer reRatedScore;
+    private List<String> bodySymptoms;
+    private String selfFocusThought;
+    private String negativeSelfImage;
+    private List<String> safetyBehaviors;
     private List<String> distortions;
+    private String adaptiveResponse;
+    private String safetyBehaviorCommitment;
+    private Integer reRatedScore;
+    private Integer reRatedBeliefScore;
+    private String behavioralExperimentIdea;
 
-    // Credit List field
     private String content;
 
     public JournalDto() {
@@ -42,7 +45,6 @@ public class JournalDto extends BaseObjectDto {
             this.setCreatedBy(entity.getCreatedBy());
             this.setModifyDate(entity.getModifyDate());
             this.setModifiedBy(entity.getModifiedBy());
-
             this.journalType = entity.getJournalType();
             this.aiRiskScore = entity.getAiRiskScore();
             this.severityLevel = entity.getSeverityLevel();
@@ -109,6 +111,14 @@ public class JournalDto extends BaseObjectDto {
         this.situation = situation;
     }
 
+    public String getWorstPrediction() {
+        return worstPrediction;
+    }
+
+    public void setWorstPrediction(String worstPrediction) {
+        this.worstPrediction = worstPrediction;
+    }
+
     public String getAutomaticThought() {
         return automaticThought;
     }
@@ -133,12 +143,60 @@ public class JournalDto extends BaseObjectDto {
         this.emotionScore = emotionScore;
     }
 
+    public List<String> getBodySymptoms() {
+        return bodySymptoms;
+    }
+
+    public void setBodySymptoms(List<String> bodySymptoms) {
+        this.bodySymptoms = bodySymptoms;
+    }
+
+    public String getSelfFocusThought() {
+        return selfFocusThought;
+    }
+
+    public void setSelfFocusThought(String selfFocusThought) {
+        this.selfFocusThought = selfFocusThought;
+    }
+
+    public String getNegativeSelfImage() {
+        return negativeSelfImage;
+    }
+
+    public void setNegativeSelfImage(String negativeSelfImage) {
+        this.negativeSelfImage = negativeSelfImage;
+    }
+
+    public List<String> getSafetyBehaviors() {
+        return safetyBehaviors;
+    }
+
+    public void setSafetyBehaviors(List<String> safetyBehaviors) {
+        this.safetyBehaviors = safetyBehaviors;
+    }
+
+    public List<String> getDistortions() {
+        return distortions;
+    }
+
+    public void setDistortions(List<String> distortions) {
+        this.distortions = distortions;
+    }
+
     public String getAdaptiveResponse() {
         return adaptiveResponse;
     }
 
     public void setAdaptiveResponse(String adaptiveResponse) {
         this.adaptiveResponse = adaptiveResponse;
+    }
+
+    public String getSafetyBehaviorCommitment() {
+        return safetyBehaviorCommitment;
+    }
+
+    public void setSafetyBehaviorCommitment(String safetyBehaviorCommitment) {
+        this.safetyBehaviorCommitment = safetyBehaviorCommitment;
     }
 
     public Integer getReRatedScore() {
@@ -149,12 +207,20 @@ public class JournalDto extends BaseObjectDto {
         this.reRatedScore = reRatedScore;
     }
 
-    public List<String> getDistortions() {
-        return distortions;
+    public Integer getReRatedBeliefScore() {
+        return reRatedBeliefScore;
     }
 
-    public void setDistortions(List<String> distortions) {
-        this.distortions = distortions;
+    public void setReRatedBeliefScore(Integer reRatedBeliefScore) {
+        this.reRatedBeliefScore = reRatedBeliefScore;
+    }
+
+    public String getBehavioralExperimentIdea() {
+        return behavioralExperimentIdea;
+    }
+
+    public void setBehavioralExperimentIdea(String behavioralExperimentIdea) {
+        this.behavioralExperimentIdea = behavioralExperimentIdea;
     }
 
     public String getContent() {

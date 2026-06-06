@@ -121,7 +121,13 @@ class AppRouter {
         name: 'thought-record',
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
-          return ThoughtRecordScreen(agenda: extra?['agenda'] as String?);
+          return ThoughtRecordScreen(
+            agenda: extra?['agenda'] as String?,
+            initialAnxietyScore: (extra?['anxietyScore'] as num?)?.toInt(),
+            initialAvoidanceUrgeScore: (extra?['avoidanceUrgeScore'] as num?)?.toInt(),
+            initialAnticipatoryAnxietyScore: (extra?['anticipatoryAnxietyScore'] as num?)?.toInt(),
+            initialPostEventRuminationScore: (extra?['postEventRuminationScore'] as num?)?.toInt(),
+          );
         },
       ),
       GoRoute(
@@ -147,7 +153,15 @@ class AppRouter {
       GoRoute(
         path: '/agenda-setting',
         name: 'agenda-setting',
-        builder: (context, state) => const AgendaSettingScreen(),
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          return AgendaSettingScreen(
+            initialAnxietyScore: (extra?['anxietyScore'] as num?)?.toInt(),
+            initialAvoidanceUrgeScore: (extra?['avoidanceUrgeScore'] as num?)?.toInt(),
+            initialAnticipatoryAnxietyScore: (extra?['anticipatoryAnxietyScore'] as num?)?.toInt(),
+            initialPostEventRuminationScore: (extra?['postEventRuminationScore'] as num?)?.toInt(),
+          );
+        },
       ),
       GoRoute(
         path: '/coping-cards',

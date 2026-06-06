@@ -20,6 +20,26 @@ public class UserMood extends BaseObject {
     @Max(100)
     private Integer moodScore;
 
+    @Column(name = "anxiety_score")
+    @Min(0)
+    @Max(100)
+    private Integer anxietyScore;
+
+    @Column(name = "avoidance_urge_score")
+    @Min(0)
+    @Max(100)
+    private Integer avoidanceUrgeScore;
+
+    @Column(name = "anticipatory_anxiety_score")
+    @Min(0)
+    @Max(8)
+    private Integer anticipatoryAnxietyScore;
+
+    @Column(name = "post_event_rumination_score")
+    @Min(0)
+    @Max(8)
+    private Integer postEventRuminationScore;
+
     @Column(name = "daily_agenda")
     private String dailyAgenda;
 
@@ -42,6 +62,38 @@ public class UserMood extends BaseObject {
 
     public void setMoodScore(Integer moodScore) {
         this.moodScore = moodScore;
+    }
+
+    public Integer getAnxietyScore() {
+        return anxietyScore;
+    }
+
+    public void setAnxietyScore(Integer anxietyScore) {
+        this.anxietyScore = anxietyScore;
+    }
+
+    public Integer getAvoidanceUrgeScore() {
+        return avoidanceUrgeScore;
+    }
+
+    public void setAvoidanceUrgeScore(Integer avoidanceUrgeScore) {
+        this.avoidanceUrgeScore = avoidanceUrgeScore;
+    }
+
+    public Integer getAnticipatoryAnxietyScore() {
+        return anticipatoryAnxietyScore;
+    }
+
+    public void setAnticipatoryAnxietyScore(Integer anticipatoryAnxietyScore) {
+        this.anticipatoryAnxietyScore = anticipatoryAnxietyScore;
+    }
+
+    public Integer getPostEventRuminationScore() {
+        return postEventRuminationScore;
+    }
+
+    public void setPostEventRuminationScore(Integer postEventRuminationScore) {
+        this.postEventRuminationScore = postEventRuminationScore;
     }
 
     public String getDailyAgenda() {

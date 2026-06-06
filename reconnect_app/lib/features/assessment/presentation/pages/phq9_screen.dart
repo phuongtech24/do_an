@@ -215,11 +215,14 @@ class _LsasFormState extends State<_LsasForm> {
           style: const TextStyle(color: Colors.black54),
         ),
         const SizedBox(height: 12),
-        _LsasQuestionOverview(
+        _LsasQuestionOverviewButton(
           situations: widget.situations,
           fearScores: widget.fearScores,
           avoidanceScores: widget.avoidanceScores,
-          onTapItem: _scrollToItem,
+          onTapItem: (index) async {
+            Navigator.pop(context);
+            await _scrollToItem(index);
+          },
         ),
         const SizedBox(height: 12),
         Expanded(
@@ -282,8 +285,144 @@ class _LsasFormState extends State<_LsasForm> {
   }
 }
 
-class _LsasQuestionOverview extends StatelessWidget {
-  const _LsasQuestionOverview({
+class _LsasQuestionOverviewButton extends StatelessWidget {
+  const _LsasQuestionOverviewButton({
+    required this.situations,
+    required this.fearScores,
+    required this.avoidanceScores,
+    required this.onTapItem,
+  });
+
+  final List<LsasSituationModel> situations;
+  final Map<String, int> fearScores;
+  final Map<String, int> avoidanceScores;
+  final ValueChanged<int> onTapItem;
+
+  @override
+  Widget build(BuildContext context) {
+    final completedCount = situations.where((item) {
+      return fearScores.containsKey(item.id) && avoidanceScores.containsKey(item.id);
+    }).length;
+    final missingCount = situations.length - completedCount;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: () => _showOverviewDialog(context),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFF0F8B7F).withOpacity(0.08)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE6F7F4),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(Icons.grid_view_rounded, color: Color(0xFF0F8B7F)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Tổng quan 24 câu hỏi',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Đã xong $completedCount/24 • Còn thiếu $missingCount câu',
+                    style: const TextStyle(color: Colors.black54, height: 1.35),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F8B7F),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: const Text(
+                'Xem',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showOverviewDialog(BuildContext context) async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720, maxHeight: 680),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Tổng quan 24 câu hỏi LSAS',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Chạm vào số câu để nhảy tới đúng câu đó. Màu xanh là đã chấm đủ Fear và Né tránh.',
+                  style: TextStyle(color: Colors.black54, height: 1.4),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: _LsasQuestionOverviewGrid(
+                      situations: situations,
+                      fearScores: fearScores,
+                      avoidanceScores: avoidanceScores,
+                      onTapItem: onTapItem,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LsasQuestionOverviewGrid extends StatelessWidget {
+  const _LsasQuestionOverviewGrid({
     required this.situations,
     required this.fearScores,
     required this.avoidanceScores,
@@ -304,18 +443,10 @@ class _LsasQuestionOverview extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFFF8FBFB),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF0F8B7F).withOpacity(0.08)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -326,7 +457,7 @@ class _LsasQuestionOverview extends StatelessWidget {
               const SizedBox(width: 8),
               const Expanded(
                 child: Text(
-                  'Tổng quan 24 câu hỏi',
+                  'Tiến độ hiện tại',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
                 ),
               ),

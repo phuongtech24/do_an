@@ -97,14 +97,25 @@ class AssessmentProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> submitUserMood(String patientId, int moodScore, String dailyAgenda, {String? token}) async {
+  Future<bool> submitUserMood(
+    String patientId, {
+    required int anxietyScore,
+    required int avoidanceUrgeScore,
+    required int anticipatoryAnxietyScore,
+    required int postEventRuminationScore,
+    required String dailyAgenda,
+    String? token,
+  }) async {
     _status = AssessmentStatus.loading;
     _errorMessage = '';
     notifyListeners();
     try {
       final mood = UserMoodModel(
         patientId: patientId,
-        moodScore: moodScore,
+        anxietyScore: anxietyScore,
+        avoidanceUrgeScore: avoidanceUrgeScore,
+        anticipatoryAnxietyScore: anticipatoryAnxietyScore,
+        postEventRuminationScore: postEventRuminationScore,
         dailyAgenda: dailyAgenda,
       );
       _lastMood = await _repository.submitUserMood(mood, token: token);

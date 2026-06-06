@@ -161,9 +161,49 @@ public class AssessmentServiceImpl implements IAssessmentService {
                 .orElseThrow(() -> new EntityNotFoundException("KhÃ´ng tÃ¬m tháº¥y bá»‡nh nhÃ¢n: " + dto.getPatientId()));
         UserMood userMood = new UserMood();
         userMood.setPatientProfile(patient);
-        userMood.setMoodScore(dto.getMoodScore());
+        Integer anxietyScore = normalizePercentageScore(dto.getAnxietyScore(), "anxietyScore");
+        Integer avoidanceUrgeScore = normalizePercentageScore(dto.getAvoidanceUrgeScore(), "avoidanceUrgeScore");
+        Integer anticipatoryAnxietyScore = normalizeEightPointScore(dto.getAnticipatoryAnxietyScore(),
+                "anticipatoryAnxietyScore");
+        Integer postEventRuminationScore = normalizeEightPointScore(dto.getPostEventRuminationScore(),
+                "postEventRuminationScore");
+        userMood.setAnxietyScore(anxietyScore);
+        userMood.setAvoidanceUrgeScore(avoidanceUrgeScore);
+        userMood.setAnticipatoryAnxietyScore(anticipatoryAnxietyScore);
+        userMood.setPostEventRuminationScore(postEventRuminationScore);
+        userMood.setMoodScore(resolveLegacyMoodScore(dto, anxietyScore));
         userMood.setDailyAgenda(dto.getDailyAgenda());
         return new UserMoodDto(userMoodRepository.save(userMood));
+    }
+
+    private Integer resolveLegacyMoodScore(UserMoodDto dto, Integer anxietyScore) {
+        if (dto.getMoodScore() != null) {
+            return normalizePercentageScore(dto.getMoodScore(), "moodScore");
+        }
+        if (anxietyScore == null) {
+            return null;
+        }
+        return 100 - anxietyScore;
+    }
+
+    private Integer normalizePercentageScore(Integer score, String fieldName) {
+        if (score == null) {
+            return null;
+        }
+        if (score < 0 || score > 100) {
+            throw new IllegalArgumentException(fieldName + " phai nam trong khoang 0-100.");
+        }
+        return score;
+    }
+
+    private Integer normalizeEightPointScore(Integer score, String fieldName) {
+        if (score == null) {
+            return null;
+        }
+        if (score < 0 || score > 8) {
+            throw new IllegalArgumentException(fieldName + " phai nam trong khoang 0-8.");
+        }
+        return score;
     }
 
     private void validateUniqueSituations(List<LsasAnswerRequestDto> answers) {
