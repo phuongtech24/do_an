@@ -8,6 +8,7 @@ import '../../features/auth/presentation/pages/auth_gate_screen.dart';
 import '../../features/auth/presentation/pages/profile_setup_screen.dart';
 import '../../features/auth/presentation/pages/standard_signup_screen.dart';
 import '../../features/home/presentation/pages/patient_home_screen.dart';
+import '../../features/home/presentation/pages/safety_support_screen.dart';
 import '../../features/journal_ai/presentation/pages/cbt_chat_screen.dart';
 import '../../features/journal_ai/presentation/pages/agenda_setting_screen.dart';
 import '../../features/journal_ai/presentation/pages/coping_cards_screen.dart';
@@ -134,6 +135,11 @@ class AppRouter {
         path: '/progress',
         name: 'progress',
         builder: (context, state) => const ProgressScreen(),
+      ),
+      GoRoute(
+        path: '/safety-support',
+        name: 'safety-support',
+        builder: (context, state) => const SafetySupportScreen(),
       ),
       GoRoute(
         path: '/goal-setting',

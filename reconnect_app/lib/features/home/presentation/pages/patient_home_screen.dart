@@ -21,29 +21,32 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
 
   double _anxietyScore = 45.0;
   double _avoidanceUrgeScore = 35.0;
+  double _sadnessScore = 20.0;
   double _anticipatoryAnxietyScore = 3.0;
   double _postEventRuminationScore = 2.0;
   String _selectedMoodLabel = 'Bình thường';
   bool _hasBoosterAlert = false;
 
-  bool get _shouldSuggestThoughtRecord =>
-      _anticipatoryAnxietyScore >= 6 ||
-      _postEventRuminationScore >= 6 ||
-      _anxietyScore >= 70 ||
-      _avoidanceUrgeScore >= 70;
+  bool get _shouldTriggerSafetyGate => _anxietyScore >= 90 || _sadnessScore >= 90;
+
+  bool get _shouldSuggestThoughtRecord => _anticipatoryAnxietyScore >= 6 || _postEventRuminationScore >= 6;
 
   String get _dailyCheckInSummary =>
       'Lo âu ${_anxietyScore.toInt()}/100 • '
       'Né tránh ${_avoidanceUrgeScore.toInt()}/100 • '
+      'Buồn bã ${_sadnessScore.toInt()}/100 • '
       'Lo âu dự kiến ${_anticipatoryAnxietyScore.toInt()}/8 • '
       'Nhai lại ${_postEventRuminationScore.toInt()}/8 • '
       'Cảm xúc: $_selectedMoodLabel';
 
   String get _checkInLabel {
-    if (_anxietyScore >= 70 || _avoidanceUrgeScore >= 70) {
+    if (_anxietyScore >= 90 || _sadnessScore >= 90) {
+      return 'Cần ưu tiên an toàn';
+    }
+    if (_anxietyScore >= 70 || _sadnessScore >= 70 || _avoidanceUrgeScore >= 70) {
       return 'Cần hỗ trợ';
     }
-    if (_anxietyScore >= 40 || _avoidanceUrgeScore >= 40) {
+    if (_anxietyScore >= 40 || _sadnessScore >= 40 || _avoidanceUrgeScore >= 40) {
       return 'Đang theo dõi';
     }
     return 'Ổn định';
@@ -109,14 +112,14 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
-                    'Hãy check-in nhanh 4 chỉ số để theo dõi lo âu xã hội và xem hôm nay bạn có cần Thought Record hay không.',
+                    'Hãy check-in nhanh 5 chỉ số để theo dõi cảm xúc hôm nay. Nếu hệ thống thấy mức căng thẳng quá cao, app sẽ ưu tiên hỏi về an toàn trước khi gợi ý bài tập CBT.',
                     style: TextStyle(color: Colors.black54, height: 1.45),
                   ),
                   const SizedBox(height: 12),
                   const TherapyGuideCard(
                     title: 'Vì sao cần điểm danh?',
                     message:
-                        'Điểm danh giúp bạn và chuyên gia nhận ra kiểu mẫu lo âu, né tránh, lo âu dự kiến và nhai lại sau sự kiện. Nếu chỉ số tăng cao, app sẽ gợi ý công cụ phù hợp trong ngày.',
+                        'Check-in giúp nhận ra nhanh lo âu, né tránh, buồn bã, lo âu dự kiến và nhai lại sau sự kiện. Khi Anxiety hoặc Sadness quá cao, hệ thống sẽ ưu tiên hỏi về mức độ an toàn của bạn trước.',
                     icon: Icons.insights_outlined,
                     accentColor: AppColors.primary,
                   ),
@@ -144,6 +147,19 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     onChanged: (value) {
                       setDialogState(() => _avoidanceUrgeScore = value);
                       setState(() => _avoidanceUrgeScore = value);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildDialogMetricSlider(
+                    title: 'Mức buồn bã / trầm uất',
+                    subtitle: '0 = không buồn • 100 = rất nặng',
+                    value: _sadnessScore,
+                    max: 100,
+                    divisions: 100,
+                    valueLabel: '${_sadnessScore.toInt()}/100',
+                    onChanged: (value) {
+                      setDialogState(() => _sadnessScore = value);
+                      setState(() => _sadnessScore = value);
                     },
                   ),
                   const SizedBox(height: 12),
@@ -216,20 +232,40 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                   final token = authProvider.loginResponse?.token;
 
                   if (patientId.isNotEmpty) {
+                    String? safetyResponse;
+                    if (_shouldTriggerSafetyGate) {
+                      safetyResponse = await _showSafetyGateDialog();
+                      if (!context.mounted || safetyResponse == null) {
+                        return;
+                      }
+                    }
+
                     final assessmentProvider = Provider.of<AssessmentProvider>(context, listen: false);
                     await assessmentProvider.submitUserMood(
                       patientId,
                       anxietyScore: _anxietyScore.toInt(),
                       avoidanceUrgeScore: _avoidanceUrgeScore.toInt(),
+                      sadnessScore: _sadnessScore.toInt(),
                       anticipatoryAnxietyScore: _anticipatoryAnxietyScore.toInt(),
                       postEventRuminationScore: _postEventRuminationScore.toInt(),
                       dailyAgenda: _dailyCheckInSummary,
+                      safetyCheckRequired: _shouldTriggerSafetyGate,
+                      safetyResponse: safetyResponse,
                       token: token,
                     );
+
+                    if (!context.mounted) {
+                      return;
+                    }
+
+                    Navigator.pop(context);
+                    if (safetyResponse == 'UNSAFE') {
+                      context.go('/safety-support');
+                      return;
+                    }
                   }
 
                   if (context.mounted) {
-                    Navigator.pop(context);
                     _showAISuggestionDialog();
                   }
                 },
@@ -298,6 +334,46 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     );
   }
 
+  Future<String?> _showSafetyGateDialog() async {
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.health_and_safety_outlined, color: AppColors.warning),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Kiểm tra an toàn',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'Chúng tôi nhận thấy cảm xúc của bạn đang rất căng thẳng. Hiện tại bạn có đang cảm thấy an toàn không, hay đang có những suy nghĩ muốn bỏ cuộc/làm hại bản thân?',
+          style: TextStyle(height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'SAFE'),
+            child: const Text('Tôi đang an toàn'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, 'UNSAFE'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.alert,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Tôi không an toàn'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showAISuggestionDialog() {
     final isHighAnxiety = _shouldSuggestThoughtRecord;
 
@@ -309,7 +385,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           children: [
             Icon(isHighAnxiety ? Icons.auto_awesome : Icons.stars_rounded, color: AppColors.primary),
             const SizedBox(width: 8),
-            Text(isHighAnxiety ? 'AI Ä‘á»“ng hÃ nh' : 'Ghi nháº­n tÃ­ch cá»±c'),
+            Text(isHighAnxiety ? 'AI điều hướng trị liệu' : 'Ghi nhận tích cực'),
           ],
         ),
         content: Column(
@@ -335,7 +411,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Äá»ƒ sau', style: TextStyle(color: Colors.grey)),
+            child: const Text('Để sau', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -605,10 +681,10 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: _buildStatCard(
-                  label: 'Lo âu dự kiến',
-                  value: '${_anticipatoryAnxietyScore.toInt()}/8',
-                  note: 'Nhai lại ${_postEventRuminationScore.toInt()}/8',
-                  icon: Icons.auto_graph_rounded,
+                  label: 'Buồn bã hôm nay',
+                  value: '${_sadnessScore.toInt()}/100',
+                  note: 'Theo dõi an toàn',
+                  icon: Icons.cloud_outlined,
                 ),
               ),
             ],
@@ -639,10 +715,10 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             children: [
               Expanded(
                 child: _buildStatCard(
-                  label: 'Trạng thái cảm xúc',
-                  value: _selectedMoodLabel,
-                  note: 'Cập nhật theo check-in',
-                  icon: Icons.emoji_emotions_outlined,
+                  label: 'Lo âu dự kiến',
+                  value: '${_anticipatoryAnxietyScore.toInt()}/8',
+                  note: 'Nhai lại ${_postEventRuminationScore.toInt()}/8',
+                  icon: Icons.auto_graph_rounded,
                 ),
               ),
             ],

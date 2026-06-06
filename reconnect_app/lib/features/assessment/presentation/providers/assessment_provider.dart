@@ -101,9 +101,12 @@ class AssessmentProvider extends ChangeNotifier {
     String patientId, {
     required int anxietyScore,
     required int avoidanceUrgeScore,
+    required int sadnessScore,
     required int anticipatoryAnxietyScore,
     required int postEventRuminationScore,
     required String dailyAgenda,
+    bool safetyCheckRequired = false,
+    String? safetyResponse,
     String? token,
   }) async {
     _status = AssessmentStatus.loading;
@@ -114,9 +117,12 @@ class AssessmentProvider extends ChangeNotifier {
         patientId: patientId,
         anxietyScore: anxietyScore,
         avoidanceUrgeScore: avoidanceUrgeScore,
+        sadnessScore: sadnessScore,
         anticipatoryAnxietyScore: anticipatoryAnxietyScore,
         postEventRuminationScore: postEventRuminationScore,
         dailyAgenda: dailyAgenda,
+        safetyCheckRequired: safetyCheckRequired,
+        safetyResponse: safetyResponse,
       );
       _lastMood = await _repository.submitUserMood(mood, token: token);
       _status = AssessmentStatus.success;

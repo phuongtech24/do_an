@@ -28,6 +28,7 @@ import com.reconnect.mindhealth.modules.assessment.service.IAssessmentService;
 import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
 import com.reconnect.mindhealth.modules.roadmap.service.FearLadderService;
+import com.reconnect.mindhealth.modules.risk.service.IRiskScoringService;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -41,18 +42,21 @@ public class AssessmentServiceImpl implements IAssessmentService {
     private final UserMoodRepository userMoodRepository;
     private final PatientProfileRepository patientProfileRepository;
     private final FearLadderService fearLadderService;
+    private final IRiskScoringService riskScoringService;
 
     public AssessmentServiceImpl(
             LsasSituationRepository lsasSituationRepository,
             LsasSubmissionRepository lsasSubmissionRepository,
             UserMoodRepository userMoodRepository,
             PatientProfileRepository patientProfileRepository,
-            FearLadderService fearLadderService) {
+            FearLadderService fearLadderService,
+            IRiskScoringService riskScoringService) {
         this.lsasSituationRepository = lsasSituationRepository;
         this.lsasSubmissionRepository = lsasSubmissionRepository;
         this.userMoodRepository = userMoodRepository;
         this.patientProfileRepository = patientProfileRepository;
         this.fearLadderService = fearLadderService;
+        this.riskScoringService = riskScoringService;
     }
 
     @Override
@@ -163,17 +167,26 @@ public class AssessmentServiceImpl implements IAssessmentService {
         userMood.setPatientProfile(patient);
         Integer anxietyScore = normalizePercentageScore(dto.getAnxietyScore(), "anxietyScore");
         Integer avoidanceUrgeScore = normalizePercentageScore(dto.getAvoidanceUrgeScore(), "avoidanceUrgeScore");
+        Integer sadnessScore = normalizePercentageScore(dto.getSadnessScore(), "sadnessScore");
         Integer anticipatoryAnxietyScore = normalizeEightPointScore(dto.getAnticipatoryAnxietyScore(),
                 "anticipatoryAnxietyScore");
         Integer postEventRuminationScore = normalizeEightPointScore(dto.getPostEventRuminationScore(),
                 "postEventRuminationScore");
+        Boolean safetyCheckRequired = Boolean.TRUE.equals(dto.getSafetyCheckRequired());
+        String safetyResponse = normalizeSafetyResponse(dto.getSafetyResponse(), safetyCheckRequired);
         userMood.setAnxietyScore(anxietyScore);
         userMood.setAvoidanceUrgeScore(avoidanceUrgeScore);
+        userMood.setSadnessScore(sadnessScore);
         userMood.setAnticipatoryAnxietyScore(anticipatoryAnxietyScore);
         userMood.setPostEventRuminationScore(postEventRuminationScore);
+        userMood.setSafetyCheckRequired(safetyCheckRequired);
+        userMood.setSafetyResponse(safetyResponse);
+        userMood.setSafetyRespondedAt(safetyCheckRequired ? LocalDateTime.now() : null);
         userMood.setMoodScore(resolveLegacyMoodScore(dto, anxietyScore));
         userMood.setDailyAgenda(dto.getDailyAgenda());
-        return new UserMoodDto(userMoodRepository.save(userMood));
+        UserMood saved = userMoodRepository.save(userMood);
+        riskScoringService.calculateAndPersist(patient.getId());
+        return new UserMoodDto(saved);
     }
 
     private Integer resolveLegacyMoodScore(UserMoodDto dto, Integer anxietyScore) {
@@ -204,6 +217,20 @@ public class AssessmentServiceImpl implements IAssessmentService {
             throw new IllegalArgumentException(fieldName + " phai nam trong khoang 0-8.");
         }
         return score;
+    }
+
+    private String normalizeSafetyResponse(String safetyResponse, boolean safetyCheckRequired) {
+        if (!safetyCheckRequired) {
+            return null;
+        }
+        if (safetyResponse == null || safetyResponse.isBlank()) {
+            throw new IllegalArgumentException("safetyResponse khong duoc de trong khi safetyCheckRequired = true.");
+        }
+        String normalized = safetyResponse.trim().toUpperCase();
+        if (!"SAFE".equals(normalized) && !"UNSAFE".equals(normalized)) {
+            throw new IllegalArgumentException("safetyResponse chi duoc la SAFE hoac UNSAFE.");
+        }
+        return normalized;
     }
 
     private void validateUniqueSituations(List<LsasAnswerRequestDto> answers) {

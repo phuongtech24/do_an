@@ -10,9 +10,13 @@ public class UserMoodDto extends BaseObjectDto {
     private Integer moodScore;
     private Integer anxietyScore;
     private Integer avoidanceUrgeScore;
+    private Integer sadnessScore;
     private Integer anticipatoryAnxietyScore;
     private Integer postEventRuminationScore;
     private String dailyAgenda;
+    private Boolean safetyCheckRequired;
+    private String safetyResponse;
+    private java.time.LocalDateTime safetyRespondedAt;
 
     public UserMoodDto() {
     }
@@ -25,9 +29,13 @@ public class UserMoodDto extends BaseObjectDto {
             this.setMoodScore(entity.getMoodScore());
             this.setAnxietyScore(entity.getAnxietyScore());
             this.setAvoidanceUrgeScore(entity.getAvoidanceUrgeScore());
+            this.setSadnessScore(entity.getSadnessScore());
             this.setAnticipatoryAnxietyScore(entity.getAnticipatoryAnxietyScore());
             this.setPostEventRuminationScore(entity.getPostEventRuminationScore());
             this.setDailyAgenda(entity.getDailyAgenda());
+            this.setSafetyCheckRequired(entity.getSafetyCheckRequired());
+            this.setSafetyResponse(entity.getSafetyResponse());
+            this.setSafetyRespondedAt(entity.getSafetyRespondedAt());
             if (entity.getPatientProfile() != null) {
                 this.setPatientId(entity.getPatientProfile().getId());
             }
@@ -66,6 +74,14 @@ public class UserMoodDto extends BaseObjectDto {
         this.avoidanceUrgeScore = avoidanceUrgeScore;
     }
 
+    public Integer getSadnessScore() {
+        return sadnessScore;
+    }
+
+    public void setSadnessScore(Integer sadnessScore) {
+        this.sadnessScore = sadnessScore;
+    }
+
     public Integer getAnticipatoryAnxietyScore() {
         return anticipatoryAnxietyScore;
     }
@@ -88,5 +104,29 @@ public class UserMoodDto extends BaseObjectDto {
 
     public void setDailyAgenda(String dailyAgenda) {
         this.dailyAgenda = dailyAgenda;
+    }
+
+    public Boolean getSafetyCheckRequired() {
+        return safetyCheckRequired;
+    }
+
+    public void setSafetyCheckRequired(Boolean safetyCheckRequired) {
+        this.safetyCheckRequired = safetyCheckRequired;
+    }
+
+    public String getSafetyResponse() {
+        return safetyResponse;
+    }
+
+    public void setSafetyResponse(String safetyResponse) {
+        this.safetyResponse = safetyResponse;
+    }
+
+    public java.time.LocalDateTime getSafetyRespondedAt() {
+        return safetyRespondedAt;
+    }
+
+    public void setSafetyRespondedAt(java.time.LocalDateTime safetyRespondedAt) {
+        this.safetyRespondedAt = safetyRespondedAt;
     }
 }

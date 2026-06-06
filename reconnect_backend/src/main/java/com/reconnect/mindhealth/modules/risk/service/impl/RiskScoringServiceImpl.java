@@ -85,8 +85,9 @@ public class RiskScoringServiceImpl implements IRiskScoringService {
 
         int maxAiToday = journalRepository.getMaxAiRiskScoreInDay(patientId, startOfDay, endOfDay);
         int scoreAi = maxAiToday >= 100 ? 100 : (maxAiToday >= 70 ? 70 : 0);
+        int scoreCheckIn = calculateCheckInSafetyScore(patientId);
         int scoreMood = calculateMoodScore(patientId);
-        int scoreSafety = scoreAi >= 100 ? 100 : 0;
+        int scoreSafety = Math.max(scoreAi >= 100 ? 100 : 0, scoreCheckIn);
 
         boolean override = scoreAi >= 70 || scoreSafety >= 70;
         int riskIndex;
@@ -95,13 +96,14 @@ public class RiskScoringServiceImpl implements IRiskScoringService {
         } else if (scoreAi >= 70) {
             riskIndex = 70;
         } else {
-            riskIndex = (int) Math.round((0.6 * scoreAi) + (0.3 * scoreMood) + (0.1 * scoreSafety));
+            riskIndex = (int) Math.round((0.5 * scoreAi) + (0.25 * scoreMood) + (0.25 * scoreCheckIn));
         }
 
         RiskCalculationResultDto dto = new RiskCalculationResultDto();
         dto.setPatientId(patientId);
         dto.setScoreAi(scoreAi);
         dto.setScoreMood(scoreMood);
+        dto.setScoreCheckIn(scoreCheckIn);
         dto.setScoreSafety(scoreSafety);
         dto.setRiskIndex(riskIndex);
         dto.setOverrideTriggered(override);
@@ -138,6 +140,25 @@ public class RiskScoringServiceImpl implements IRiskScoringService {
             return 100;
         }
         if (average < 35) {
+            return 50;
+        }
+        return 0;
+    }
+
+    private int calculateCheckInSafetyScore(UUID patientId) {
+        List<UserMood> last3 = userMoodRepository.findTop3ByPatientProfile_IdOrderByCreateDateDesc(patientId);
+        if (last3 == null || last3.isEmpty()) {
+            return 0;
+        }
+
+        UserMood latest = last3.get(0);
+        if ("UNSAFE".equalsIgnoreCase(latest.getSafetyResponse())) {
+            return 100;
+        }
+
+        int anxiety = latest.getAnxietyScore() != null ? latest.getAnxietyScore() : 0;
+        int sadness = latest.getSadnessScore() != null ? latest.getSadnessScore() : 0;
+        if (anxiety >= 90 || sadness >= 90) {
             return 50;
         }
         return 0;

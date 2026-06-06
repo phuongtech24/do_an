@@ -8,6 +8,7 @@ public class RiskCalculationResultDto {
     private int scoreSafety;
     private int scoreAi;
     private int scoreMood;
+    private int scoreCheckIn;
     private boolean overrideTriggered;
 
     public RiskCalculationResultDto() {
@@ -51,6 +52,14 @@ public class RiskCalculationResultDto {
 
     public void setScoreMood(int scoreMood) {
         this.scoreMood = scoreMood;
+    }
+
+    public int getScoreCheckIn() {
+        return scoreCheckIn;
+    }
+
+    public void setScoreCheckIn(int scoreCheckIn) {
+        this.scoreCheckIn = scoreCheckIn;
     }
 
     public boolean isOverrideTriggered() {
