@@ -8,6 +8,13 @@ public class TherapistAssignmentStatusDto {
     private UUID therapistId;
     private String therapistName;
     private String message;
+    private String carePhaseCode;
+    private String carePhaseLabel;
+    private String recommendedFrequencyLabel;
+    private String recommendedPlanSummary;
+    private String durationGuidance;
+    private String recommendedPurposeCode;
+    private boolean allowOverride;
 
     public TherapistAssignmentStatusDto() {
     }
@@ -18,6 +25,23 @@ public class TherapistAssignmentStatusDto {
         this.therapistId = therapistId;
         this.therapistName = therapistName;
         this.message = message;
+    }
+
+    public TherapistAssignmentStatusDto(UUID patientId, boolean assigned, UUID therapistId, String therapistName,
+            String message, String carePhaseCode, String carePhaseLabel, String recommendedFrequencyLabel,
+            String recommendedPlanSummary, String durationGuidance, String recommendedPurposeCode, boolean allowOverride) {
+        this.patientId = patientId;
+        this.assigned = assigned;
+        this.therapistId = therapistId;
+        this.therapistName = therapistName;
+        this.message = message;
+        this.carePhaseCode = carePhaseCode;
+        this.carePhaseLabel = carePhaseLabel;
+        this.recommendedFrequencyLabel = recommendedFrequencyLabel;
+        this.recommendedPlanSummary = recommendedPlanSummary;
+        this.durationGuidance = durationGuidance;
+        this.recommendedPurposeCode = recommendedPurposeCode;
+        this.allowOverride = allowOverride;
     }
 
     public UUID getPatientId() {
@@ -59,5 +83,60 @@ public class TherapistAssignmentStatusDto {
     public void setMessage(String message) {
         this.message = message;
     }
-}
 
+    public String getCarePhaseCode() {
+        return carePhaseCode;
+    }
+
+    public void setCarePhaseCode(String carePhaseCode) {
+        this.carePhaseCode = carePhaseCode;
+    }
+
+    public String getCarePhaseLabel() {
+        return carePhaseLabel;
+    }
+
+    public void setCarePhaseLabel(String carePhaseLabel) {
+        this.carePhaseLabel = carePhaseLabel;
+    }
+
+    public String getRecommendedFrequencyLabel() {
+        return recommendedFrequencyLabel;
+    }
+
+    public void setRecommendedFrequencyLabel(String recommendedFrequencyLabel) {
+        this.recommendedFrequencyLabel = recommendedFrequencyLabel;
+    }
+
+    public String getRecommendedPlanSummary() {
+        return recommendedPlanSummary;
+    }
+
+    public void setRecommendedPlanSummary(String recommendedPlanSummary) {
+        this.recommendedPlanSummary = recommendedPlanSummary;
+    }
+
+    public String getDurationGuidance() {
+        return durationGuidance;
+    }
+
+    public void setDurationGuidance(String durationGuidance) {
+        this.durationGuidance = durationGuidance;
+    }
+
+    public String getRecommendedPurposeCode() {
+        return recommendedPurposeCode;
+    }
+
+    public void setRecommendedPurposeCode(String recommendedPurposeCode) {
+        this.recommendedPurposeCode = recommendedPurposeCode;
+    }
+
+    public boolean isAllowOverride() {
+        return allowOverride;
+    }
+
+    public void setAllowOverride(boolean allowOverride) {
+        this.allowOverride = allowOverride;
+    }
+}

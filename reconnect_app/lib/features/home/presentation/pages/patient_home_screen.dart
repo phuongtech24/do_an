@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import 'package:reconnect_app/features/assessment/presentation/providers/assessment_provider.dart';
 import 'package:reconnect_app/features/auth/presentation/providers/auth_provider.dart';
+import 'package:reconnect_app/features/onboarding/presentation/utils/onboarding_route_resolver.dart';
 import 'package:reconnect_app/theme/app_colors.dart';
 import '../../../../shared/widgets/feature_card.dart';
 import '../../../../shared/widgets/mindhealth_scaffold.dart';
@@ -18,6 +19,7 @@ class PatientHomeScreen extends StatefulWidget {
 
 class _PatientHomeScreenState extends State<PatientHomeScreen> {
   static bool _moodDialogShownThisSession = false;
+  bool _isCheckingHomeGate = true;
 
   double _anxietyScore = 45.0;
   double _avoidanceUrgeScore = 35.0;
@@ -30,6 +32,13 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   bool get _shouldTriggerSafetyGate => _anxietyScore >= 90 || _sadnessScore >= 90;
 
   bool get _shouldSuggestThoughtRecord => _anticipatoryAnxietyScore >= 6 || _postEventRuminationScore >= 6;
+
+  bool get _shouldSuggestCopingCards => _anticipatoryAnxietyScore <= 3 && _postEventRuminationScore <= 3;
+
+  bool get _shouldOfferChoice =>
+      !_shouldSuggestThoughtRecord &&
+      !_shouldSuggestCopingCards &&
+      (_anticipatoryAnxietyScore >= 4 || _postEventRuminationScore >= 4);
 
   String get _dailyCheckInSummary =>
       'Lo âu ${_anxietyScore.toInt()}/100 • '
@@ -55,12 +64,23 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_moodDialogShownThisSession) {
-        _moodDialogShownThisSession = true;
-        _showMoodCheckDialog();
-      }
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _guardHomeEntry());
+  }
+
+  Future<void> _guardHomeEntry() async {
+    final decision = await OnboardingRouteResolver.resolve(context);
+    if (!mounted) return;
+
+    if (decision.route != '/home') {
+      context.go(decision.route);
+      return;
+    }
+
+    setState(() => _isCheckingHomeGate = false);
+    if (!_moodDialogShownThisSession) {
+      _moodDialogShownThisSession = true;
+      _showMoodCheckDialog();
+    }
   }
 
   void _showRecoveryCongratsDialog() {
@@ -72,18 +92,18 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           children: [
             Icon(Icons.emoji_events, color: Colors.amber),
             SizedBox(width: 8),
-            Text('ChÃºc má»«ng báº¡n!'),
+            Text('Chúc mừng bạn!'),
           ],
         ),
         content: const Text(
-          'Äiá»ƒm LSAS/Fear Ladder cá»§a báº¡n Ä‘ang cáº£i thiá»‡n. Báº¡n cÃ³ nháº­n tháº¥y mÃ¬nh Ä‘Ã£ bá»›t nÃ© trÃ¡nh vÃ  dÃ¡m thá»­ cÃ¡c tÃ¬nh huá»‘ng xÃ£ há»™i hÆ¡n khÃ´ng?',
+          'Điểm LSAS/Fear Ladder của bạn đang cải thiện. Bạn có nhận thấy mình đã bớt né tránh và dám thử các tình huống xã hội hơn không?',
           style: TextStyle(height: 1.5),
         ),
         actions: [
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-            child: const Text('TÃ´i Ä‘Ã£ lÃ m Ä‘Æ°á»£c!', style: TextStyle(color: Colors.white)),
+            child: const Text('Tôi đã làm được!', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -266,7 +286,15 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                   }
 
                   if (context.mounted) {
-                    _showAISuggestionDialog();
+                    if (_shouldSuggestThoughtRecord || _shouldSuggestCopingCards || _shouldOfferChoice) {
+                      _showAISuggestionDialog();
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Hôm nay bạn đang ở mức theo dõi. Hệ thống sẽ chưa mở bài tập mới.'),
+                        ),
+                      );
+                    }
                   }
                 },
                 child: const Text('Tiếp tục', style: TextStyle(color: Colors.white)),
@@ -375,7 +403,10 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   }
 
   void _showAISuggestionDialog() {
-    final isHighAnxiety = _shouldSuggestThoughtRecord;
+    final shouldOpenThoughtRecord = _shouldSuggestThoughtRecord;
+    final shouldOpenCopingCards = _shouldSuggestCopingCards;
+    final shouldOfferChoice = _shouldOfferChoice;
+    final isChoiceMode = shouldOfferChoice && !shouldOpenThoughtRecord && !shouldOpenCopingCards;
 
     showDialog(
       context: context,
@@ -383,66 +414,130 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            Icon(isHighAnxiety ? Icons.auto_awesome : Icons.stars_rounded, color: AppColors.primary),
+            Icon(
+              shouldOpenThoughtRecord ? Icons.auto_awesome : (isChoiceMode ? Icons.balance_rounded : Icons.stars_rounded),
+              color: AppColors.primary,
+            ),
             const SizedBox(width: 8),
-            Text(isHighAnxiety ? 'AI điều hướng trị liệu' : 'Ghi nhận tích cực'),
+            Text(
+              shouldOpenThoughtRecord
+                  ? 'AI điều hướng trị liệu'
+                  : (isChoiceMode ? 'Bạn muốn chọn cách nào?' : 'Bảo dưỡng & củng cố'),
+            ),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              isHighAnxiety
-                  ? 'Check-in cho thấy lo âu dự kiến hoặc nhai lại của bạn đang khá cao. Đây là lúc phù hợp để viết Thought Record cho lo âu xã hội.'
-                  : 'Bạn đang tương đối ổn định. Nếu muốn, bạn có thể ghi nhanh một thẻ đối phó hoặc credit list để củng cố tiến triển hôm nay.',
+              shouldOpenThoughtRecord
+                  ? 'Check-in cho thấy lo âu dự kiến hoặc nhai lại của bạn đang khá cao. Đây là lúc phù hợp để vào thẳng nhật ký suy nghĩ 6 bước.'
+                  : (isChoiceMode
+                      ? 'MindHealth nhận thấy bạn đang có chút bận tâm và lo âu nhẹ. Bạn muốn đọc nhanh một Thẻ đối phó để củng cố tinh thần, hay muốn dành 3 phút viết Nhật ký suy nghĩ để giải tỏa sâu hơn?'
+                      : 'Check-in của bạn đang ở mức ổn định 0-3. Hệ thống sẽ không mở Thought Record lúc này mà chuyển sang chế độ bảo dưỡng để bạn lưu lại các suy nghĩ cân bằng khi đầu óc còn sáng rõ.'),
               style: const TextStyle(height: 1.5),
             ),
             const SizedBox(height: 12),
             TherapyGuideCard(
-              title: isHighAnxiety ? 'Gợi ý Thought Record' : 'Gợi ý thẻ đối phó',
-              message: isHighAnxiety
-                  ? 'Thought Record sẽ giúp bạn bóc tách dự đoán tệ nhất, self-focus, safety behaviors và chọn một bước thực hành nhỏ.'
-                  : 'Thẻ đối phó giúp bạn nhắc lại phản hồi cân bằng hoặc ghi nhận một nỗ lực tích cực trong ngày.',
-              icon: isHighAnxiety ? Icons.edit_note_outlined : Icons.playlist_add_check_circle_outlined,
+              title: shouldOpenThoughtRecord
+                  ? 'Gợi ý Thought Record'
+                  : (isChoiceMode ? 'Chế độ cảnh giác nhẹ' : 'Thư viện Thẻ Đối Phó'),
+              message: shouldOpenThoughtRecord
+                  ? 'Nhật ký 6 bước sẽ giúp bạn đi từ tình huống, cảm xúc, hành vi an toàn đến phản hồi cân bằng và cam kết hành động.'
+                  : (isChoiceMode
+                      ? 'Bạn có thể tự chọn cách hỗ trợ phù hợp với mức sẵn sàng lúc này: cắt nhanh cơn lo âu nhẹ bằng Thẻ đối phó, hoặc đi sâu hơn bằng Nhật ký suy nghĩ.'
+                      : 'Thẻ đối phó là “túi sơ cứu cảm xúc” của bạn: nơi lưu lại các suy nghĩ cân bằng, tích cực để mở ra đọc nhanh trước những tình huống giao tiếp căng thẳng.'),
+              icon: shouldOpenThoughtRecord ? Icons.edit_note_outlined : (isChoiceMode ? Icons.tune_rounded : Icons.style_outlined),
               accentColor: AppColors.primary,
             ),
+            if (shouldOpenCopingCards)
+              const Padding(
+                padding: EdgeInsets.only(top: 10),
+                child: Text(
+                  'Bạn có thể lưu sẵn phản hồi tích cực lúc tâm trí còn sáng suốt nhất để dùng lại khi cần.',
+                  style: TextStyle(color: AppColors.textSecondary, height: 1.45),
+                ),
+              ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Để sau', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            onPressed: () {
-              Navigator.pop(context);
-              if (isHighAnxiety) {
-                context.push('/agenda-setting', extra: {
-                  'anxietyScore': _anxietyScore.toInt(),
-                  'avoidanceUrgeScore': _avoidanceUrgeScore.toInt(),
-                  'anticipatoryAnxietyScore': _anticipatoryAnxietyScore.toInt(),
-                  'postEventRuminationScore': _postEventRuminationScore.toInt(),
-                });
-              } else {
-                context.push('/coping-cards');
-              }
-            },
-            child: Text(isHighAnxiety ? 'Viết Thought Record' : 'Mở thẻ đối phó', style: const TextStyle(color: Colors.white)),
-          ),
-        ],
+        actions: isChoiceMode
+            ? [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Để sau', style: TextStyle(color: Colors.grey)),
+                ),
+                OutlinedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    context.push('/coping-cards');
+                  },
+                  style: OutlinedButton.styleFrom(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Đọc thẻ đối phó'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    context.push('/thought-record', extra: {
+                      'anxietyScore': _anxietyScore.toInt(),
+                      'avoidanceUrgeScore': _avoidanceUrgeScore.toInt(),
+                      'anticipatoryAnxietyScore': _anticipatoryAnxietyScore.toInt(),
+                      'postEventRuminationScore': _postEventRuminationScore.toInt(),
+                    });
+                  },
+                  child: const Text('Viết nhật ký suy nghĩ', style: TextStyle(color: Colors.white)),
+                ),
+              ]
+            : [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Để sau', style: TextStyle(color: Colors.grey)),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    if (shouldOpenThoughtRecord) {
+                      context.push('/thought-record', extra: {
+                        'anxietyScore': _anxietyScore.toInt(),
+                        'avoidanceUrgeScore': _avoidanceUrgeScore.toInt(),
+                        'anticipatoryAnxietyScore': _anticipatoryAnxietyScore.toInt(),
+                        'postEventRuminationScore': _postEventRuminationScore.toInt(),
+                      });
+                    } else {
+                      context.push('/coping-cards');
+                    }
+                  },
+                  child: Text(
+                    shouldOpenThoughtRecord ? 'Viết Thought Record' : 'Mở thư viện thẻ đối phó',
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isCheckingHomeGate) {
+      return const MindHealthScaffold(
+        title: 'Trang chủ',
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final auth = Provider.of<AuthProvider>(context);
     final user = auth.loginResponse?.user;
-    final displayName = user?.username ?? 'CÃ¡o Nhá»';
+    final displayName = user?.username ?? 'Cáo Nhỏ';
     final isAnonymous = user?.isAnonymous ?? true;
     final checkInLabel = _checkInLabel;
 
@@ -451,12 +546,12 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
       actions: [
         IconButton(
           icon: const Icon(Icons.emoji_events_outlined, color: Colors.amber),
-          tooltip: 'Demo: chÃºc má»«ng phá»¥c há»“i',
+          tooltip: 'Demo: chúc mừng phục hồi',
           onPressed: _showRecoveryCongratsDialog,
         ),
         IconButton(
           icon: const Icon(Icons.bolt, color: Colors.amber),
-          tooltip: 'Demo: báº­t/táº¯t cáº£nh bÃ¡o bÃ¡c sÄ©',
+          tooltip: 'Demo: bật/tắt cảnh báo bác sĩ',
           onPressed: () => setState(() => _hasBoosterAlert = !_hasBoosterAlert),
         ),
       ],
@@ -466,8 +561,8 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           _buildHeroCard(displayName: displayName, userEmail: user?.email ?? '', isAnonymous: isAnonymous, checkInLabel: checkInLabel),
           const SizedBox(height: 24),
           _buildSectionHeader(
-            title: 'HÃ´m nay báº¡n muá»‘n báº¯t Ä‘áº§u tá»« Ä‘Ã¢u?',
-            subtitle: 'CÃ¡c tÃ­nh nÄƒng Ä‘Æ°á»£c nhÃ³m theo hÃ nh trÃ¬nh CBT Ä‘á»ƒ báº¡n thao tÃ¡c nhanh hÆ¡n.',
+            title: 'Hôm nay bạn muốn bắt đầu từ đâu?',
+            subtitle: 'Các tính năng được nhóm theo hành trình CBT để bạn thao tác nhanh hơn.',
           ),
           const SizedBox(height: 14),
           GridView.count(
@@ -479,26 +574,26 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             childAspectRatio: 1.04,
             children: [
               _buildQuickActionCard(
-                title: 'Nháº­t kÃ½ Lo Ã¢u XÃ£ há»™i',
-                subtitle: 'Ghi láº¡i dá»± Ä‘oÃ¡n, self-focus vÃ  safety behaviors.',
+                title: 'Nhật ký Lo âu Xã hội',
+                subtitle: 'Vào thẳng nhật ký 6 bước để gỡ vòng lặp lo âu xã hội.',
                 icon: Icons.psychology_outlined,
                 onTap: () => context.go('/journal'),
               ),
               _buildQuickActionCard(
-                title: 'Fear Ladder hÃ´m nay',
-                subtitle: 'Xem náº¥c thang Ä‘ang má»Ÿ vÃ  bÃ i thá»±c hÃ nh gáº§n nháº¥t.',
+                title: 'Fear Ladder hôm nay',
+                subtitle: 'Xem nấc thang đang mở và bài thực hành gần nhất.',
                 icon: Icons.alt_route_rounded,
                 onTap: () => context.go('/roadmap'),
               ),
               _buildQuickActionCard(
-                title: 'Tháº» Ä‘á»‘i phÃ³',
-                subtitle: 'Má»Ÿ coping cards vÃ  credit list khi cáº§n tá»± á»•n Ä‘á»‹nh.',
+                title: 'Thẻ đối phó',
+                subtitle: 'Mở coping cards và credit list khi cần tự ổn định.',
                 icon: Icons.style_outlined,
                 onTap: () => context.push('/coping-cards'),
               ),
               _buildQuickActionCard(
-                title: 'Tham váº¥n tá»« xa',
-                subtitle: 'Äáº·t lá»‹ch vá»›i chuyÃªn gia vÃ  theo dÃµi buá»•i háº¹n sáº¯p tá»›i.',
+                title: 'Tham vấn từ xa',
+                subtitle: 'Đặt lịch với chuyên gia và theo dõi buổi hẹn sắp tới.',
                 icon: Icons.video_camera_front_outlined,
                 onTap: () => context.go('/telehealth'),
               ),
@@ -506,8 +601,8 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           ),
           const SizedBox(height: 28),
           _buildSectionHeader(
-            title: 'Theo dÃµi tiáº¿n triá»ƒn',
-            subtitle: 'NhÃ¬n láº¡i LSAS, Fear Ladder vÃ  cÃ¡c chá»‰ sá»‘ há»“i phá»¥c theo chu ká»³.',
+            title: 'Theo dõi tiến triển',
+            subtitle: 'Nhìn lại LSAS, Fear Ladder và các chỉ số hồi phục theo chu kỳ.',
           ),
           const SizedBox(height: 12),
           Container(
@@ -520,15 +615,15 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             child: Column(
               children: [
                 FeatureCard(
-                  title: 'Re-rating LSAS Ä‘á»‹nh ká»³',
-                  subtitle: 'Cáº­p nháº­t má»©c sá»£ vÃ  nÃ© trÃ¡nh má»—i 14 ngÃ y',
+                  title: 'Re-rating LSAS định kỳ',
+                  subtitle: 'Cập nhật mức sợ và né tránh mỗi 14 ngày',
                   icon: Icons.analytics_outlined,
                   onTap: () => context.go('/lsas'),
                 ),
                 const SizedBox(height: 12),
                 FeatureCard(
-                  title: 'Tiáº¿n triá»ƒn há»“i phá»¥c',
-                  subtitle: 'Theo dÃµi LSAS vÃ  Fear Ladder theo thá»i gian',
+                  title: 'Tiến triển hồi phục',
+                  subtitle: 'Theo dõi LSAS và Fear Ladder theo thời gian',
                   icon: Icons.trending_up,
                   onTap: () => context.push('/progress'),
                 ),
@@ -537,9 +632,9 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           ),
           const SizedBox(height: 20),
           TherapyGuideCard(
-            title: 'Nháº¯c nháº¹ hÃ´m nay',
+            title: 'Nhắc nhở hôm nay',
             message:
-                'Báº¡n khÃ´ng cáº§n lÃ m má»i thá»© cÃ¹ng lÃºc. HÃ£y chá»n má»™t bÆ°á»›c nhá» nháº¥t trong Fear Ladder hoáº·c hoÃ n thÃ nh má»™t check-in trung thá»±c.',
+                'Bạn không cần làm mọi thứ cùng lúc. Hãy chọn một bước nhỏ nhất trong Fear Ladder hoặc hoàn thành một check-in trung thực.',
             icon: Icons.spa_outlined,
             accentColor: AppColors.secondary,
           ),
@@ -569,7 +664,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
               const SizedBox(width: 12),
               const Expanded(
                 child: Text(
-                  'BÃ¡c sÄ© yÃªu cáº§u Booster Session',
+                  'Bác sĩ yêu cầu Booster Session',
                   style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.alert),
                 ),
               ),
@@ -580,16 +675,16 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             ],
           ),
           const Text(
-            'Há»‡ thá»‘ng nháº­n tháº¥y chá»‰ sá»‘ rá»§i ro cá»§a báº¡n tÄƒng nháº¹. BÃ¡c sÄ© khuyÃªn báº¡n nÃªn Ã´n táº­p láº¡i ká»¹ nÄƒng Nháº­t kÃ½ suy nghÄ© ngay hÃ´m nay.',
+            'Hệ thống nhận thấy chỉ số rủi ro của bạn tăng nhẹ. Bác sĩ khuyên bạn nên ôn tập lại kỹ năng Nhật ký suy nghĩ ngay hôm nay.',
             style: TextStyle(fontSize: 12, color: Colors.black87),
           ),
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () => context.push('/agenda-setting'),
+              onPressed: () => context.push('/thought-record'),
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.alert, foregroundColor: Colors.white),
-              child: const Text('Báº¯t Ä‘áº§u Ã´n táº­p ngay'),
+              child: const Text('Bắt đầu ôn tập ngay'),
             ),
           ),
         ],
@@ -636,7 +731,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Xin chÃ o, $displayName',
+                      'Xin chào, $displayName',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w900,
                         color: Colors.white,
@@ -644,7 +739,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      isAnonymous ? 'Báº¡n Ä‘ang á»Ÿ cháº¿ Ä‘á»™ áº©n danh an toÃ n' : 'TÃ i khoáº£n chÃ­nh thá»©c ($userEmail)',
+                      isAnonymous ? 'Bạn đang ở chế độ ẩn danh an toàn' : 'Tài khoản chính thức ($userEmail)',
                       style: const TextStyle(color: Colors.white70, fontSize: 13),
                     ),
                   ],
@@ -661,7 +756,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                   children: [
                     Icon(Icons.shield_outlined, size: 16, color: Colors.white),
                     SizedBox(width: 6),
-                    Text('Báº£o máº­t', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                    Text('Bảo mật', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
                   ],
                 ),
               ),
@@ -733,7 +828,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ),
             icon: const Icon(Icons.edit_outlined),
-            label: const Text('Cáº­p nháº­t check-in'),
+            label: const Text('Cập nhật check-in'),
           ),
         ],
       ),
@@ -857,7 +952,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
               const Row(
                 children: [
                   Text(
-                    'Má»Ÿ ngay',
+                    'Mở ngay',
                     style: TextStyle(
                       color: AppColors.primary,
                       fontWeight: FontWeight.w800,

@@ -15,6 +15,8 @@ public class AppointmentDto extends BaseObjectDto {
     private LocalDateTime endAt;
     private AppointmentStatus status;
     private AppointmentPurpose purpose;
+    private String clinicalPurposeCode;
+    private String carePhaseCode;
     private Boolean isAnonymous;
     private String meetingLink;
     private String patientDisplayName;
@@ -49,6 +51,8 @@ public class AppointmentDto extends BaseObjectDto {
             this.endAt = entity.getEndAt();
             this.status = entity.getStatus();
             this.purpose = entity.getPurpose();
+            this.clinicalPurposeCode = entity.getClinicalPurposeCode();
+            this.carePhaseCode = entity.getCarePhaseCode();
             this.isAnonymous = entity.getIsAnonymous();
             if (this.meetingLink == null || this.meetingLink.isBlank()) {
                 this.meetingLink = entity.getMeetingLink();
@@ -107,6 +111,22 @@ public class AppointmentDto extends BaseObjectDto {
 
     public Boolean getIsAnonymous() {
         return isAnonymous;
+    }
+
+    public String getClinicalPurposeCode() {
+        return clinicalPurposeCode;
+    }
+
+    public void setClinicalPurposeCode(String clinicalPurposeCode) {
+        this.clinicalPurposeCode = clinicalPurposeCode;
+    }
+
+    public String getCarePhaseCode() {
+        return carePhaseCode;
+    }
+
+    public void setCarePhaseCode(String carePhaseCode) {
+        this.carePhaseCode = carePhaseCode;
     }
 
     public void setIsAnonymous(Boolean isAnonymous) {

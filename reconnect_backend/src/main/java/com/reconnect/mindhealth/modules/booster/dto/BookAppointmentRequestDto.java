@@ -8,7 +8,8 @@ public class BookAppointmentRequestDto {
     private LocalDateTime startAt;
     private Boolean isAnonymous = true;
     private Integer durationMinutes;
-    private com.reconnect.mindhealth.modules.booster.enums.AppointmentPurpose purpose;
+    private String purpose;
+    private String carePhaseCode;
 
     public BookAppointmentRequestDto() {
     }
@@ -45,11 +46,19 @@ public class BookAppointmentRequestDto {
         this.durationMinutes = durationMinutes;
     }
 
-    public com.reconnect.mindhealth.modules.booster.enums.AppointmentPurpose getPurpose() {
+    public String getPurpose() {
         return purpose;
     }
 
-    public void setPurpose(com.reconnect.mindhealth.modules.booster.enums.AppointmentPurpose purpose) {
+    public void setPurpose(String purpose) {
         this.purpose = purpose;
+    }
+
+    public String getCarePhaseCode() {
+        return carePhaseCode;
+    }
+
+    public void setCarePhaseCode(String carePhaseCode) {
+        this.carePhaseCode = carePhaseCode;
     }
 }

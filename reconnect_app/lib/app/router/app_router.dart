@@ -10,7 +10,6 @@ import '../../features/auth/presentation/pages/standard_signup_screen.dart';
 import '../../features/home/presentation/pages/patient_home_screen.dart';
 import '../../features/home/presentation/pages/safety_support_screen.dart';
 import '../../features/journal_ai/presentation/pages/cbt_chat_screen.dart';
-import '../../features/journal_ai/presentation/pages/agenda_setting_screen.dart';
 import '../../features/journal_ai/presentation/pages/coping_cards_screen.dart';
 import '../../features/journal_ai/presentation/pages/journal_ai_screen.dart';
 import '../../features/journal_ai/presentation/pages/risk_index_screen.dart';
@@ -161,7 +160,8 @@ class AppRouter {
         name: 'agenda-setting',
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
-          return AgendaSettingScreen(
+          return ThoughtRecordScreen(
+            agenda: extra?['agenda'] as String?,
             initialAnxietyScore: (extra?['anxietyScore'] as num?)?.toInt(),
             initialAvoidanceUrgeScore: (extra?['avoidanceUrgeScore'] as num?)?.toInt(),
             initialAnticipatoryAnxietyScore: (extra?['anticipatoryAnxietyScore'] as num?)?.toInt(),

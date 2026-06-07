@@ -41,7 +41,7 @@ class _JournalAiScreenState extends State<JournalAiScreen> {
     return MindHealthScaffold(
       title: 'Nhật ký & Trợ lý AI CBT',
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/agenda-setting'),
+        onPressed: () => context.push('/thought-record'),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.edit_note_rounded),
@@ -166,7 +166,7 @@ class _JournalAiScreenState extends State<JournalAiScreen> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Hãy bấm “Viết nhật ký mới” để ghi lại tình huống, suy nghĩ và phản hồi cân bằng cùng AI.',
+            'Hãy bấm “Viết nhật ký mới” để vào thẳng Bước 1 và ghi lại tình huống, cảm xúc, hành vi an toàn cùng phản hồi cân bằng.',
             textAlign: TextAlign.center,
             style: TextStyle(color: AppColors.textSecondary, height: 1.45),
           ),
@@ -338,7 +338,7 @@ class _JournalAiScreenState extends State<JournalAiScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          isThoughtRecord ? 'Chi tiết nhật ký 6 bước' : 'Chi tiết ghi nhận nỗ lực',
+                          isThoughtRecord ? 'Chi tiết nhật ký suy nghĩ 6 bước' : 'Chi tiết ghi nhận nỗ lực',
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w800,
@@ -391,25 +391,60 @@ class _JournalAiScreenState extends State<JournalAiScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildDetailStepItem('1', 'Tình huống thực tế', journal.situation ?? 'Không rõ'),
-        _buildDetailStepItem('2', 'Suy nghĩ tự động tiêu cực', journal.automaticThought ?? 'Không rõ'),
+        _buildDetailStepItem(
+          '1',
+          'Tình huống',
+          _joinDetailParts([
+            journal.situation,
+            if (journal.worstPrediction != null && journal.worstPrediction!.trim().isNotEmpty)
+              'Dự đoán tệ nhất: ${journal.worstPrediction}',
+          ]),
+        ),
+        _buildDetailStepItem(
+          '2',
+          'Cảm xúc',
+          _joinDetailParts([
+            '${journal.emotion ?? "Lo âu"} - ${journal.emotionScore ?? 0}%',
+            if (journal.bodySymptoms != null && journal.bodySymptoms!.isNotEmpty)
+              'Phản ứng cơ thể: ${journal.bodySymptoms!.join(", ")}',
+          ]),
+        ),
         _buildDetailStepItem(
           '3',
-          'Cảm xúc ban đầu',
-          '${journal.emotion ?? "Lo âu"} - ${journal.emotionScore ?? 0}%',
+          'Hành vi an toàn',
+          _joinDetailParts([
+            if (journal.safetyBehaviors != null && journal.safetyBehaviors!.isNotEmpty)
+              journal.safetyBehaviors!.join(', '),
+            if (journal.selfFocusThought != null && journal.selfFocusThought!.trim().isNotEmpty)
+              'Tự chú ý: ${journal.selfFocusThought}',
+            if (journal.negativeSelfImage != null && journal.negativeSelfImage!.trim().isNotEmpty)
+              'Hình ảnh bản thân: ${journal.negativeSelfImage}',
+          ]),
         ),
         _buildDetailStepItem(
           '4',
-          'Lỗi tư duy được nhận diện',
+          'Suy nghĩ tự động',
+          _joinDetailParts([
+            journal.automaticThought,
+            'Niềm tin ban đầu được ghi trong phiên viết và dùng để AI gợi mở thêm.',
+          ]),
+        ),
+        _buildDetailStepItem(
+          '5',
+          'Lỗi tư duy',
           (journal.distortions != null && journal.distortions!.isNotEmpty)
               ? journal.distortions!.join(', ')
-              : 'AI đã hỗ trợ nhận diện các khuôn mẫu tư duy tiêu cực nổi bật.',
+              : 'Chưa gắn nhãn lỗi tư duy.',
         ),
-        _buildDetailStepItem('5', 'Suy nghĩ phản biện thực tế', journal.adaptiveResponse ?? 'Chưa có phản hồi cân bằng'),
         _buildDetailStepItem(
           '6',
-          'Đánh giá lại cảm xúc',
-          'Cường độ cảm xúc tiêu cực giảm xuống còn ${journal.reRatedScore ?? 0}%.',
+          'Phản hồi thích nghi',
+          _joinDetailParts([
+            journal.adaptiveResponse ?? 'Chưa có phản hồi cân bằng',
+            if (journal.safetyBehaviorCommitment != null && journal.safetyBehaviorCommitment!.trim().isNotEmpty)
+              'Cam kết hành động: ${journal.safetyBehaviorCommitment}',
+            'Lo âu sau phiên: ${journal.reRatedScore ?? 0}%',
+          ]),
           isLast: true,
         ),
       ],
@@ -525,6 +560,14 @@ class _JournalAiScreenState extends State<JournalAiScreen> {
     } catch (_) {
       return dateStr;
     }
+  }
+
+  String _joinDetailParts(List<String?> parts) {
+    return parts
+        .whereType<String>()
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .join('\n');
   }
 }
 

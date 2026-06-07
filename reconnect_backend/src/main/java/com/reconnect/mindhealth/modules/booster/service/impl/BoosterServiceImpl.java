@@ -39,6 +39,7 @@ import com.reconnect.mindhealth.modules.booster.repository.TherapistWeeklySchedu
 import com.reconnect.mindhealth.modules.booster.service.IBoosterService;
 import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
 import com.reconnect.mindhealth.modules.clinical.entity.TherapistProfile;
+import com.reconnect.mindhealth.modules.clinical.enums.TaperingStage;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
 import com.reconnect.mindhealth.modules.clinical.repository.TherapistProfileRepository;
 
@@ -98,7 +99,9 @@ public class BoosterServiceImpl implements IBoosterService {
         if (!ALLOWED_DURATIONS.contains(durationMinutes)) {
             throw new IllegalArgumentException("Duration chỉ hỗ trợ 45, 50, 60 hoặc 90 phút.");
         }
-        AppointmentPurpose purpose = request.getPurpose() == null ? AppointmentPurpose.CBT_SESSION : request.getPurpose();
+        AppointmentPurpose purpose = resolveAppointmentPurpose(request.getPurpose(), durationMinutes);
+        validatePurposeForPatient(patient, purpose, durationMinutes);
+        String carePhaseCode = normalizeCarePhaseCode(request.getCarePhaseCode(), patient);
 
         log.info("Book appointment: patientId={}, therapistId={}, startAt={}, duration={}, purpose={}",
                 patient.getId(), therapist.getId(), startAt, durationMinutes, purpose);
@@ -123,9 +126,83 @@ public class BoosterServiceImpl implements IBoosterService {
         appt.setIsAnonymous(request.getIsAnonymous() != null ? request.getIsAnonymous() : true);
         appt.setMeetingLink(therapist.getMeetingLink());
         appt.setPurpose(purpose);
+        appt.setClinicalPurposeCode(purpose.name());
+        appt.setCarePhaseCode(carePhaseCode);
 
         Appointment saved = appointmentRepository.save(appt);
         return new AppointmentDto(saved);
+    }
+
+    private AppointmentPurpose resolveAppointmentPurpose(String rawPurpose, int durationMinutes) {
+        if (rawPurpose != null && !rawPurpose.isBlank()) {
+            try {
+                return AppointmentPurpose.valueOf(rawPurpose.trim().toUpperCase());
+            } catch (IllegalArgumentException ex) {
+                throw new IllegalArgumentException("Mục đích buổi hẹn không hợp lệ: " + rawPurpose);
+            }
+        }
+        if (durationMinutes == 60) {
+            return AppointmentPurpose.INITIAL_ASSESSMENT;
+        }
+        if (durationMinutes == 90) {
+            return AppointmentPurpose.BEHAVIORAL_EXPERIMENT;
+        }
+        return AppointmentPurpose.CBT_SESSION;
+    }
+
+    private void validatePurposeForPatient(PatientProfile patient, AppointmentPurpose purpose, int durationMinutes) {
+        switch (purpose) {
+            case INITIAL_ASSESSMENT -> {
+                if (durationMinutes != 60) {
+                    throw new IllegalArgumentException("Phiên đánh giá ban đầu cần thời lượng 60 phút.");
+                }
+            }
+            case BEHAVIORAL_EXPERIMENT, INTENSIVE_EXPOSURE -> {
+                if (durationMinutes != 90) {
+                    throw new IllegalArgumentException("Thử nghiệm hành vi hoặc can thiệp cường độ cao cần thời lượng 90 phút.");
+                }
+            }
+            case BOOSTER_3M, BOOSTER_6M, BOOSTER_12M -> {
+                if (patient.getGraduatedAt() == null) {
+                    throw new IllegalStateException("Booster session chỉ áp dụng sau khi kết thúc điều trị chính.");
+                }
+            }
+            case CRISIS -> {
+                if (!isRedFlagPatient(patient)) {
+                    throw new IllegalStateException("Lịch khẩn cấp chỉ áp dụng cho ca cờ đỏ hoặc nguy cơ cao.");
+                }
+            }
+            default -> {
+            }
+        }
+    }
+
+    private String normalizeCarePhaseCode(String requestedCode, PatientProfile patient) {
+        if (requestedCode != null && !requestedCode.isBlank()) {
+            return requestedCode.trim().toUpperCase();
+        }
+        return deriveCarePhaseCode(patient);
+    }
+
+    private String deriveCarePhaseCode(PatientProfile patient) {
+        if (isRedFlagPatient(patient)) {
+            return "RED_FLAG_OVERRIDE";
+        }
+        if (patient.getGraduatedAt() != null) {
+            return "MAINTENANCE";
+        }
+        if (patient.getTaperingStage() == TaperingStage.MONTHLY) {
+            return "TAPERING_BIWEEKLY";
+        }
+        if (patient.getTaperingStage() == TaperingStage.QUARTERLY) {
+            return "TAPERING_3_TO_4_WEEKS";
+        }
+        return "STANDARD_WEEKLY";
+    }
+
+    private boolean isRedFlagPatient(PatientProfile patient) {
+        return Boolean.TRUE.equals(patient.getIsRedFlagActive())
+                || (patient.getCurrentRiskScore() != null && patient.getCurrentRiskScore() >= 70);
     }
 
     @Override

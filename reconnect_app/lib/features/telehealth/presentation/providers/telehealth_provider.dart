@@ -25,6 +25,15 @@ class TelehealthProvider extends ChangeNotifier {
   bool get isAssigned => _assignmentStatus?.assigned == true;
   String get assignmentMessage => _assignmentStatus?.message ?? '';
   String get therapistName => _assignmentStatus?.therapistName ?? '';
+  String get carePhaseCode => _assignmentStatus?.carePhaseCode ?? 'STANDARD_WEEKLY';
+  String get carePhaseLabel => _assignmentStatus?.carePhaseLabel ?? 'Điều trị tiêu chuẩn';
+  String get recommendedFrequencyLabel => _assignmentStatus?.recommendedFrequencyLabel ?? '1 lần / tuần';
+  String get recommendedPlanSummary =>
+      _assignmentStatus?.recommendedPlanSummary ?? 'Liệu trình chuẩn gồm 14 phiên CBT hàng tuần.';
+  String get durationGuidance =>
+      _assignmentStatus?.durationGuidance ?? '45-50 phút cho CBT chuẩn, 60 phút cho phiên khởi đầu, 90 phút cho Behavioral Experiment.';
+  String get recommendedPurposeCode => _assignmentStatus?.recommendedPurposeCode ?? 'CBT_SESSION';
+  bool get allowOverride => _assignmentStatus?.allowOverride == true;
 
   Future<void> loadAssignmentStatus(String patientId, {String? token}) async {
     _status = TelehealthStatus.loading;
@@ -62,6 +71,7 @@ class TelehealthProvider extends ChangeNotifier {
     bool isAnonymous, {
     required int durationMinutes,
     String purpose = 'CBT_SESSION',
+    String? carePhaseCode,
     String? token,
   }) async {
     _status = TelehealthStatus.loading;
@@ -75,6 +85,7 @@ class TelehealthProvider extends ChangeNotifier {
         isAnonymous: isAnonymous,
         durationMinutes: durationMinutes,
         purpose: purpose,
+        carePhaseCode: carePhaseCode,
         token: token,
       );
       _status = TelehealthStatus.success;

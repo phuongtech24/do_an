@@ -87,7 +87,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                     title: const Text('Bật chế độ ẩn danh'),
                     subtitle: Text(
                       _anonymousMode
-                          ? 'Hiện nickname và avatar ẩn danh trong app.'
+                          ? 'Hiển thị nickname và avatar ẩn danh trong app.'
                           : 'Dùng tên hiển thị và thông tin thật hơn khi cần.',
                     ),
                     activeColor: AppColors.primary,

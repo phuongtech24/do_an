@@ -41,7 +41,13 @@ public class Appointment extends BaseObject {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "purpose", nullable = false)
-    private AppointmentPurpose purpose = AppointmentPurpose.TAPERING;
+    private AppointmentPurpose purpose = AppointmentPurpose.CBT_SESSION;
+
+    @Column(name = "clinical_purpose_code")
+    private String clinicalPurposeCode;
+
+    @Column(name = "care_phase_code")
+    private String carePhaseCode;
 
     @Column(name = "is_anonymous", nullable = false)
     private Boolean isAnonymous = true;
@@ -98,6 +104,22 @@ public class Appointment extends BaseObject {
 
     public void setPurpose(AppointmentPurpose purpose) {
         this.purpose = purpose;
+    }
+
+    public String getClinicalPurposeCode() {
+        return clinicalPurposeCode;
+    }
+
+    public void setClinicalPurposeCode(String clinicalPurposeCode) {
+        this.clinicalPurposeCode = clinicalPurposeCode;
+    }
+
+    public String getCarePhaseCode() {
+        return carePhaseCode;
+    }
+
+    public void setCarePhaseCode(String carePhaseCode) {
+        this.carePhaseCode = carePhaseCode;
     }
 
     public Boolean getIsAnonymous() {

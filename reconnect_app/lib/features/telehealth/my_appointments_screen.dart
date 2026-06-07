@@ -40,15 +40,13 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
     final uri = Uri.tryParse(link);
     if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
       final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-      if (opened) {
-        return;
-      }
+      if (opened) return;
     }
 
     await Clipboard.setData(ClipboardData(text: link));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Không mở được link tự động. Đã copy link phòng tư vấn để bạn dán vào trình duyệt.')),
+      const SnackBar(content: Text('Không mở được link tự động. Hệ thống đã copy link phòng tư vấn để bạn dán vào trình duyệt.')),
     );
   }
 
@@ -58,7 +56,6 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
         return 'Đã hoàn thành';
       case 'CANCELLED':
         return 'Đã hủy';
-      case 'BOOKED':
       default:
         return 'Đã đặt';
     }
@@ -70,9 +67,30 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
         return AppColors.success;
       case 'CANCELLED':
         return AppColors.alert;
-      case 'BOOKED':
       default:
         return AppColors.primary;
+    }
+  }
+
+  String _purposeLabel(AppointmentModel appointment) {
+    final code = appointment.clinicalPurposeCode ?? appointment.purpose;
+    switch (code) {
+      case 'INITIAL_ASSESSMENT':
+        return 'Phiên đánh giá ban đầu';
+      case 'BEHAVIORAL_EXPERIMENT':
+        return 'Thử nghiệm hành vi';
+      case 'BOOSTER_3M':
+        return 'Booster 3 tháng';
+      case 'BOOSTER_6M':
+        return 'Booster 6 tháng';
+      case 'BOOSTER_12M':
+        return 'Booster 12 tháng';
+      case 'CRISIS':
+        return 'Phiên hỗ trợ khẩn cấp';
+      case 'INTENSIVE_EXPOSURE':
+        return 'Can thiệp cường độ cao';
+      default:
+        return 'Phiên CBT';
     }
   }
 
@@ -87,7 +105,12 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (telehealth.status == TelehealthStatus.error && telehealth.myAppointments.isEmpty) {
-            return Center(child: Text('Lỗi: ${telehealth.errorMessage}', style: const TextStyle(color: AppColors.alert)));
+            return Center(
+              child: Text(
+                'Lỗi: ${telehealth.errorMessage}',
+                style: const TextStyle(color: AppColors.alert),
+              ),
+            );
           }
           if (telehealth.myAppointments.isEmpty) {
             return const Center(
@@ -116,6 +139,7 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
                 return _AppointmentCard(
                   appointment: appointment,
                   statusLabel: _statusLabel(appointment.status),
+                  purposeLabel: _purposeLabel(appointment),
                   statusColor: _statusColor(appointment.status),
                   onOpenMeetingLink: () => _openMeetingLink(appointment),
                 );
@@ -129,23 +153,25 @@ class _MyAppointmentsScreenState extends State<MyAppointmentsScreen> {
 }
 
 class _AppointmentCard extends StatelessWidget {
-  final AppointmentModel appointment;
-  final String statusLabel;
-  final Color statusColor;
-  final VoidCallback onOpenMeetingLink;
-
   const _AppointmentCard({
     required this.appointment,
     required this.statusLabel,
+    required this.purposeLabel,
     required this.statusColor,
     required this.onOpenMeetingLink,
   });
+
+  final AppointmentModel appointment;
+  final String statusLabel;
+  final String purposeLabel;
+  final Color statusColor;
+  final VoidCallback onOpenMeetingLink;
 
   @override
   Widget build(BuildContext context) {
     final startText = DateFormat('dd/MM/yyyy HH:mm').format(appointment.startAt);
     final endText = DateFormat('HH:mm').format(appointment.endAt);
-    final therapistName = appointment.therapistDisplayName ?? 'Bác sĩ phụ trách';
+    final therapistName = appointment.therapistDisplayName ?? 'Chuyên gia phụ trách';
     final hasMeetingLink = appointment.meetingLink != null && appointment.meetingLink!.isNotEmpty;
     final canJoin = hasMeetingLink && appointment.status == 'BOOKED';
 
@@ -153,7 +179,7 @@ class _AppointmentCard extends StatelessWidget {
       color: AppColors.surface,
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         side: BorderSide(color: AppColors.textSecondary.withOpacity(0.18)),
       ),
       child: Padding(
@@ -177,9 +203,19 @@ class _AppointmentCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(startText, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: AppColors.textPrimary)),
+                      Text(
+                        startText,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
                       const SizedBox(height: 2),
-                      Text('Kết thúc $endText • $therapistName', style: const TextStyle(color: AppColors.textSecondary)),
+                      Text(
+                        'Kết thúc $endText • $therapistName',
+                        style: const TextStyle(color: AppColors.textSecondary),
+                      ),
                     ],
                   ),
                 ),
@@ -189,18 +225,39 @@ class _AppointmentCard extends StatelessWidget {
                     color: statusColor.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(999),
                   ),
-                  child: Text(statusLabel, style: TextStyle(color: statusColor, fontWeight: FontWeight.w700)),
+                  child: Text(
+                    statusLabel,
+                    style: TextStyle(color: statusColor, fontWeight: FontWeight.w700),
+                  ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _Tag(
+                  label: purposeLabel,
+                  color: AppColors.primary,
+                  background: AppColors.primary.withOpacity(0.1),
+                ),
+                if (appointment.carePhaseCode != null && appointment.carePhaseCode!.isNotEmpty)
+                  _Tag(
+                    label: _carePhaseLabel(appointment.carePhaseCode!),
+                    color: AppColors.textPrimary,
+                    background: const Color(0xFFF2FBFA),
+                  ),
               ],
             ),
             const SizedBox(height: 14),
             Text(
               appointment.status == 'BOOKED'
-                  ? 'Đến giờ hẹn, bấm vào phòng tư vấn để mở link Meet của bác sĩ.'
+                  ? 'Đến giờ hẹn, bấm vào phòng tư vấn để mở link họp của chuyên gia.'
                   : appointment.status == 'COMPLETED'
                       ? 'Buổi tư vấn đã hoàn thành.'
                       : 'Lịch hẹn đã bị hủy.',
-              style: const TextStyle(color: AppColors.textSecondary),
+              style: const TextStyle(color: AppColors.textSecondary, height: 1.45),
             ),
             const SizedBox(height: 14),
             SizedBox(
@@ -212,6 +269,51 @@ class _AppointmentCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  String _carePhaseLabel(String code) {
+    switch (code) {
+      case 'MAINTENANCE':
+        return 'Duy trì';
+      case 'TAPERING_BIWEEKLY':
+        return 'Giãn cách 2 tuần / lần';
+      case 'TAPERING_3_TO_4_WEEKS':
+        return 'Giãn cách 3-4 tuần / lần';
+      case 'RED_FLAG_OVERRIDE':
+        return 'Ưu tiên an toàn';
+      default:
+        return 'Điều trị tiêu chuẩn';
+    }
+  }
+}
+
+class _Tag extends StatelessWidget {
+  const _Tag({
+    required this.label,
+    required this.color,
+    required this.background,
+  });
+
+  final String label;
+  final Color color;
+  final Color background;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w700,
         ),
       ),
     );

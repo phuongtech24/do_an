@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../../onboarding/presentation/utils/onboarding_route_resolver.dart';
 import '../providers/auth_provider.dart';
 
 class AuthGateScreen extends StatefulWidget {
@@ -22,7 +23,9 @@ class _AuthGateScreenState extends State<AuthGateScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     await auth.restoreSession();
     if (!mounted) return;
-    context.go(auth.isLoggedIn ? '/home' : '/auth');
+    final decision = await OnboardingRouteResolver.resolve(context);
+    if (!mounted) return;
+    context.go(decision.route);
   }
 
   @override

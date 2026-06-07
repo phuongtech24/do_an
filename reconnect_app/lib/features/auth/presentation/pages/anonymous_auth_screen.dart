@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../shared/widgets/mindhealth_scaffold.dart';
 import '../../../../theme/app_colors.dart';
+import '../../../onboarding/presentation/utils/onboarding_route_resolver.dart';
 import '../providers/auth_provider.dart';
 
 class AnonymousAuthScreen extends StatefulWidget {
@@ -128,7 +129,9 @@ class _PatientLoginFormState extends State<_PatientLoginForm> {
           backgroundColor: AppColors.success,
         ),
       );
-      context.go('/profile-setup');
+      final decision = await OnboardingRouteResolver.resolve(context);
+      if (!context.mounted) return;
+      context.go(decision.route);
       return;
     }
 
@@ -215,7 +218,9 @@ class _PatientLoginFormState extends State<_PatientLoginForm> {
                                 backgroundColor: AppColors.success,
                               ),
                             );
-                            context.go('/home');
+                            final decision = await OnboardingRouteResolver.resolve(context);
+                            if (!context.mounted) return;
+                            context.go(decision.route);
                             return;
                           }
 
@@ -376,21 +381,6 @@ class _AuthField extends StatelessWidget {
         hintText: hint,
         prefixIcon: Icon(icon),
         suffixIcon: suffixIcon,
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide(color: AppColors.primary.withOpacity(0.08)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.4),
-        ),
       ),
     );
   }

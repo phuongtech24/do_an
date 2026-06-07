@@ -1,5 +1,7 @@
 package com.reconnect.mindhealth.modules.ai.controller;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,6 +19,8 @@ import com.reconnect.mindhealth.modules.ai.service.IAiAssistantService;
 @RestController
 @RequestMapping("/api/ai")
 public class AiController {
+
+    private static final Logger log = LoggerFactory.getLogger(AiController.class);
 
     private final IAiAssistantService aiAssistantService;
 
@@ -42,7 +46,13 @@ public class AiController {
     @PostMapping("/cognitive-distortions")
     public ResponseEntity<ApiResponse<CognitiveDistortionResponseDto>> cognitiveDistortions(
             @Validated @RequestBody CognitiveDistortionRequestDto request) {
+        log.info("AI cognitive distortions request: situationChars={}, thoughtChars={}",
+                request.getSituation() != null ? request.getSituation().trim().length() : 0,
+                request.getAutomaticThought() != null ? request.getAutomaticThought().trim().length() : 0);
         CognitiveDistortionResponseDto result = aiAssistantService.detectCognitiveDistortions(request);
+        log.info("AI cognitive distortions response: suggestions={}, hasHint={}",
+                result.getDistortions() != null ? result.getDistortions().size() : 0,
+                result.getHint() != null && !result.getHint().isBlank());
         return ResponseEntity.ok(ApiResponse.success("OK", result));
     }
 }

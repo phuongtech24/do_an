@@ -23,13 +23,13 @@ class _GoalSettingScreenState extends State<GoalSettingScreen> {
     ),
     _GoalOption(
       goalType: 'PERFORMANCE',
-      title: 'Thể hiện tốt hơn trong công việc/học tập',
+      title: 'Thể hiện tốt hơn trong công việc / học tập',
       subtitle: 'Ưu tiên thuyết trình, phát biểu, trả lời trước đám đông và các tình huống áp lực hiệu suất.',
       icon: Icons.campaign_outlined,
     ),
     _GoalOption(
       goalType: 'GENERAL',
-      title: 'Tự tin trong mọi tình huống hàng ngày',
+      title: 'Tự tin trong mọi tình huống hằng ngày',
       subtitle: 'Kết hợp cả giao tiếp xã hội và tình huống hiệu suất để tạo lộ trình tổng quát.',
       icon: Icons.self_improvement_outlined,
     ),
@@ -134,8 +134,7 @@ class _GoalSettingScreenState extends State<GoalSettingScreen> {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: onboardingProvider.status != OnboardingStatus.loading &&
-                      (isLocked || _selectedGoalType != null)
+              onPressed: onboardingProvider.status != OnboardingStatus.loading && (isLocked || _selectedGoalType != null)
                   ? () async {
                       if (patientId.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -154,10 +153,7 @@ class _GoalSettingScreenState extends State<GoalSettingScreen> {
                           return;
                         }
 
-                        final nextRoute = onboardingProvider.nextOnboardingRoute == '/goal-setting'
-                            ? '/therapist-matching'
-                            : onboardingProvider.nextOnboardingRoute;
-                        context.go(nextRoute);
+                        context.go(onboardingProvider.nextOnboardingRoute);
                         return;
                       }
 

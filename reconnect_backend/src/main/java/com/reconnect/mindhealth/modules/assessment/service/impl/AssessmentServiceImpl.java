@@ -128,7 +128,10 @@ public class AssessmentServiceImpl implements IAssessmentService {
         patientProfileRepository.save(patient);
 
         if (type == LsasSubmissionType.BASELINE) {
-            fearLadderService.rebuildFromBaseline(patient, answers);
+            List<?> ladder = fearLadderService.rebuildFromBaseline(patient, answers);
+            log.info("LSAS baseline triggered fear ladder rebuild patientId={}, ladderItems={}",
+                    patient.getId(),
+                    ladder != null ? ladder.size() : 0);
         }
 
         log.info("LSAS submitted patientId={}, type={}, fearTotal={}, avoidanceTotal={}, total={}",

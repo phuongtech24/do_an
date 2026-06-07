@@ -71,6 +71,7 @@ class TelehealthRepository {
     required bool isAnonymous,
     required int durationMinutes,
     String purpose = 'CBT_SESSION',
+    String? carePhaseCode,
     String? token,
   }) async {
     try {
@@ -86,6 +87,7 @@ class TelehealthRepository {
           'isAnonymous': isAnonymous,
           'durationMinutes': durationMinutes,
           'purpose': purpose,
+          'carePhaseCode': carePhaseCode,
         }),
       );
 

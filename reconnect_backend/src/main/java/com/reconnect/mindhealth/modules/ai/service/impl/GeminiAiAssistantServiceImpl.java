@@ -137,6 +137,21 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
         if (shouldCallAi && aiProperties.getDistortions().isCallAiOnlyWhenSuspicious()) {
             shouldCallAi = !rule.isEmpty();
         }
+        log.info("Detect cognitive distortions start: aiEnabled={}, shouldCallAi={}, ruleMatches={}, situationSnippet={}, thoughtSnippet={}",
+                aiProperties.isEnabled(),
+                shouldCallAi,
+                rule.size(),
+                safeSnippet(request.getSituation(), 80),
+                safeSnippet(request.getAutomaticThought(), 120));
+
+        if (!shouldCallAi) {
+            String hint = rule.isEmpty()
+                    ? "Chưa thấy mẫu lỗi tư duy quá rõ từ rule hiện tại; bạn vẫn có thể tự chọn thủ công."
+                    : "Gợi ý từ rule-based — bạn có thể giữ hoặc chỉnh lại các nhãn này.";
+            log.info("Detect cognitive distortions fallback: source=RULE_ONLY, suggestions={}, hasHint={}",
+                    rule.size(), !hint.isBlank());
+            return new CognitiveDistortionResponseDto(rule, hint);
+        }
 
         if (!shouldCallAi) {
             return new CognitiveDistortionResponseDto(rule, rule.isEmpty() ? null : "Gợi ý (rule-based) — bạn có thể chỉnh lại.");
@@ -158,6 +173,20 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
         if (hint == null || hint.isBlank()) {
             hint = out.isEmpty() ? null : "Gợi ý — bạn chọn 1–3 lỗi tư duy phù hợp nhất.";
         }
+        if (hint == null || hint.isBlank()) {
+            hint = out.isEmpty()
+                    ? "AI chưa thấy đủ tín hiệu rõ; bạn vẫn có thể tự chọn thủ công."
+                    : "Gợi ý từ AI/rule — bạn chọn 1-3 lỗi tư duy phù hợp nhất.";
+        }
+        if (hint != null && (hint.contains("Ã") || hint.contains("á»"))) {
+            hint = out.isEmpty()
+                    ? "AI chưa thấy đủ tín hiệu rõ; bạn vẫn có thể tự chọn thủ công."
+                    : "Gợi ý từ AI/rule — bạn chọn 1-3 lỗi tư duy phù hợp nhất.";
+        }
+        log.info("Detect cognitive distortions completed: source={}, suggestions={}, hasHint={}",
+                raw == null || raw.isBlank() ? "RULE_FALLBACK_AFTER_AI" : "AI_OR_MERGED",
+                out.size(),
+                hint != null && !hint.isBlank());
         return new CognitiveDistortionResponseDto(out, hint);
     }
 

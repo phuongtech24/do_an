@@ -21,34 +21,30 @@ class _PsychoeducationScreenState extends State<PsychoeducationScreen> {
   final List<Map<String, String>> _pages = [
     {
       'title': 'Mô hình nhận thức',
-      'description':
-          'Không chỉ sự kiện làm bạn thay đổi cảm xúc, mà còn là cách bạn diễn giải sự kiện đó.',
+      'description': 'Không chỉ sự kiện làm bạn thay đổi cảm xúc, mà còn là cách bạn diễn giải sự kiện đó.',
       'guide':
           'CBT luyện bạn nhìn lại chuỗi: tình huống → suy nghĩ → cảm xúc → hành vi. Khi nhận ra mắt xích “suy nghĩ”, bạn có thêm lựa chọn để phản ứng khác đi.',
       'icon': '🧠',
     },
     {
       'title': 'Vòng lặp tiêu cực',
-      'description':
-          'Suy nghĩ tiêu cực có thể kéo cảm xúc đi xuống, khiến bạn thu mình lại và mệt hơn.',
+      'description': 'Suy nghĩ tiêu cực có thể kéo cảm xúc đi xuống, khiến bạn thu mình lại và mệt hơn.',
       'guide':
           'MindHealth không thay chuyên gia. App giúp bạn luyện kỹ năng nhỏ mỗi ngày để theo dõi cảm xúc và phá vòng lặp tiêu cực từng bước.',
       'icon': '🔄',
     },
     {
       'title': 'Nhật ký suy nghĩ',
-      'description':
-          'Bạn sẽ học cách nhận diện lỗi tư duy và viết phản hồi cân bằng hơn cho suy nghĩ tự động.',
+      'description': 'Bạn sẽ học cách nhận diện lỗi tư duy và viết phản hồi cân bằng hơn cho suy nghĩ tự động.',
       'guide':
           'Nhật ký suy nghĩ là nơi bạn thực hành bắt suy nghĩ tự động, kiểm tra bằng chứng và viết phản hồi thích nghi.',
       'icon': '💡',
     },
     {
       'title': 'Kích hoạt hành vi',
-      'description':
-          'Các nhiệm vụ nhỏ mỗi ngày giúp bạn bắt đầu hành động, ghi nhận nỗ lực và xây lại sự tự tin.',
+      'description': 'Các nhiệm vụ nhỏ mỗi ngày giúp bạn bắt đầu hành động, ghi nhận nỗ lực và xây lại sự tự tin.',
       'guide':
-          'Roadmap giao bài tập vừa sức. Mục tiêu là bắt đầu bằng hành động nhỏ, không phải làm hoàn hảo.',
+          'Lộ trình giao bài tập vừa sức. Mục tiêu là bắt đầu bằng hành động nhỏ, không phải làm hoàn hảo.',
       'icon': '🚀',
     },
   ];
@@ -78,10 +74,7 @@ class _PsychoeducationScreenState extends State<PsychoeducationScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const SizedBox(height: 36),
-                        Text(
-                          page['icon']!,
-                          style: const TextStyle(fontSize: 80),
-                        ),
+                        Text(page['icon']!, style: const TextStyle(fontSize: 80)),
                         const SizedBox(height: 40),
                         Text(
                           page['title']!,
@@ -124,9 +117,7 @@ class _PsychoeducationScreenState extends State<PsychoeducationScreen> {
                   width: _currentPage == index ? 24 : 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: _currentPage == index
-                        ? const Color(0xFF6C63FF)
-                        : Colors.grey[300],
+                    color: _currentPage == index ? const Color(0xFF6C63FF) : Colors.grey[300],
                     borderRadius: BorderRadius.circular(4),
                   ),
                 );
@@ -166,11 +157,7 @@ class _PsychoeducationScreenState extends State<PsychoeducationScreen> {
                         context.go(onboardingProvider.nextOnboardingRoute);
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Lỗi: ${onboardingProvider.errorMessage}',
-                            ),
-                          ),
+                          SnackBar(content: Text('Lỗi: ${onboardingProvider.errorMessage}')),
                         );
                       }
                     });
@@ -178,24 +165,15 @@ class _PsychoeducationScreenState extends State<PsychoeducationScreen> {
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF6C63FF),
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   child: (_currentPage == _pages.length - 1 && _isSubmitting)
                       ? const SizedBox(
                           height: 18,
                           width: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
-                      : Text(
-                          _currentPage == _pages.length - 1
-                              ? 'Bắt đầu ngay'
-                              : 'Tiếp theo',
-                        ),
+                      : Text(_currentPage == _pages.length - 1 ? 'Bắt đầu ngay' : 'Tiếp theo'),
                 ),
               ),
             ),

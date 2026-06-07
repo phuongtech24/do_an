@@ -35,7 +35,7 @@ class _TelehealthScreenState extends State<TelehealthScreen> {
   @override
   Widget build(BuildContext context) {
     return MindHealthScaffold(
-      title: 'Tư vấn CBT từ xa',
+      title: 'Đặt lịch CBT',
       body: Consumer<TelehealthProvider>(
         builder: (context, telehealth, _) {
           final assigned = telehealth.isAssigned;
@@ -51,10 +51,19 @@ class _TelehealthScreenState extends State<TelehealthScreen> {
             children: [
               _TelehealthHero(
                 assigned: assigned,
-                therapistName: therapistName,
                 message: bannerText,
               ),
               const SizedBox(height: 18),
+              if (assigned) ...[
+                _GuidanceCard(
+                  carePhaseLabel: telehealth.carePhaseLabel,
+                  frequencyLabel: telehealth.recommendedFrequencyLabel,
+                  summary: telehealth.recommendedPlanSummary,
+                  durationGuidance: telehealth.durationGuidance,
+                  allowOverride: telehealth.allowOverride,
+                ),
+                const SizedBox(height: 14),
+              ],
               if (!assigned) ...[
                 _ActionCard(
                   icon: Icons.people_alt_outlined,
@@ -69,7 +78,7 @@ class _TelehealthScreenState extends State<TelehealthScreen> {
                 icon: Icons.schedule_outlined,
                 title: 'Đặt lịch tư vấn',
                 subtitle: assigned
-                    ? 'Chọn khung giờ CBT còn trống để bắt đầu buổi tư vấn.'
+                    ? 'Chọn khung giờ CBT còn trống theo đúng giai đoạn điều trị hiện tại.'
                     : 'Bạn cần chọn chuyên gia trước khi xem lịch trống.',
                 accent: AppColors.primary,
                 onTap: assigned
@@ -79,7 +88,7 @@ class _TelehealthScreenState extends State<TelehealthScreen> {
               const SizedBox(height: 14),
               _ActionCard(
                 icon: Icons.history_rounded,
-                title: 'Lịch sử đặt lịch',
+                title: 'Lịch hẹn của tôi',
                 subtitle: 'Xem các buổi hẹn đã đặt và theo dõi lịch tư vấn sắp tới.',
                 accent: AppColors.secondary,
                 onTap: () => context.push('/telehealth/my-appointments'),
@@ -125,12 +134,10 @@ class _TelehealthScreenState extends State<TelehealthScreen> {
 class _TelehealthHero extends StatelessWidget {
   const _TelehealthHero({
     required this.assigned,
-    required this.therapistName,
     required this.message,
   });
 
   final bool assigned;
-  final String therapistName;
   final String message;
 
   @override
@@ -139,9 +146,7 @@ class _TelehealthHero extends StatelessWidget {
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: assigned
-              ? const [AppColors.primary, Color(0xFF159489)]
-              : const [Color(0xFFF2FBFA), Color(0xFFE5F5F3)],
+          colors: assigned ? const [AppColors.primary, Color(0xFF159489)] : const [Color(0xFFF2FBFA), Color(0xFFE5F5F3)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -197,6 +202,109 @@ class _TelehealthHero extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _GuidanceCard extends StatelessWidget {
+  const _GuidanceCard({
+    required this.carePhaseLabel,
+    required this.frequencyLabel,
+    required this.summary,
+    required this.durationGuidance,
+    required this.allowOverride,
+  });
+
+  final String carePhaseLabel;
+  final String frequencyLabel;
+  final String summary;
+  final String durationGuidance;
+  final bool allowOverride;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: AppColors.primary.withOpacity(0.12)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _InfoPill(label: carePhaseLabel, color: AppColors.primary, background: AppColors.primary.withOpacity(0.12)),
+              if (allowOverride)
+                const _InfoPill(label: 'Bác sĩ có thể ghi đè lịch', color: AppColors.alert, background: Color(0xFFFFE9E8)),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            frequencyLabel,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(summary, style: const TextStyle(color: AppColors.textSecondary, height: 1.45)),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF2FBFA),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Text(
+              'Gợi ý thời lượng: $durationGuidance',
+              style: const TextStyle(color: AppColors.textPrimary, height: 1.45),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoPill extends StatelessWidget {
+  const _InfoPill({
+    required this.label,
+    required this.color,
+    required this.background,
+  });
+
+  final String label;
+  final Color color;
+  final Color background;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }

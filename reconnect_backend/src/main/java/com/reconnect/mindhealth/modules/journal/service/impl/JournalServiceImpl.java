@@ -54,6 +54,12 @@ public class JournalServiceImpl implements IJournalService {
     @Override
     public JournalDto saveJournal(JournalDto dto, UUID loggedInPatientId) {
         log.info("Saving journal for patient: {} with type: {}", loggedInPatientId, dto.getJournalType());
+        if (dto.getJournalType() == JournalType.THOUGHT_RECORD) {
+            log.info("Thought record save requested patientId={}, selectedDistortions={}, hasAdaptiveResponse={}",
+                    loggedInPatientId,
+                    dto.getDistortions() != null ? dto.getDistortions().size() : 0,
+                    dto.getAdaptiveResponse() != null && !dto.getAdaptiveResponse().isBlank());
+        }
 
         PatientProfile patientProfile = patientProfileRepository.findById(loggedInPatientId)
                 .orElseThrow(() -> new EntityNotFoundException("Bệnh nhân không tồn tại..."));

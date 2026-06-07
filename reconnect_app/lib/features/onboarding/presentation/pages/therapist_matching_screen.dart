@@ -63,9 +63,7 @@ class _TherapistMatchingScreenState extends State<TherapistMatchingScreen> {
                 : onboarding.therapists.isEmpty
                     ? Center(
                         child: Text(
-                          onboarding.errorMessage.isNotEmpty
-                              ? onboarding.errorMessage
-                              : 'Hiện chưa có chuyên gia phù hợp để chọn.',
+                          onboarding.errorMessage.isNotEmpty ? onboarding.errorMessage : 'Hiện chưa có chuyên gia phù hợp để chọn.',
                           style: const TextStyle(color: AppColors.textSecondary),
                         ),
                       )
@@ -78,9 +76,7 @@ class _TherapistMatchingScreenState extends State<TherapistMatchingScreen> {
                           return _TherapistCard(
                             therapist: therapist,
                             selected: selected,
-                            onTap: therapist.caseloadFull
-                                ? null
-                                : () => setState(() => _selectedTherapistId = therapist.therapistId),
+                            onTap: therapist.caseloadFull ? null : () => setState(() => _selectedTherapistId = therapist.therapistId),
                             onViewDetail: () => _showTherapistDetail(therapist, token: token),
                           );
                         },
@@ -213,31 +209,17 @@ class _TherapistMatchingScreenState extends State<TherapistMatchingScreen> {
                                   runSpacing: 10,
                                   children: [
                                     _buildInfoChip('Quê quán', detail.hometown ?? 'Chưa cập nhật'),
-                                    _buildInfoChip(
-                                      'Năm sinh',
-                                      detail.birthYear?.toString() ?? 'Chưa cập nhật',
-                                    ),
+                                    _buildInfoChip('Năm sinh', detail.birthYear?.toString() ?? 'Chưa cập nhật'),
                                     _buildInfoChip(
                                       'Chứng chỉ',
-                                      detail.credentialCount > 0
-                                          ? 'Đã nộp ${detail.credentialCount} chứng chỉ'
-                                          : 'Chưa cập nhật',
+                                      detail.credentialCount > 0 ? 'Đã nộp ${detail.credentialCount} chứng chỉ' : 'Chưa cập nhật',
                                     ),
                                   ],
                                 ),
                                 const SizedBox(height: 18),
-                                _buildDetailBlock(
-                                  'Giọng nói',
-                                  detail.voiceDescription ?? 'Chưa cập nhật',
-                                ),
-                                _buildDetailBlock(
-                                  'Phong cách trị liệu',
-                                  detail.therapyStyle ?? 'Chưa cập nhật',
-                                ),
-                                _buildDetailBlock(
-                                  'Giới thiệu',
-                                  detail.bio ?? 'Chưa cập nhật',
-                                ),
+                                _buildDetailBlock('Giọng nói', detail.voiceDescription ?? 'Chưa cập nhật'),
+                                _buildDetailBlock('Phong cách trị liệu', detail.therapyStyle ?? 'Chưa cập nhật'),
+                                _buildDetailBlock('Giới thiệu', detail.bio ?? 'Chưa cập nhật'),
                                 const SizedBox(height: 8),
                                 Text(
                                   detail.caseloadFull
@@ -414,9 +396,7 @@ class _TherapistCard extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
-                            color: therapist.caseloadFull
-                                ? AppColors.alert.withOpacity(0.1)
-                                : AppColors.success.withOpacity(0.1),
+                            color: therapist.caseloadFull ? AppColors.alert.withOpacity(0.1) : AppColors.success.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(

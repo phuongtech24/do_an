@@ -6,6 +6,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +40,8 @@ import jakarta.persistence.EntityNotFoundException;
 @Service
 public class FearLadderService {
 
+    private static final Logger log = LoggerFactory.getLogger(FearLadderService.class);
+
     private final PatientProfileRepository patientProfileRepository;
     private final FearLadderItemRepository fearLadderItemRepository;
     private final BehavioralExperimentRepository behavioralExperimentRepository;
@@ -65,6 +69,9 @@ public class FearLadderService {
                         .thenComparing(LsasAnswer::getTotalScore)
                         .thenComparing(answer -> answer.getSituation().getSituationNumber()))
                 .toList();
+        long goalMatchedCount = scored.stream()
+                .filter(answer -> matchesGoal(answer.getSituation().getSituationGroup(), primaryGoalType))
+                .count();
 
         int order = 1;
         for (LsasAnswer answer : scored) {
@@ -82,6 +89,13 @@ public class FearLadderService {
             item.setStatus(FearLadderStatus.ACTIVE);
             fearLadderItemRepository.save(item);
         }
+        log.info(
+                "Fear ladder rebuilt patientId={}, primaryGoalType={}, totalLsasAnswers={}, scoredItems={}, goalMatchedItems={}",
+                patient.getId(),
+                primaryGoalType,
+                answers.size(),
+                scored.size(),
+                goalMatchedCount);
         return getFearLadder(patient.getId());
     }
 
@@ -106,6 +120,7 @@ public class FearLadderService {
     @Transactional
     public List<FearLadderItemDto> rerate(FearLadderRerateRequestDto request) {
         requirePatient(request.getPatientId());
+        int masteredCount = 0;
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new IllegalArgumentException("Thiếu danh sách tình huống cần re-rate.");
         }
@@ -123,8 +138,15 @@ public class FearLadderService {
             item.setCurrentTotalScore(total);
             item.setBucket(resolveBucket(total));
             item.setStatus(total <= 1 ? FearLadderStatus.MASTERED : FearLadderStatus.ACTIVE);
+            if (item.getStatus() == FearLadderStatus.MASTERED) {
+                masteredCount++;
+            }
             fearLadderItemRepository.save(item);
         }
+        log.info("Fear ladder rerated patientId={}, itemsUpdated={}, masteredItems={}",
+                request.getPatientId(),
+                request.getItems().size(),
+                masteredCount);
         return getFearLadder(request.getPatientId());
     }
 
@@ -155,7 +177,12 @@ public class FearLadderService {
         goal.setGoalType(dto.getGoalType());
         goal.setDescription(description.trim());
         goal.setStatus(PatientGoalStatus.ACTIVE);
-        return new PatientGoalDto(patientGoalRepository.save(goal));
+        PatientGoal savedGoal = patientGoalRepository.save(goal);
+        log.info("Patient goal saved patientId={}, goalType={}, description={}",
+                patient.getId(),
+                savedGoal.getGoalType(),
+                savedGoal.getDescription());
+        return new PatientGoalDto(savedGoal);
     }
 
     @Transactional(readOnly = true)
@@ -195,7 +222,13 @@ public class FearLadderService {
         experiment.setPredictionBelief(normalizePercent(request.getPredictionBelief()));
         experiment.setSafetyBehaviorsJson(request.getSafetyBehaviorsJson());
         experiment.setStatus(BehavioralExperimentStatus.IN_PROGRESS);
-        return new BehavioralExperimentDto(behavioralExperimentRepository.save(experiment));
+        BehavioralExperiment saved = behavioralExperimentRepository.save(experiment);
+        log.info("Behavioral experiment started patientId={}, experimentId={}, ladderItemId={}, predictionBelief={}",
+                saved.getPatientProfile() != null ? saved.getPatientProfile().getId() : null,
+                saved.getId(),
+                saved.getFearLadderItem() != null ? saved.getFearLadderItem().getId() : null,
+                saved.getPredictionBelief());
+        return new BehavioralExperimentDto(saved);
     }
 
     @Transactional
@@ -218,7 +251,16 @@ public class FearLadderService {
         ladderItem.setStatus(total <= 1 ? FearLadderStatus.MASTERED : FearLadderStatus.ACTIVE);
         fearLadderItemRepository.save(ladderItem);
 
-        return new BehavioralExperimentDto(behavioralExperimentRepository.save(experiment));
+        BehavioralExperiment saved = behavioralExperimentRepository.save(experiment);
+        log.info(
+                "Behavioral experiment completed patientId={}, experimentId={}, ladderItemId={}, postFear={}, postAvoidance={}, ladderStatus={}",
+                saved.getPatientProfile() != null ? saved.getPatientProfile().getId() : null,
+                saved.getId(),
+                ladderItem.getId(),
+                saved.getPostFearScore(),
+                saved.getPostAvoidanceScore(),
+                ladderItem.getStatus());
+        return new BehavioralExperimentDto(saved);
     }
 
     private BehavioralExperiment createNextExperiment(PatientProfile patient) {
@@ -237,7 +279,16 @@ public class FearLadderService {
         experiment.setStatus(BehavioralExperimentStatus.PLANNED);
         experiment.setAssignedAt(LocalDateTime.now());
         experiment.setDueDate(LocalDateTime.now().plusDays(2));
-        return behavioralExperimentRepository.save(experiment);
+        BehavioralExperiment saved = behavioralExperimentRepository.save(experiment);
+        log.info(
+                "Behavioral experiment assigned patientId={}, experimentId={}, ladderItemId={}, ladderOrder={}, bucket={}, currentTotalScore={}",
+                patient.getId(),
+                saved.getId(),
+                item.getId(),
+                item.getLadderOrder(),
+                item.getBucket(),
+                item.getCurrentTotalScore());
+        return saved;
     }
 
     private PatientProfile requirePatient(UUID patientId) {
