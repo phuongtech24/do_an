@@ -82,7 +82,7 @@ class _AuthHero extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Tiếp tục hành trình CBT của bạn hoặc bắt đầu trải nghiệm ẩn danh nhanh gọn và an toàn.',
+                  'Tiếp tục hành trình CBT của bạn hoặc bắt đầu trải nghiệm ẩn danh an toàn để làm LSAS trước.',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.92),
                     height: 1.45,
@@ -120,18 +120,16 @@ class _PatientLoginFormState extends State<_PatientLoginForm> {
   Future<void> _onStartAnonymous(BuildContext context, AuthProvider auth) async {
     final deviceId = 'web_user_${DateTime.now().millisecondsSinceEpoch}';
     final success = await auth.loginAnonymous(deviceId);
-
     if (!context.mounted) return;
+
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Đã bắt đầu trải nghiệm ẩn danh.'),
+          content: Text('Đã tạo phiên ẩn danh. Hãy chọn biệt danh và avatar trước khi làm LSAS.'),
           backgroundColor: AppColors.success,
         ),
       );
-      final decision = await OnboardingRouteResolver.resolve(context);
-      if (!context.mounted) return;
-      context.go(decision.route);
+      context.go('/profile-setup?mode=anonymous-demo');
       return;
     }
 
@@ -141,6 +139,41 @@ class _PatientLoginFormState extends State<_PatientLoginForm> {
         backgroundColor: AppColors.alert,
       ),
     );
+  }
+
+  Future<void> _onLogin(BuildContext context, AuthProvider auth) async {
+    if (!_formKey.currentState!.validate()) return;
+
+    await auth.login(
+      _nicknameController.text.trim(),
+      _passwordController.text.trim(),
+    );
+    if (!context.mounted) return;
+
+    if (auth.status == AuthStatus.success) {
+      final name = auth.patientProfile?.nickname.isNotEmpty == true
+          ? auth.patientProfile!.nickname
+          : (auth.loginResponse?.user.username ?? 'bạn');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Chào mừng $name quay trở lại!'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+      final decision = await OnboardingRouteResolver.resolve(context);
+      if (!context.mounted) return;
+      context.go(decision.route);
+      return;
+    }
+
+    if (auth.status == AuthStatus.error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Đăng nhập thất bại: ${auth.errorMessage}'),
+          backgroundColor: AppColors.alert,
+        ),
+      );
+    }
   }
 
   @override
@@ -191,7 +224,7 @@ class _PatientLoginFormState extends State<_PatientLoginForm> {
                 child: TextButton(
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Tính năng quên mật khẩu sẽ được kết nối ở batch sau.')),
+                      const SnackBar(content: Text('Tính năng quên mật khẩu sẽ được nối ở batch sau.')),
                     );
                   },
                   child: const Text('Quên mật khẩu?'),
@@ -201,38 +234,7 @@ class _PatientLoginFormState extends State<_PatientLoginForm> {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: isLoading
-                      ? null
-                      : () async {
-                          if (!_formKey.currentState!.validate()) return;
-                          await auth.login(
-                            _nicknameController.text.trim(),
-                            _passwordController.text.trim(),
-                          );
-
-                          if (!context.mounted) return;
-                          if (auth.status == AuthStatus.success) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Chào mừng ${auth.loginResponse?.user.username ?? "bạn"} quay trở lại!'),
-                                backgroundColor: AppColors.success,
-                              ),
-                            );
-                            final decision = await OnboardingRouteResolver.resolve(context);
-                            if (!context.mounted) return;
-                            context.go(decision.route);
-                            return;
-                          }
-
-                          if (auth.status == AuthStatus.error) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Đăng nhập thất bại: ${auth.errorMessage}'),
-                                backgroundColor: AppColors.alert,
-                              ),
-                            );
-                          }
-                        },
+                  onPressed: isLoading ? null : () => _onLogin(context, auth),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 17),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -304,7 +306,7 @@ class _PatientLoginFormState extends State<_PatientLoginForm> {
                         const SizedBox(width: 12),
                         const Expanded(
                           child: Text(
-                            'Trải nghiệm ẩn danh',
+                            'Bắt đầu ngay (Ẩn danh)',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
@@ -316,27 +318,27 @@ class _PatientLoginFormState extends State<_PatientLoginForm> {
                     ),
                     const SizedBox(height: 10),
                     const Text(
-                      'Vào nhanh app với nickname ẩn danh để làm LSAS, chọn mục tiêu và bắt đầu hành trình mà chưa cần khai tên thật.',
+                      'Bạn sẽ được chọn biệt danh và avatar hệ thống trước, sau đó làm bài đánh giá LSAS 24 câu để xem app có thực sự hiểu trải nghiệm lo âu xã hội của mình không.',
+                      style: TextStyle(color: AppColors.textSecondary, height: 1.45),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Sau bài LSAS, app mới mời bạn cung cấp thông tin thật tối thiểu để phục vụ an toàn y tế và mở khóa lộ trình CBT.',
                       style: TextStyle(color: AppColors.textSecondary, height: 1.45),
                     ),
                     const SizedBox(height: 14),
                     SizedBox(
                       width: double.infinity,
-                      child: TextButton.icon(
+                      child: FilledButton.tonalIcon(
                         onPressed: isLoading ? null : () => _onStartAnonymous(context, auth),
-                        icon: isLoading
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
-                              )
-                            : const Icon(Icons.bolt_rounded),
-                        label: const Text('Bắt đầu ngay (Ẩn danh)'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppColors.primary,
+                        icon: const Icon(Icons.privacy_tip_outlined, color: AppColors.primary),
+                        label: const Text(
+                          'Bắt đầu ngay (Ẩn danh)',
+                          style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.primary),
+                        ),
+                        style: FilledButton.styleFrom(
                           backgroundColor: AppColors.primary.withOpacity(0.08),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          padding: const EdgeInsets.symmetric(vertical: 15),
                         ),
                       ),
                     ),
@@ -374,8 +376,8 @@ class _AuthField extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextFormField(
       controller: controller,
-      validator: validator,
       obscureText: obscureText,
+      validator: validator,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,

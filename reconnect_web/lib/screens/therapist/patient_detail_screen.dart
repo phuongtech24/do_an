@@ -34,6 +34,15 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
   int get _currentRiskScore => (widget.patient['riskScore'] as num?)?.toInt() ?? 0;
   bool get _hasRedFlag => widget.patient['hasRedFlag'] == true || _currentRiskScore >= 70;
   bool get _isAnonymous => widget.patient['isAnonymous'] == true;
+  String get _realFullName => widget.patient['realFullName']?.toString() ?? 'Chưa cập nhật';
+  String get _phoneNumber => widget.patient['phoneNumber']?.toString() ?? 'Chưa cập nhật';
+  String get _emergencyContactPhone => widget.patient['emergencyContactPhone']?.toString() ?? 'Chưa cập nhật';
+  String get _dateOfBirth => widget.patient['dateOfBirth']?.toString() ?? 'Chưa cập nhật';
+  String get _gender => widget.patient['gender']?.toString() ?? 'Chưa cập nhật';
+  String get _educationLevel => widget.patient['educationLevel']?.toString() ?? 'Chưa cập nhật';
+  String get _occupation => widget.patient['occupation']?.toString() ?? 'Chưa cập nhật';
+  String get _relationshipStatus => widget.patient['relationshipStatus']?.toString() ?? 'Chưa cập nhật';
+  String get _medicalHistory => widget.patient['medicalHistory']?.toString() ?? 'Chưa cập nhật';
 
   @override
   void initState() {
@@ -140,6 +149,8 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                 children: [
                   _buildPatientHeader(statusColor),
                   const SizedBox(height: 24),
+                  _buildIdentityPanel(),
+                  const SizedBox(height: 24),
                   _buildRiskAnalyticsPanel(),
                   const SizedBox(height: 24),
                   _buildActionPanel(),
@@ -203,6 +214,61 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     );
   }
 
+
+  Widget _buildIdentityPanel() {
+    return _Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Hồ sơ y tế & danh tính kép',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primary),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _isAnonymous
+                ? 'Bệnh nhân đang bật chế độ ẩn danh. Khi trao đổi, nên ưu tiên gọi bằng biệt danh nếu người bệnh chưa sẵn sàng lộ diện.'
+                : 'Bệnh nhân đang cho phép hiển thị tên thật rõ hơn trong quá trình trị liệu.',
+            style: const TextStyle(color: AppColors.textSecondary, height: 1.45),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              _Badge(label: 'Biệt danh: $_patientName', color: AppColors.primary),
+              _Badge(label: 'Họ tên thật: $_realFullName', color: AppColors.secondary),
+              _Badge(label: 'SĐT: $_phoneNumber', color: AppColors.primary),
+              _Badge(label: 'Liên hệ khẩn cấp: $_emergencyContactPhone', color: AppColors.alert),
+              _Badge(label: 'Ngày sinh: $_dateOfBirth', color: AppColors.secondary),
+              _Badge(label: 'Giới tính: $_gender', color: AppColors.primary),
+              _Badge(label: 'Học vấn: $_educationLevel', color: AppColors.secondary),
+              _Badge(label: 'Nghề nghiệp: $_occupation', color: AppColors.primary),
+              _Badge(label: 'Quan hệ: $_relationshipStatus', color: AppColors.secondary),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Tiền sử bệnh lý / thuốc đang dùng', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text(_medicalHistory, style: const TextStyle(color: AppColors.textSecondary, height: 1.45)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
   Widget _buildRiskAnalyticsPanel() {
     final analytics = _riskAnalytics;
     return _Card(
@@ -372,7 +438,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                 Text('Can thiệp CBT', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 SizedBox(height: 8),
                 Text(
-                  'Giao thêm bài cá nhân hóa từ Kho CBT. Ghi chú lâm sàng và chat bảo mật để phase sau khi có API thật.',
+                  'Giao thêm bài cá nhân hóa từ Kho CBT. Ghi chú lâm sàng và chat bảo mật ở phase sau khi có API thật.',
                   style: TextStyle(color: AppColors.textSecondary),
                 ),
               ],

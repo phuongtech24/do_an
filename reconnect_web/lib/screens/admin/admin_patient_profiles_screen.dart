@@ -365,7 +365,7 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      '${it.email ?? ''} • risk: $risk • redFlag: $red',
+                                      '${it.realFullName ?? 'Chưa có tên thật'} • ${it.phoneNumber ?? 'Chưa có SĐT'}',
                                       style: const TextStyle(color: Colors.black54),
                                     ),
                                     const SizedBox(height: 4),
@@ -373,6 +373,18 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
                                       'Chuyên gia: ${it.therapistName ?? 'Chưa gán'}',
                                       style: const TextStyle(color: Colors.black54),
                                     ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Ẩn danh: ${it.anonymousModeEnabled ? 'Đang bật' : 'Đang tắt'} • risk: $risk • redFlag: $red',
+                                      style: const TextStyle(color: Colors.black54),
+                                    ),
+                                    if ((it.emergencyContactPhone ?? '').isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Liên hệ khẩn cấp: ${it.emergencyContactPhone}',
+                                        style: const TextStyle(color: Colors.black54),
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),

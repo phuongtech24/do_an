@@ -543,8 +543,11 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
 
     final auth = Provider.of<AuthProvider>(context);
     final user = auth.loginResponse?.user;
-    final displayName = user?.username ?? 'Cáo Nhỏ';
-    final isAnonymous = user?.isAnonymous ?? true;
+    final profile = auth.patientProfile;
+    final displayName = profile?.nickname.isNotEmpty == true
+        ? profile!.nickname
+        : (user?.username ?? 'Cáo Nhỏ');
+    final isAnonymous = profile?.anonymousModeEnabled ?? (user?.isAnonymous ?? true);
     final checkInLabel = _checkInLabel;
 
     return MindHealthScaffold(

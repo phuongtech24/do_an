@@ -43,7 +43,7 @@ class _MainTherapistScreenState extends State<MainTherapistScreen> {
         );
       }
     } catch (_) {
-      // Demo mode: không chặn màn chính nếu API status tạm lỗi.
+      // Demo mode: kh?ng ch?n m?n ch?nh n?u API status t?m l?i.
     }
   }
 
@@ -66,7 +66,7 @@ class _MainTherapistScreenState extends State<MainTherapistScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Text(
-                    'Hi, ${email ?? 'Chuyên gia'}',
+                    'Hi, ${email ?? 'Chuy?n gia'}',
                     textAlign: TextAlign.center,
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     maxLines: 2,
@@ -76,26 +76,26 @@ class _MainTherapistScreenState extends State<MainTherapistScreen> {
                 const Divider(height: 48),
                 _SidebarItem(
                   icon: Icons.psychology,
-                  label: 'Bảng điều trị',
+                  label: 'B?ng ?i?u tr?',
                   selected: _selectedIndex == 0,
                   onTap: () => setState(() => _selectedIndex = 0),
                 ),
                 _SidebarItem(
                   icon: Icons.calendar_month,
-                  label: 'Lịch hẹn & Tham vấn',
+                  label: 'L?ch h?n & Tham v?n',
                   selected: _selectedIndex == 1,
                   onTap: () => setState(() => _selectedIndex = 1),
                 ),
                 _SidebarItem(
                   icon: Icons.account_circle_outlined,
-                  label: 'Hồ sơ Chuyên gia',
+                  label: 'H? s? chuy?n gia',
                   selected: _selectedIndex == 2,
                   onTap: () => setState(() => _selectedIndex = 2),
                 ),
                 const Spacer(),
                 ListTile(
                   leading: const Icon(Icons.logout, color: Colors.grey),
-                  title: const Text('Đăng xuất'),
+                  title: const Text('??ng xu?t'),
                   onTap: () {
                     context.read<AuthProvider>().logout();
                     Navigator.pop(context);
@@ -170,7 +170,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
     if (token == null || token.isEmpty) {
       setState(() {
         _loading = false;
-        _error = 'Chưa đăng nhập hoặc token không hợp lệ.';
+        _error = 'Ch?a ??ng nh?p ho?c token kh?ng h?p l?.';
       });
       return;
     }
@@ -206,7 +206,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
           children: [
             const Expanded(
               child: Text(
-                'Bảng giám sát bệnh nhân',
+                'B?ng gi?m s?t b?nh nh?n',
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
               ),
             ),
@@ -223,7 +223,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
             ),
             const SizedBox(width: 12),
             IconButton(
-              tooltip: 'Tải lại',
+              tooltip: 'Táº£i láº¡i',
               onPressed: _loadPatients,
               icon: const Icon(Icons.refresh),
             ),
@@ -231,7 +231,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Theo dõi bệnh nhân được Admin gán, ưu tiên ca Red Flag và tiến độ can thiệp CBT.',
+          'Theo d?i b?nh nh?n ???c Admin g?n, ?u ti?n ca Red Flag v? ti?n ?? can thi?p CBT.',
           style: TextStyle(color: AppColors.textSecondary),
         ),
         const SizedBox(height: 32),
@@ -264,8 +264,8 @@ class _PatientDashboardState extends State<PatientDashboard> {
           padding: const EdgeInsets.all(32),
           child: Text(
             _redFlagOnly
-                ? 'Không có bệnh nhân Red Flag trong danh sách phụ trách.'
-                : 'Chưa có bệnh nhân nào được Admin gán cho tài khoản chuyên gia này.',
+                ? 'Kh?ng c? b?nh nh?n Red Flag trong danh s?ch ph? tr?ch.'
+                : 'Ch?a c? b?nh nh?n n?o ???c Admin g?n cho t?i kho?n chuy?n gia n?y.',
             textAlign: TextAlign.center,
             style: const TextStyle(color: AppColors.textSecondary, fontSize: 16),
           ),
@@ -302,7 +302,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 _StatusBadge(
-                  label: isRedAlert ? 'RED FLAG' : 'ĐANG THEO DÕI',
+                  label: isRedAlert ? 'RED FLAG' : '?ANG THEO D?I',
                   color: isRedAlert ? AppColors.alert : AppColors.success,
                 ),
                 Text(
@@ -318,7 +318,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
                     children: [
                       Icon(Icons.warning_amber_rounded, color: AppColors.alert, size: 16),
                       SizedBox(width: 4),
-                      Text('Cần ưu tiên can thiệp', style: TextStyle(color: AppColors.alert)),
+                      Text('C?n ?u ti?n can thi?p', style: TextStyle(color: AppColors.alert)),
                     ],
                   ),
               ],
@@ -334,12 +334,21 @@ class _PatientDashboardState extends State<PatientDashboard> {
                       'id': patient.patientId,
                       'name': displayName,
                       'status': isRedAlert ? 'Cảnh báo' : 'Ổn định',
-                      'isAnonymous': true,
+                      'isAnonymous': patient.anonymousModeEnabled,
                       'color': isRedAlert ? AppColors.alert : AppColors.primary,
                       'avatar': Icons.person,
                       'hasRedFlag': patient.isRedFlagActive,
                       'riskScore': patient.currentRiskScore,
                       'moodHistory': const [50, 50, 50, 50, 50, 50, 50],
+                      'realFullName': patient.realFullName,
+                      'phoneNumber': patient.phoneNumber,
+                      'emergencyContactPhone': patient.emergencyContactPhone,
+                      'dateOfBirth': patient.dateOfBirth,
+                      'gender': patient.gender,
+                      'educationLevel': patient.educationLevel,
+                      'occupation': patient.occupation,
+                      'relationshipStatus': patient.relationshipStatus,
+                      'medicalHistory': patient.medicalHistory,
                     },
                   ),
                 ),
@@ -349,7 +358,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
               backgroundColor: isRedAlert ? AppColors.alert : AppColors.primary,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Xem chi tiết & can thiệp'),
+            child: const Text('Xem chi ti?t & can thi?p'),
           ),
         );
       },

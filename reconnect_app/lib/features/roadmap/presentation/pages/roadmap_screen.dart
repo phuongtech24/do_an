@@ -1,3 +1,4 @@
+﻿import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -18,6 +19,37 @@ class RoadmapScreen extends StatefulWidget {
 class _RoadmapScreenState extends State<RoadmapScreen> {
   bool _loaded = false;
 
+  String _decodeSafetyBehaviorsToText(String? rawValue) {
+    if (rawValue == null || rawValue.trim().isEmpty) {
+      return '';
+    }
+
+    final trimmed = rawValue.trim();
+    try {
+      final decoded = jsonDecode(trimmed);
+      if (decoded is List) {
+        return decoded
+            .map((item) => item?.toString().trim() ?? '')
+            .where((item) => item.isNotEmpty)
+            .join('\n');
+      }
+      if (decoded is String) {
+        return decoded;
+      }
+    } catch (_) {
+      return trimmed;
+    }
+    return trimmed;
+  }
+
+  List<String> _parseSafetyBehaviorsInput(String rawValue) {
+    return rawValue
+        .split(RegExp(r'[\r\n,]+'))
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
@@ -33,7 +65,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
     }
 
     return MindHealthScaffold(
-      title: 'Lộ trình tiếp xúc',
+      title: 'Lá»™ trÃ¬nh tiáº¿p xÃºc',
       body: provider.status == RoadmapStatus.loading && provider.fearLadder.isEmpty
           ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
           : provider.status == RoadmapStatus.error && provider.fearLadder.isEmpty
@@ -61,7 +93,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                     ),
                     const SizedBox(height: 20),
                     const Text(
-                      'Thang sợ của bạn',
+                      'Thang sá»£ cá»§a báº¡n',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w900,
@@ -70,7 +102,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                     ),
                     const SizedBox(height: 6),
                     const Text(
-                      'Đi từ bước dễ hơn tới bước khó hơn. Mỗi lần hoàn thành tốt, hệ thống sẽ mở dần nấc tiếp theo.',
+                      'Äi tá»« bÆ°á»›c dá»… hÆ¡n tá»›i bÆ°á»›c khÃ³ hÆ¡n. Má»—i láº§n hoÃ n thÃ nh tá»‘t, há»‡ thá»‘ng sáº½ má»Ÿ dáº§n náº¥c tiáº¿p theo.',
                       style: TextStyle(color: AppColors.textSecondary, height: 1.45),
                     ),
                     const SizedBox(height: 14),
@@ -84,7 +116,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                           border: Border.all(color: AppColors.primary.withOpacity(0.08)),
                         ),
                         child: const Text(
-                          'Chưa có thang sợ. Hãy hoàn tất LSAS baseline và chọn mục tiêu trị liệu để hệ thống tạo lộ trình phù hợp.',
+                          'ChÆ°a cÃ³ thang sá»£. HÃ£y hoÃ n táº¥t LSAS baseline vÃ  chá»n má»¥c tiÃªu trá»‹ liá»‡u Ä‘á»ƒ há»‡ thá»‘ng táº¡o lá»™ trÃ¬nh phÃ¹ há»£p.',
                           style: TextStyle(color: AppColors.textSecondary, height: 1.45),
                         ),
                       )
@@ -102,7 +134,9 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
 
   Future<void> _showStartDialog(BuildContext context, BehavioralExperimentModel experiment, String? token) async {
     final predictionController = TextEditingController(text: experiment.prediction ?? '');
-    final safetyController = TextEditingController(text: experiment.safetyBehaviorsJson ?? '');
+    final safetyController = TextEditingController(
+      text: _decodeSafetyBehaviorsToText(experiment.safetyBehaviorsJson),
+    );
     double belief = (experiment.predictionBelief ?? 50).toDouble();
 
     final ok = await showDialog<bool>(
@@ -110,7 +144,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: const Text('Bắt đầu bài thực hành'),
+          title: const Text('Báº¯t Ä‘áº§u bÃ i thá»±c hÃ nh'),
           content: SizedBox(
             width: 440,
             child: Column(
@@ -118,14 +152,17 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
               children: [
                 TextField(
                   controller: predictionController,
-                  decoration: const InputDecoration(labelText: 'Dự đoán điều bạn lo sẽ xảy ra'),
+                  decoration: const InputDecoration(labelText: 'Dá»± Ä‘oÃ¡n Ä‘iá»u báº¡n lo sáº½ xáº£y ra'),
                   maxLines: 2,
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: safetyController,
-                  decoration: const InputDecoration(labelText: 'Hành vi an toàn bạn muốn giảm'),
-                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'Những hành vi an toàn bạn muốn giảm',
+                    helperText: 'Mỗi dòng là một hành vi riêng để hệ thống lưu thành danh sách.',
+                  ),
+                  maxLines: 4,
                 ),
                 const SizedBox(height: 12),
                 Text('Mức tin vào dự đoán: ${belief.round()}%'),
@@ -141,8 +178,8 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Hủy')),
-            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Lưu và bắt đầu')),
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Há»§y')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('LÆ°u vÃ  báº¯t Ä‘áº§u')),
           ],
         ),
       ),
@@ -150,16 +187,17 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
 
     if (ok != true) return;
     final provider = context.read<RoadmapProvider>();
+    final safetyBehaviors = _parseSafetyBehaviorsInput(safetyController.text);
     final success = await provider.startTodayExperiment(
       experimentId: experiment.id,
       prediction: predictionController.text.trim(),
       predictionBelief: belief.round(),
-      safetyBehaviorsJson: safetyController.text.trim(),
+      safetyBehaviors: safetyBehaviors,
       token: token,
     );
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(success ? 'Đã bắt đầu bài thực hành.' : provider.errorMessage)),
+      SnackBar(content: Text(success ? 'ÄÃ£ báº¯t Ä‘áº§u bÃ i thá»±c hÃ nh.' : provider.errorMessage)),
     );
   }
 
@@ -174,7 +212,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: const Text('Tổng kết bài thực hành'),
+          title: const Text('Tá»•ng káº¿t bÃ i thá»±c hÃ nh'),
           content: SizedBox(
             width: 440,
             child: Column(
@@ -182,17 +220,17 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
               children: [
                 TextField(
                   controller: executionController,
-                  decoration: const InputDecoration(labelText: 'Bạn đã làm như thế nào?'),
+                  decoration: const InputDecoration(labelText: 'Báº¡n Ä‘Ã£ lÃ m nhÆ° tháº¿ nÃ o?'),
                   maxLines: 2,
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: debriefController,
-                  decoration: const InputDecoration(labelText: 'Điều thực sự xảy ra / bài học rút ra'),
+                  decoration: const InputDecoration(labelText: 'Äiá»u thá»±c sá»± xáº£y ra / bÃ i há»c rÃºt ra'),
                   maxLines: 3,
                 ),
                 const SizedBox(height: 12),
-                Text('Mức sợ sau bài: ${fear.round()}'),
+                Text('Má»©c sá»£ sau bÃ i: ${fear.round()}'),
                 Slider(
                   value: fear,
                   min: 0,
@@ -201,7 +239,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                   activeColor: AppColors.primary,
                   onChanged: (value) => setState(() => fear = value),
                 ),
-                Text('Mức né tránh sau bài: ${avoidance.round()}'),
+                Text('Má»©c nÃ© trÃ¡nh sau bÃ i: ${avoidance.round()}'),
                 Slider(
                   value: avoidance,
                   min: 0,
@@ -214,8 +252,8 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Hủy')),
-            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Lưu tổng kết')),
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Há»§y')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('LÆ°u tá»•ng káº¿t')),
           ],
         ),
       ),
@@ -233,7 +271,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
     );
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(success ? 'Đã lưu tổng kết và cập nhật thang sợ.' : provider.errorMessage)),
+      SnackBar(content: Text(success ? 'ÄÃ£ lÆ°u tá»•ng káº¿t vÃ  cáº­p nháº­t thang sá»£.' : provider.errorMessage)),
     );
   }
 }
@@ -273,7 +311,7 @@ class _ScreenHero extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Thang tiếp xúc cá nhân',
+                  'Thang tiáº¿p xÃºc cÃ¡ nhÃ¢n',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 24,
@@ -282,7 +320,7 @@ class _ScreenHero extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Đã mở $unlockedItems/$totalItems nấc. Hãy đi từng bước nhỏ, đều và thực tế.',
+                  'ÄÃ£ má»Ÿ $unlockedItems/$totalItems náº¥c. HÃ£y Ä‘i tá»«ng bÆ°á»›c nhá», Ä‘á»u vÃ  thá»±c táº¿.',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.9),
                     height: 1.45,
@@ -366,14 +404,14 @@ class _ExperimentCard extends StatelessWidget {
       ),
       child: experiment == null
           ? const Text(
-              'Hôm nay chưa có bài thực hành hành vi. Khi có một nấc đang mở phù hợp, hệ thống sẽ gợi ý tại đây.',
+              'HÃ´m nay chÆ°a cÃ³ bÃ i thá»±c hÃ nh hÃ nh vi. Khi cÃ³ má»™t náº¥c Ä‘ang má»Ÿ phÃ¹ há»£p, há»‡ thá»‘ng sáº½ gá»£i Ã½ táº¡i Ä‘Ã¢y.',
               style: TextStyle(color: AppColors.textSecondary, height: 1.45),
             )
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Bài thực hành hôm nay',
+                  'BÃ i thá»±c hÃ nh hÃ´m nay',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w900,
@@ -401,9 +439,9 @@ class _ExperimentCard extends StatelessWidget {
                 const SizedBox(height: 14),
                 Row(
                   children: [
-                    FilledButton(onPressed: onStart, child: const Text('Bắt đầu')),
+                    FilledButton(onPressed: onStart, child: const Text('Báº¯t Ä‘áº§u')),
                     const SizedBox(width: 10),
-                    OutlinedButton(onPressed: onDebrief, child: const Text('Tổng kết')),
+                    OutlinedButton(onPressed: onDebrief, child: const Text('Tá»•ng káº¿t')),
                   ],
                 ),
               ],
@@ -533,10 +571,10 @@ class _FearLadderCard extends StatelessWidget {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        _metaChip('Mức sợ ${item.currentFearScore}/3'),
-                        _metaChip('Né tránh ${item.currentAvoidanceScore}/3'),
+                        _metaChip('Má»©c sá»£ ${item.currentFearScore}/3'),
+                        _metaChip('NÃ© trÃ¡nh ${item.currentAvoidanceScore}/3'),
                         _metaChip(_mapBucket(item.bucket)),
-                        if (item.goalMatch) _metaChip('Khớp mục tiêu'),
+                        if (item.goalMatch) _metaChip('Khá»›p má»¥c tiÃªu'),
                       ],
                     ),
                   ],
@@ -553,10 +591,10 @@ class _FearLadderCard extends StatelessWidget {
     final locked = !item.unlocked;
     final mastered = item.status == 'MASTERED';
     final label = locked
-        ? 'Đang khóa'
+        ? 'Äang khÃ³a'
         : mastered
-            ? 'Đã làm chủ'
-            : 'Đang mở';
+            ? 'ÄÃ£ lÃ m chá»§'
+            : 'Äang má»Ÿ';
     final color = locked
         ? AppColors.textSecondary
         : mastered
@@ -602,11 +640,11 @@ class _FearLadderCard extends StatelessWidget {
 String _mapBucket(String bucket) {
   switch (bucket.toUpperCase()) {
     case 'EASY':
-      return 'Mức dễ';
+      return 'Má»©c dá»…';
     case 'MEDIUM':
-      return 'Mức vừa';
+      return 'Má»©c vá»«a';
     case 'HARD':
-      return 'Mức khó';
+      return 'Má»©c khÃ³';
     default:
       return bucket;
   }
@@ -615,11 +653,11 @@ String _mapBucket(String bucket) {
 String _mapExperimentStatus(String status) {
   switch (status.toUpperCase()) {
     case 'PLANNED':
-      return 'Đã lên kế hoạch';
+      return 'ÄÃ£ lÃªn káº¿ hoáº¡ch';
     case 'STARTED':
-      return 'Đang thực hành';
+      return 'Äang thá»±c hÃ nh';
     case 'COMPLETED':
-      return 'Đã hoàn tất';
+      return 'ÄÃ£ hoÃ n táº¥t';
     default:
       return status;
   }

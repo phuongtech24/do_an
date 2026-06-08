@@ -53,11 +53,11 @@ public class TherapistAssignmentService {
             throw new SecurityException("Forbidden: ADMIN role required.");
         }
 
-        log.info("Admin assign therapist: adminId={}, patientId={}, therapistId={}", current.getId(), patientId, therapistId);
+        log.info("Admin assign therapist: adminId={}, patientId={}, therapistId={}",
+                current.getId(), patientId, therapistId);
 
         PatientProfile patient = patientProfileRepository.findById(patientId)
                 .orElseThrow(() -> new EntityNotFoundException("Patient not found: " + patientId));
-
         TherapistProfile therapist = therapistProfileRepository.findByIdForUpdate(therapistId);
         if (therapist == null) {
             throw new EntityNotFoundException("Therapist not found: " + therapistId);
@@ -67,10 +67,10 @@ public class TherapistAssignmentService {
         }
 
         long caseload = patientProfileRepository.countByTherapist_IdAndIsActiveTrueAndGraduatedAtIsNull(therapistId);
-
         if (patient.getTherapist() == null || !therapistId.equals(patient.getTherapist().getId())) {
             if (caseload >= CASELOAD_LIMIT) {
-                log.warn("Caseload full: therapistId={}, caseload={}, limit={}", therapistId, caseload, CASELOAD_LIMIT);
+                log.warn("Caseload full: therapistId={}, caseload={}, limit={}",
+                        therapistId, caseload, CASELOAD_LIMIT);
                 throw new IllegalStateException("Bác sĩ đã đủ 20 bệnh nhân đang theo dõi.");
             }
         }
@@ -107,7 +107,7 @@ public class TherapistAssignmentService {
 
     public PatientProfile selectTherapist(UUID patientId, UUID therapistId) {
         if (patientId == null || therapistId == null) {
-            throw new IllegalArgumentException("Thiáº¿u patientId hoáº·c therapistId.");
+            throw new IllegalArgumentException("Thiếu patientId hoặc therapistId.");
         }
 
         PatientProfile patient = patientProfileRepository.findById(patientId)
@@ -119,13 +119,13 @@ public class TherapistAssignmentService {
         if (therapist.getApprovalStatus() != ApprovalStatus.ACTIVE
                 || therapist.getUser() == null
                 || !Boolean.TRUE.equals(therapist.getUser().getIsActive())) {
-            throw new IllegalStateException("ChuyÃªn gia nÃ y hiá»‡n chÆ°a sáºµn sÃ ng nháº­n patient.");
+            throw new IllegalStateException("Chuyên gia này hiện chưa sẵn sàng nhận bệnh nhân.");
         }
 
         long caseload = patientProfileRepository.countByTherapist_IdAndIsActiveTrueAndGraduatedAtIsNull(therapistId);
         if ((patient.getTherapist() == null || !therapistId.equals(patient.getTherapist().getId()))
                 && caseload >= CASELOAD_LIMIT) {
-            throw new IllegalStateException("ChuyÃªn gia nÃ y Ä‘Ã£ Ä‘á»§ caseload. Vui lÃ²ng chá»n ngÆ°á»i khÃ¡c.");
+            throw new IllegalStateException("Chuyên gia này đã đủ caseload. Vui lòng chọn người khác.");
         }
 
         patient.setTherapist(therapist);
@@ -150,7 +150,8 @@ public class TherapistAssignmentService {
         therapistAccessGuardService.requireActiveTherapist();
 
         if (redFlagOnly) {
-            return patientProfileRepository.findByTherapist_User_IdAndIsRedFlagActiveTrueOrderByCurrentRiskScoreDesc(therapistUserId);
+            return patientProfileRepository.findByTherapist_User_IdAndIsRedFlagActiveTrueOrderByCurrentRiskScoreDesc(
+                    therapistUserId);
         }
         return patientProfileRepository.findByTherapist_User_IdOrderByCurrentRiskScoreDesc(therapistUserId);
     }

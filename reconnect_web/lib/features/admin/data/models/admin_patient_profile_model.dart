@@ -9,6 +9,17 @@ class AdminPatientProfileModel {
   final bool? active;
   final String? therapistId;
   final String? therapistName;
+  final String? avatarIcon;
+  final bool anonymousModeEnabled;
+  final String? realFullName;
+  final String? phoneNumber;
+  final String? emergencyContactPhone;
+  final String? dateOfBirth;
+  final String? gender;
+  final String? educationLevel;
+  final String? occupation;
+  final String? relationshipStatus;
+  final String? medicalHistory;
 
   AdminPatientProfileModel({
     required this.patientId,
@@ -21,6 +32,17 @@ class AdminPatientProfileModel {
     this.active,
     this.therapistId,
     this.therapistName,
+    this.avatarIcon,
+    this.anonymousModeEnabled = true,
+    this.realFullName,
+    this.phoneNumber,
+    this.emergencyContactPhone,
+    this.dateOfBirth,
+    this.gender,
+    this.educationLevel,
+    this.occupation,
+    this.relationshipStatus,
+    this.medicalHistory,
   });
 
   factory AdminPatientProfileModel.fromJson(Map<String, dynamic> json) {
@@ -35,6 +57,17 @@ class AdminPatientProfileModel {
       active: json['active'] is bool ? json['active'] as bool : null,
       therapistId: json['therapistId']?.toString(),
       therapistName: json['therapistName']?.toString(),
+      avatarIcon: json['avatarIcon']?.toString(),
+      anonymousModeEnabled: json['anonymousModeEnabled'] != false,
+      realFullName: json['realFullName']?.toString(),
+      phoneNumber: json['phoneNumber']?.toString(),
+      emergencyContactPhone: json['emergencyContactPhone']?.toString(),
+      dateOfBirth: json['dateOfBirth']?.toString(),
+      gender: json['gender']?.toString(),
+      educationLevel: json['educationLevel']?.toString(),
+      occupation: json['occupation']?.toString(),
+      relationshipStatus: json['relationshipStatus']?.toString(),
+      medicalHistory: json['medicalHistory']?.toString(),
     );
   }
 
@@ -42,6 +75,17 @@ class AdminPatientProfileModel {
     bool? active,
     String? therapistId,
     String? therapistName,
+    String? avatarIcon,
+    bool? anonymousModeEnabled,
+    String? realFullName,
+    String? phoneNumber,
+    String? emergencyContactPhone,
+    String? dateOfBirth,
+    String? gender,
+    String? educationLevel,
+    String? occupation,
+    String? relationshipStatus,
+    String? medicalHistory,
   }) {
     return AdminPatientProfileModel(
       patientId: patientId,
@@ -54,7 +98,17 @@ class AdminPatientProfileModel {
       active: active ?? this.active,
       therapistId: therapistId ?? this.therapistId,
       therapistName: therapistName ?? this.therapistName,
+      avatarIcon: avatarIcon ?? this.avatarIcon,
+      anonymousModeEnabled: anonymousModeEnabled ?? this.anonymousModeEnabled,
+      realFullName: realFullName ?? this.realFullName,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      emergencyContactPhone: emergencyContactPhone ?? this.emergencyContactPhone,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      gender: gender ?? this.gender,
+      educationLevel: educationLevel ?? this.educationLevel,
+      occupation: occupation ?? this.occupation,
+      relationshipStatus: relationshipStatus ?? this.relationshipStatus,
+      medicalHistory: medicalHistory ?? this.medicalHistory,
     );
   }
 }
-

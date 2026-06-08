@@ -91,10 +91,14 @@ class RoadmapRepository {
     String id, {
     required String prediction,
     required int predictionBelief,
-    required String safetyBehaviorsJson,
+    required List<String> safetyBehaviors,
     String? token,
   }) async {
     try {
+      final normalizedSafetyBehaviors = safetyBehaviors
+          .map((value) => value.trim())
+          .where((value) => value.isNotEmpty)
+          .toList();
       final response = await http.post(
         Uri.parse(ApiConstants.startBehavioralExperiment(id)),
         headers: {
@@ -104,7 +108,7 @@ class RoadmapRepository {
         body: jsonEncode({
           'prediction': prediction,
           'predictionBelief': predictionBelief,
-          'safetyBehaviorsJson': safetyBehaviorsJson,
+          'safetyBehaviorsJson': jsonEncode(normalizedSafetyBehaviors),
         }),
       );
       _handleHttpError(response, 'bắt đầu Behavioral Experiment');

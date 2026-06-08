@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../../../theme/app_colors.dart';
 import '../../../../shared/widgets/mindhealth_scaffold.dart';
+import '../../../../theme/app_colors.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -23,9 +23,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
     final user = auth.loginResponse?.user;
-    final nickname = user?.username?.trim().isNotEmpty == true ? user!.username!.trim() : 'Người dùng ReConnect';
+    final profile = auth.patientProfile;
+
+    final nickname = profile?.nickname.isNotEmpty == true
+        ? profile!.nickname
+        : (user?.username?.trim().isNotEmpty == true ? user!.username!.trim() : 'Người dùng ReConnect');
     final email = user?.email ?? 'Chưa cập nhật';
-    final roleLabel = user?.isAnonymous == true ? 'Tài khoản ẩn danh' : 'Tài khoản bệnh nhân';
+    final isAnonymousMode = profile?.anonymousModeEnabled ?? (user?.isAnonymous ?? true);
+    final roleLabel = isAnonymousMode ? 'Đang bật ẩn danh' : 'Đang hiển thị tên thật';
+    final realName = profile?.realFullName?.isNotEmpty == true ? profile!.realFullName! : 'Chưa cập nhật';
+    final phoneNumber = profile?.phoneNumber?.isNotEmpty == true ? profile!.phoneNumber! : 'Chưa cập nhật';
 
     return MindHealthScaffold(
       title: 'Cài đặt tài khoản',
@@ -42,9 +49,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 10),
           _InfoCard(
             icon: Icons.badge_outlined,
-            title: 'Thông tin hiển thị',
-            subtitle: 'Nickname: $nickname',
-            trailingText: user?.isAnonymous == true ? 'Ẩn danh' : 'Đã xác thực',
+            title: 'Danh tính hiển thị',
+            subtitle: 'Biệt danh: $nickname',
+            trailingText: isAnonymousMode ? 'Ẩn danh' : 'Tên thật',
+          ),
+          const SizedBox(height: 12),
+          _InfoCard(
+            icon: Icons.person_outline,
+            title: 'Hồ sơ thật',
+            subtitle: '$realName • $phoneNumber',
+            trailingText: profile?.medicalProfileCompleted == true ? 'Đã đủ hồ sơ' : 'Chưa đủ hồ sơ',
+          ),
+          const SizedBox(height: 12),
+          _SettingTile(
+            icon: Icons.privacy_tip_outlined,
+            title: 'Giữ chế độ ẩn danh',
+            subtitle: 'Khi bật, app sẽ ưu tiên biệt danh và avatar hệ thống ở các bề mặt giao tiếp với chuyên gia.',
+            value: isAnonymousMode,
+            onChanged: (value) async {
+              final ok = await auth.updatePatientProfile({'anonymousModeEnabled': value});
+              if (!mounted) return;
+              if (!ok) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(auth.errorMessage)),
+                );
+              }
+            },
           ),
           const SizedBox(height: 12),
           _SettingTile(
@@ -83,6 +113,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 18),
           const _SectionTitle('Hỗ trợ tài khoản'),
           const SizedBox(height: 10),
+          _ActionTile(
+            icon: Icons.edit_note_outlined,
+            title: 'Cập nhật hồ sơ y tế',
+            subtitle: 'Bổ sung họ tên thật, số điện thoại, học vấn, nghề nghiệp và tiền sử bệnh lý/thuốc đang dùng.',
+            accent: AppColors.primary,
+            onTap: () => context.go('/profile-setup?mode=medical-profile&after=/settings'),
+          ),
+          const SizedBox(height: 12),
           _ActionTile(
             icon: Icons.lock_reset_outlined,
             title: 'Khôi phục mật khẩu',

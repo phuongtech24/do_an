@@ -11,6 +11,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reconnect.mindhealth.modules.assessment.entity.LsasAnswer;
 import com.reconnect.mindhealth.modules.assessment.enums.LsasSituationGroup;
 import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
@@ -46,16 +49,19 @@ public class FearLadderService {
     private final FearLadderItemRepository fearLadderItemRepository;
     private final BehavioralExperimentRepository behavioralExperimentRepository;
     private final PatientGoalRepository patientGoalRepository;
+    private final ObjectMapper objectMapper;
 
     public FearLadderService(
             PatientProfileRepository patientProfileRepository,
             FearLadderItemRepository fearLadderItemRepository,
             BehavioralExperimentRepository behavioralExperimentRepository,
-            PatientGoalRepository patientGoalRepository) {
+            PatientGoalRepository patientGoalRepository,
+            ObjectMapper objectMapper) {
         this.patientProfileRepository = patientProfileRepository;
         this.fearLadderItemRepository = fearLadderItemRepository;
         this.behavioralExperimentRepository = behavioralExperimentRepository;
         this.patientGoalRepository = patientGoalRepository;
+        this.objectMapper = objectMapper;
     }
 
     @Transactional
@@ -218,16 +224,19 @@ public class FearLadderService {
     @Transactional
     public BehavioralExperimentDto startExperiment(UUID experimentId, BehavioralExperimentStartRequestDto request) {
         BehavioralExperiment experiment = requireExperiment(experimentId);
+        String normalizedSafetyBehaviorsJson = normalizeSafetyBehaviorsJson(request.getSafetyBehaviorsJson());
         experiment.setPrediction(request.getPrediction());
         experiment.setPredictionBelief(normalizePercent(request.getPredictionBelief()));
-        experiment.setSafetyBehaviorsJson(request.getSafetyBehaviorsJson());
+        experiment.setSafetyBehaviorsJson(normalizedSafetyBehaviorsJson);
         experiment.setStatus(BehavioralExperimentStatus.IN_PROGRESS);
         BehavioralExperiment saved = behavioralExperimentRepository.save(experiment);
-        log.info("Behavioral experiment started patientId={}, experimentId={}, ladderItemId={}, predictionBelief={}",
+        log.info(
+                "Behavioral experiment started patientId={}, experimentId={}, ladderItemId={}, predictionBelief={}, safetyBehaviorsJsonNormalized={}",
                 saved.getPatientProfile() != null ? saved.getPatientProfile().getId() : null,
                 saved.getId(),
                 saved.getFearLadderItem() != null ? saved.getFearLadderItem().getId() : null,
-                saved.getPredictionBelief());
+                saved.getPredictionBelief(),
+                normalizedSafetyBehaviorsJson);
         return new BehavioralExperimentDto(saved);
     }
 
@@ -352,5 +361,50 @@ public class FearLadderService {
             return 0;
         }
         return Math.max(0, Math.min(100, score));
+    }
+
+    private String normalizeSafetyBehaviorsJson(String rawValue) {
+        if (rawValue == null || rawValue.trim().isEmpty()) {
+            return "[]";
+        }
+
+        String trimmed = rawValue.trim();
+        try {
+            List<String> parsedList = objectMapper.readValue(trimmed, new TypeReference<List<String>>() {
+            });
+            return writeSafetyBehaviorList(sanitizeSafetyBehaviorList(parsedList));
+        } catch (Exception ignored) {
+        }
+
+        try {
+            String parsedString = objectMapper.readValue(trimmed, String.class);
+            List<String> normalized = tokenizeSafetyBehaviors(parsedString);
+            log.info("Behavioral experiment safety behaviors fallback from JSON string to JSON array.");
+            return writeSafetyBehaviorList(normalized);
+        } catch (Exception ignored) {
+        }
+
+        List<String> normalized = tokenizeSafetyBehaviors(trimmed);
+        log.info("Behavioral experiment safety behaviors fallback from plain text to JSON array.");
+        return writeSafetyBehaviorList(normalized);
+    }
+
+    private List<String> tokenizeSafetyBehaviors(String rawValue) {
+        return sanitizeSafetyBehaviorList(List.of(rawValue.split("[\\r\\n,]+")));
+    }
+
+    private List<String> sanitizeSafetyBehaviorList(List<String> values) {
+        return values.stream()
+                .map(value -> value == null ? "" : value.trim())
+                .filter(value -> !value.isEmpty())
+                .toList();
+    }
+
+    private String writeSafetyBehaviorList(List<String> values) {
+        try {
+            return objectMapper.writeValueAsString(values);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalArgumentException("Không thể chuẩn hóa danh sách hành vi an toàn.", exception);
+        }
     }
 }

@@ -88,6 +88,7 @@ class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
 
   Future<void> _submit(BuildContext context, String patientId, String? token) async {
     final provider = context.read<AssessmentProvider>();
+    final auth = context.read<AuthProvider>();
     final situations = provider.situations;
     final missing = situations.where((item) {
       return !_fearScores.containsKey(item.id) || !_avoidanceScores.containsKey(item.id);
@@ -119,6 +120,15 @@ class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
     if (!context.mounted) return;
     if (ok) {
       final submission = provider.lastSubmission;
+      final profileBeforeGate = auth.patientProfile;
+      final needsSafetyGate = profileBeforeGate?.safetyGateCompleted != true;
+      if (needsSafetyGate) {
+        final gateCompleted = await _showMedicalSafetyGateDialog(context);
+        if (!context.mounted || !gateCompleted) {
+          return;
+        }
+      }
+
       final score = submission?.totalScore ?? 0;
       final severityLabel = submission?.severityLabel.isNotEmpty == true
           ? submission!.severityLabel
@@ -157,10 +167,17 @@ class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
       );
       await context.read<OnboardingProvider>().loadOnboardingStatus(patientId, token: token);
       if (context.mounted) {
+        final refreshedProfile = context.read<AuthProvider>().patientProfile;
+        final onboardingRoute = context.read<OnboardingProvider>().nextOnboardingRoute;
+        final nextAfterMedical = isReassuranceFlow ? '/lsas-light-tips' : onboardingRoute;
+        if (refreshedProfile?.medicalProfileCompleted != true) {
+          context.go('/profile-setup?mode=medical-profile&after=${Uri.encodeComponent(nextAfterMedical)}');
+          return;
+        }
         if (isReassuranceFlow) {
           context.go('/lsas-light-tips');
         } else {
-          context.go(context.read<OnboardingProvider>().nextOnboardingRoute);
+          context.go(onboardingRoute);
         }
       }
     } else {
@@ -168,6 +185,109 @@ class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
         SnackBar(content: Text(provider.errorMessage)),
       );
     }
+  }
+
+  Future<bool> _showMedicalSafetyGateDialog(BuildContext context) async {
+    final auth = context.read<AuthProvider>();
+    final realNameController = TextEditingController(text: auth.patientProfile?.realFullName ?? '');
+    final phoneController = TextEditingController(text: auth.patientProfile?.phoneNumber ?? '');
+    final formKey = GlobalKey<FormState>();
+
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        bool submitting = false;
+        return StatefulBuilder(
+          builder: (context, setStateDialog) => AlertDialog(
+            title: const Text('Cam kết An toàn Y tế'),
+            content: SizedBox(
+              width: 420,
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Để mở khóa phân tích kết quả LSAS và lộ trình CBT phù hợp, bạn cần cung cấp tối thiểu họ tên thật và số điện thoại cá nhân. Thông tin này chỉ dành cho bác sĩ/admin để phục vụ an toàn y tế khi có tình huống khẩn cấp.',
+                      style: TextStyle(height: 1.5),
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: realNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Họ và tên thật',
+                        prefixIcon: Icon(Icons.person_outline),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Vui lòng nhập họ và tên thật.';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(
+                        labelText: 'Số điện thoại cá nhân',
+                        prefixIcon: Icon(Icons.phone_outlined),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Vui lòng nhập số điện thoại cá nhân.';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: submitting ? null : () => Navigator.pop(dialogContext, false),
+                child: const Text('Để sau'),
+              ),
+              ElevatedButton(
+                onPressed: submitting
+                    ? null
+                    : () async {
+                        if (!formKey.currentState!.validate()) return;
+                        setStateDialog(() => submitting = true);
+                        final ok = await auth.completePatientSafetyGate(
+                          realFullName: realNameController.text.trim(),
+                          phoneNumber: phoneController.text.trim(),
+                        );
+                        if (!dialogContext.mounted) return;
+                        if (ok) {
+                          Navigator.pop(dialogContext, true);
+                        } else {
+                          setStateDialog(() => submitting = false);
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                            SnackBar(content: Text(auth.errorMessage)),
+                          );
+                        }
+                      },
+                child: submitting
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text('Cam kết và xem kết quả'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    realNameController.dispose();
+    phoneController.dispose();
+    return result == true;
   }
 }
 

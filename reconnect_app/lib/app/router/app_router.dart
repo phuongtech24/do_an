@@ -54,7 +54,16 @@ class AppRouter {
       GoRoute(
         path: '/profile-setup',
         name: 'profile-setup',
-        builder: (context, state) => const ProfileSetupScreen(),
+        builder: (context, state) {
+          final modeParam = state.uri.queryParameters['mode'];
+          final redirectAfter = state.uri.queryParameters['after'];
+          final mode = switch (modeParam) {
+            'anonymous-demo' => ProfileSetupMode.anonymousDemo,
+            'medical-profile' => ProfileSetupMode.medicalProfile,
+            _ => ProfileSetupMode.standard,
+          };
+          return ProfileSetupScreen(mode: mode, redirectAfter: redirectAfter);
+        },
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => PatientShellScreen(shell: shell),

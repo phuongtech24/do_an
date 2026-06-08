@@ -73,7 +73,7 @@ public class PatientJourneyController {
     public ResponseEntity<ApiResponse<Object>> selectTherapist(@RequestBody TherapistSelectionRequestDto request) {
         try {
             therapistAssignmentService.selectTherapist(request.getPatientId(), request.getTherapistId());
-            return ResponseEntity.ok(ApiResponse.success("ÄÃ£ chá»n chuyÃªn gia phÃ¹ há»£p.", null));
+            return ResponseEntity.ok(ApiResponse.success("Đã chọn chuyên gia phù hợp.", null));
         } catch (Exception e) {
             return ResponseEntity.ok(ApiResponse.error(e.getMessage()));
         }

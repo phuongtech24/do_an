@@ -16,7 +16,7 @@ class TelehealthScreen extends StatefulWidget {
 
 class _TelehealthScreenState extends State<TelehealthScreen> {
   bool _loaded = false;
-  bool _shareRealIdentity = true;
+  bool _anonymousModeEnabled = true;
 
   @override
   void didChangeDependencies() {
@@ -26,6 +26,7 @@ class _TelehealthScreenState extends State<TelehealthScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final patientId = auth.loginResponse?.user.id ?? '';
     final token = auth.loginResponse?.token;
+    _anonymousModeEnabled = auth.patientProfile?.anonymousModeEnabled ?? true;
     if (patientId.isNotEmpty) {
       Provider.of<TelehealthProvider>(context, listen: false).loadAssignmentStatus(patientId, token: token);
     }
@@ -130,8 +131,13 @@ class _TelehealthScreenState extends State<TelehealthScreen> {
                 ),
                 const SizedBox(height: 14),
                 _IdentityCard(
-                  value: _shareRealIdentity,
-                  onChanged: (value) => setState(() => _shareRealIdentity = value),
+                  value: _anonymousModeEnabled,
+                  onChanged: (value) async {
+                    setState(() => _anonymousModeEnabled = value);
+                    await context.read<AuthProvider>().updatePatientProfile({
+                      'anonymousModeEnabled': value,
+                    });
+                  },
                 ),
               ],
               if (telehealth.status == TelehealthStatus.loading) ...[
@@ -488,8 +494,8 @@ class _IdentityCard extends StatelessWidget {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
+              children: [
+                const Text(
                   'Chế độ danh tính',
                   style: TextStyle(
                     fontSize: 17,
@@ -497,10 +503,12 @@ class _IdentityCard extends StatelessWidget {
                     color: AppColors.textPrimary,
                   ),
                 ),
-                SizedBox(height: 6),
+                const SizedBox(height: 6),
                 Text(
-                  'Bật để chia sẻ danh tính thật khi vào buổi CBT. Tắt nếu bạn muốn chuyên gia nhìn nickname ẩn danh.',
-                  style: TextStyle(
+                  value
+                      ? 'Hiện tại app đang ưu tiên biệt danh và avatar hệ thống khi giao tiếp với chuyên gia.'
+                      : 'Bạn cho phép hiển thị tên thật rõ hơn khi tham vấn. Bác sĩ vẫn luôn xem được hồ sơ y tế thật trong portal.',
+                  style: const TextStyle(
                     color: AppColors.textSecondary,
                     height: 1.45,
                   ),

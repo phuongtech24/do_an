@@ -55,7 +55,7 @@ class RoadmapProvider extends ChangeNotifier {
     required String experimentId,
     required String prediction,
     required int predictionBelief,
-    required String safetyBehaviorsJson,
+    required List<String> safetyBehaviors,
     String? token,
   }) async {
     _status = RoadmapStatus.loading;
@@ -67,7 +67,7 @@ class RoadmapProvider extends ChangeNotifier {
         experimentId,
         prediction: prediction,
         predictionBelief: predictionBelief,
-        safetyBehaviorsJson: safetyBehaviorsJson,
+        safetyBehaviors: safetyBehaviors,
         token: token,
       );
       _status = RoadmapStatus.success;

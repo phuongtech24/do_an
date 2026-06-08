@@ -31,6 +31,7 @@ class _BookingCalendarScreenState extends State<BookingCalendarScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final patientId = auth.loginResponse?.user.id ?? '';
     final token = auth.loginResponse?.token;
+    _isAnonymous = auth.patientProfile?.anonymousModeEnabled ?? true;
     final telehealth = Provider.of<TelehealthProvider>(context, listen: false);
 
     if (patientId.isNotEmpty) {
@@ -390,12 +391,17 @@ class _BookingCalendarScreenState extends State<BookingCalendarScreen> {
                         ),
                         child: SwitchListTile(
                           value: _isAnonymous,
-                          onChanged: (value) => setState(() => _isAnonymous = value),
-                          title: const Text('Giữ nickname / ẩn danh'),
+                          onChanged: (value) async {
+                            setState(() => _isAnonymous = value);
+                            await context.read<AuthProvider>().updatePatientProfile({
+                              'anonymousModeEnabled': value,
+                            });
+                          },
+                          title: const Text('Hiển thị biệt danh / ẩn danh'),
                           subtitle: Text(
                             _isAnonymous
-                                ? 'Chuyên gia sẽ ưu tiên nickname để bạn thấy an toàn và thoải mái hơn khi bắt đầu.'
-                                : 'Chuyên gia có thể nhìn thêm danh tính thật nếu hệ thống cho phép và bạn đồng ý chia sẻ.',
+                                ? 'Buổi hẹn này sẽ ưu tiên biệt danh và avatar hệ thống để bạn thấy an toàn hơn khi bắt đầu.'
+                                : 'Bạn cho phép hiển thị tên thật rõ hơn trong buổi tham vấn này.',
                           ),
                         ),
                       ),
