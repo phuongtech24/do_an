@@ -4,6 +4,8 @@ class OnboardingStatusModel {
   final bool hasGoals;
   final bool hasCompletedPsychoeducation;
   final bool hasSelectedTherapist;
+  final bool requiresTherapistSelection;
+  final String lsasClinicalRoute;
 
   OnboardingStatusModel({
     required this.patientId,
@@ -11,6 +13,8 @@ class OnboardingStatusModel {
     required this.hasGoals,
     required this.hasCompletedPsychoeducation,
     required this.hasSelectedTherapist,
+    required this.requiresTherapistSelection,
+    required this.lsasClinicalRoute,
   });
 
   factory OnboardingStatusModel.fromJson(Map<String, dynamic> json) {
@@ -20,19 +24,21 @@ class OnboardingStatusModel {
       hasGoals: json['hasGoals'] == true,
       hasCompletedPsychoeducation: json['hasCompletedPsychoeducation'] == true,
       hasSelectedTherapist: json['hasSelectedTherapist'] == true,
+      requiresTherapistSelection: json['requiresTherapistSelection'] == true,
+      lsasClinicalRoute: json['lsasClinicalRoute']?.toString() ?? 'REASSURANCE',
     );
   }
 
   bool get isComplete =>
       hasBaselineLsas &&
       hasGoals &&
-      hasSelectedTherapist &&
+      (!requiresTherapistSelection || hasSelectedTherapist) &&
       hasCompletedPsychoeducation;
 
   String get nextRoute {
     if (!hasBaselineLsas) return '/lsas';
     if (!hasGoals) return '/goal-setting';
-    if (!hasSelectedTherapist) return '/therapist-matching';
+    if (requiresTherapistSelection && !hasSelectedTherapist) return '/therapist-matching';
     if (!hasCompletedPsychoeducation) return '/psycho-education';
     return '/home';
   }

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/assessment/presentation/pages/phq9_screen.dart';
 import '../../features/assessment/presentation/pages/progress_screen.dart';
+import '../../features/assessment/presentation/pages/lsas_light_tips_screen.dart';
 import '../../features/auth/presentation/pages/anonymous_auth_screen.dart';
 import '../../features/auth/presentation/pages/auth_gate_screen.dart';
 import '../../features/auth/presentation/pages/profile_setup_screen.dart';
@@ -134,6 +135,11 @@ class AppRouter {
         path: '/progress',
         name: 'progress',
         builder: (context, state) => const ProgressScreen(),
+      ),
+      GoRoute(
+        path: '/lsas-light-tips',
+        name: 'lsas-light-tips',
+        builder: (context, state) => const LsasLightTipsScreen(),
       ),
       GoRoute(
         path: '/safety-support',

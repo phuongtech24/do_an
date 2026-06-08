@@ -59,7 +59,7 @@ class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
           ? const _LsasEmptyState(
               icon: Icons.lock_outline_rounded,
               title: 'Vui lòng đăng nhập',
-              message: 'Bạn cần đăng nhập để làm LSAS và tạo Fear Ladder cá nhân.',
+              message: 'Bạn cần đăng nhập để làm LSAS và nhận lộ trình phù hợp với mình.',
             )
           : provider.status == AssessmentStatus.loading && provider.situations.isEmpty
               ? const Center(child: CircularProgressIndicator())
@@ -118,13 +118,34 @@ class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
 
     if (!context.mounted) return;
     if (ok) {
-      final score = provider.lastSubmission?.totalScore ?? 0;
+      final submission = provider.lastSubmission;
+      final score = submission?.totalScore ?? 0;
+      final severityLabel = submission?.severityLabel.isNotEmpty == true
+          ? submission!.severityLabel
+          : _lsasSeverityLabel(score);
+      final clinicalRouteLabel = _clinicalRouteLabel(submission?.clinicalRoute ?? '');
+      final summaryMessage = submission?.summaryMessage.isNotEmpty == true
+          ? submission!.summaryMessage
+          : 'Tổng điểm LSAS của bạn là $score/144.';
+      final recommendedNextStep = submission?.recommendedNextStep.isNotEmpty == true
+          ? submission!.recommendedNextStep
+          : 'Hệ thống sẽ dùng kết quả này để tiếp tục lộ trình phù hợp cho bạn.';
+      final isReassuranceFlow = (submission?.clinicalRoute ?? '') == 'REASSURANCE';
+      final displaySummaryMessage = isReassuranceFlow
+          ? '$score/144: Bạn đang ở mức rất ít khả năng mắc lo âu xã hội. Ở mức này, bạn chưa cần đi vào lộ trình trị liệu chuyên sâu.'
+          : summaryMessage;
+      final displayNextStep = isReassuranceFlow
+          ? 'App sẽ giới thiệu một số mẹo giúp bạn tự chăm sóc tinh thần, thư giãn và theo dõi thêm khi cần.'
+          : recommendedNextStep;
       await showDialog<void>(
         context: context,
         builder: (_) => AlertDialog(
           title: const Text('Đã lưu LSAS'),
           content: Text(
-            'Tổng điểm LSAS của bạn là $score/144.\n\nBaseline và re-rating định kỳ đều dùng cùng 24 tình huống để so sánh tiến triển theo thời gian. Hệ thống sẽ dùng kết quả này để tạo Fear Ladder và bài thực hành hành vi theo mức dễ → khó.',
+            '$displaySummaryMessage\n\n'
+            'Mức độ: $severityLabel\n'
+            'Nhánh hiện tại: $clinicalRouteLabel\n\n'
+            '$displayNextStep',
           ),
           actions: [
             TextButton(
@@ -136,7 +157,11 @@ class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
       );
       await context.read<OnboardingProvider>().loadOnboardingStatus(patientId, token: token);
       if (context.mounted) {
-        context.go(context.read<OnboardingProvider>().nextOnboardingRoute);
+        if (isReassuranceFlow) {
+          context.go('/lsas-light-tips');
+        } else {
+          context.go(context.read<OnboardingProvider>().nextOnboardingRoute);
+        }
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -205,7 +230,7 @@ class _LsasFormState extends State<_LsasForm> {
           icon: Icons.psychology_alt_rounded,
           title: 'LSAS là gì?',
           message:
-              'Bạn sẽ chấm 24 tình huống xã hội theo 2 trục: mức sợ/hồi hộp và mức né tránh. Cả baseline và re-rating đều dùng đúng 24 tình huống này để đo tiến triển.',
+              'Bạn sẽ chấm 24 tình huống xã hội theo 2 trục: mức sợ/hồi hộp và mức né tránh. Bài đầu tiên và các lần đánh giá lại sau này đều dùng cùng 24 tình huống để theo dõi thay đổi.',
         ),
         const SizedBox(height: 12),
         LinearProgressIndicator(value: progress, minHeight: 8, borderRadius: BorderRadius.circular(999)),
@@ -259,7 +284,7 @@ class _LsasFormState extends State<_LsasForm> {
             icon: widget.loading
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.check_circle_outline_rounded),
-            label: const Text('Lưu LSAS và tạo Fear Ladder'),
+            label: const Text('Lưu kết quả LSAS'),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0F8B7F),
               foregroundColor: Colors.white,
@@ -725,7 +750,7 @@ class _LsasCooldownView extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           const Text(
-            'Bạn đã làm LSAS gần đây. Sau 14 ngày, hệ thống sẽ mở re-rating để cập nhật Fear Ladder. Bài định kỳ vẫn dùng đủ 24 tình huống giống baseline.',
+            'Bạn đã làm LSAS gần đây. Sau 14 ngày, hệ thống sẽ mở lần đánh giá tiếp theo để cập nhật tiến triển. Bài này vẫn dùng đủ 24 tình huống như lần đầu.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 16, color: Colors.black54, height: 1.5),
           ),
@@ -790,16 +815,19 @@ class _LsasHistorySection extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: Colors.grey.shade200),
                 ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
+              child: Row(
+                children: [
+                  CircleAvatar(
                       backgroundColor: _lsasColor(score).withOpacity(0.14),
                       child: Text('$score', style: TextStyle(color: _lsasColor(score), fontWeight: FontWeight.w900)),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        '${item.createDate ?? ''} • ${item.submissionType}\nFear ${item.fearTotal}/72 • Avoidance ${item.avoidanceTotal}/72',
+                        '${item.createDate ?? ''} • ${item.submissionType}\n'
+                        '${item.severityLabel.isNotEmpty ? item.severityLabel : _lsasSeverityLabel(score)}'
+                        '${item.clinicalRoute.isNotEmpty ? ' • ${_clinicalRouteLabel(item.clinicalRoute)}' : ''}\n'
+                        'Fear ${item.fearTotal}/72 • Avoidance ${item.avoidanceTotal}/72',
                         style: const TextStyle(height: 1.35),
                       ),
                     ),
@@ -904,8 +932,30 @@ class _LsasEmptyState extends StatelessWidget {
 }
 
 Color _lsasColor(int score) {
-  if (score >= 95) return Colors.red;
-  if (score >= 65) return Colors.deepOrange;
-  if (score >= 35) return Colors.orange;
+  if (score >= 90) return Colors.red;
+  if (score >= 60) return Colors.deepOrange;
+  if (score >= 30) return Colors.orange;
   return const Color(0xFF0F8B7F);
+}
+
+String _lsasSeverityLabel(int score) {
+  if (score >= 90) return 'Rất nặng và suy giảm chức năng';
+  if (score >= 60) return 'Lo âu xã hội rõ rệt';
+  if (score >= 30) return 'Lo âu nhẹ đến vừa';
+  return 'Rất ít khả năng mắc';
+}
+
+String _clinicalRouteLabel(String route) {
+  switch (route) {
+    case 'SELF_HELP':
+      return 'Tự trị liệu trên app (Self-help)';
+    case 'THERAPIST_TRACK_14_WEEKS':
+      return 'Lộ trình 14 tuần chuyên sâu cùng bác sĩ';
+    case 'URGENT_RED_FLAG':
+      return 'Cờ đỏ khẩn cấp';
+    case 'REASSURANCE':
+      return 'Thông điệp an tâm và theo dõi cơ bản';
+    default:
+      return 'Luồng điều trị phù hợp';
+  }
 }

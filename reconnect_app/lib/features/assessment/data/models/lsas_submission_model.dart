@@ -6,6 +6,13 @@ class LsasSubmissionModel {
   final int avoidanceTotal;
   final int totalScore;
   final String? createDate;
+  final String severityBand;
+  final String severityLabel;
+  final String clinicalRoute;
+  final String summaryMessage;
+  final String recommendedNextStep;
+  final bool clinicalAttention;
+  final bool redFlagTriggered;
 
   const LsasSubmissionModel({
     this.id,
@@ -15,6 +22,13 @@ class LsasSubmissionModel {
     required this.avoidanceTotal,
     required this.totalScore,
     this.createDate,
+    this.severityBand = '',
+    this.severityLabel = '',
+    this.clinicalRoute = '',
+    this.summaryMessage = '',
+    this.recommendedNextStep = '',
+    this.clinicalAttention = false,
+    this.redFlagTriggered = false,
   });
 
   factory LsasSubmissionModel.fromJson(Map<String, dynamic> json) {
@@ -26,6 +40,13 @@ class LsasSubmissionModel {
       avoidanceTotal: (json['avoidanceTotal'] as num?)?.toInt() ?? 0,
       totalScore: (json['totalScore'] as num?)?.toInt() ?? 0,
       createDate: json['createDate']?.toString(),
+      severityBand: json['severityBand']?.toString() ?? '',
+      severityLabel: json['severityLabel']?.toString() ?? '',
+      clinicalRoute: json['clinicalRoute']?.toString() ?? '',
+      summaryMessage: json['summaryMessage']?.toString() ?? '',
+      recommendedNextStep: json['recommendedNextStep']?.toString() ?? '',
+      clinicalAttention: json['clinicalAttention'] == true,
+      redFlagTriggered: json['redFlagTriggered'] == true,
     );
   }
 }

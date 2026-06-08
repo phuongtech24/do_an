@@ -153,6 +153,8 @@ public class ClinicalServiceImpl implements IClinicalService {
                 || (patientProfile.getGoalsJson() != null && !patientProfile.getGoalsJson().trim().isEmpty());
         boolean hasPsycho = Boolean.TRUE.equals(patientProfile.getPsychoeducationCompleted());
         boolean hasSelectedTherapist = patientProfile.getTherapist() != null;
+        String lsasClinicalRoute = resolveLsasClinicalRoute(patientProfile);
+        boolean requiresTherapistSelection = requiresTherapistSelection(patientProfile);
 
         OnboardingStatusDto dto = new OnboardingStatusDto();
         dto.setPatientId(patientId);
@@ -160,6 +162,29 @@ public class ClinicalServiceImpl implements IClinicalService {
         dto.setHasGoals(hasGoals);
         dto.setHasCompletedPsychoeducation(hasPsycho);
         dto.setHasSelectedTherapist(hasSelectedTherapist);
+        dto.setRequiresTherapistSelection(requiresTherapistSelection);
+        dto.setLsasClinicalRoute(lsasClinicalRoute);
+        log.info("Onboarding status patientId={}, hasBaselineLsas={}, hasGoals={}, hasCompletedPsychoeducation={}, hasSelectedTherapist={}, requiresTherapistSelection={}, lsasClinicalRoute={}",
+                patientId, hasBaseline, hasGoals, hasPsycho, hasSelectedTherapist, requiresTherapistSelection, lsasClinicalRoute);
         return dto;
+    }
+
+    private boolean requiresTherapistSelection(PatientProfile patientProfile) {
+        String route = resolveLsasClinicalRoute(patientProfile);
+        return "THERAPIST_TRACK_14_WEEKS".equals(route) || "URGENT_RED_FLAG".equals(route);
+    }
+
+    private String resolveLsasClinicalRoute(PatientProfile patientProfile) {
+        int score = patientProfile.getCurrentLsasScore() != null ? patientProfile.getCurrentLsasScore() : 0;
+        if (score >= 90) {
+            return "URGENT_RED_FLAG";
+        }
+        if (score >= 60) {
+            return "THERAPIST_TRACK_14_WEEKS";
+        }
+        if (score >= 30) {
+            return "SELF_HELP";
+        }
+        return "REASSURANCE";
     }
 }

@@ -8,6 +8,8 @@ public class OnboardingStatusDto {
     private boolean hasGoals;
     private boolean hasCompletedPsychoeducation;
     private boolean hasSelectedTherapist;
+    private boolean requiresTherapistSelection;
+    private String lsasClinicalRoute;
 
     public OnboardingStatusDto() {
     }
@@ -50,5 +52,21 @@ public class OnboardingStatusDto {
 
     public void setHasSelectedTherapist(boolean hasSelectedTherapist) {
         this.hasSelectedTherapist = hasSelectedTherapist;
+    }
+
+    public boolean isRequiresTherapistSelection() {
+        return requiresTherapistSelection;
+    }
+
+    public void setRequiresTherapistSelection(boolean requiresTherapistSelection) {
+        this.requiresTherapistSelection = requiresTherapistSelection;
+    }
+
+    public String getLsasClinicalRoute() {
+        return lsasClinicalRoute;
+    }
+
+    public void setLsasClinicalRoute(String lsasClinicalRoute) {
+        this.lsasClinicalRoute = lsasClinicalRoute;
     }
 }

@@ -78,6 +78,40 @@ public class ClinicalController {
                 return ResponseEntity.ok(ApiResponse.error("Không tìm thấy bệnh nhân."));
             }
 
+            if (patient.getTherapist() == null && isSelfHelpFlow(patient)) {
+                TherapistAssignmentStatusDto dto = new TherapistAssignmentStatusDto(
+                        patientId,
+                        false,
+                        null,
+                        null,
+                        "Bạn đang ở nhánh tự trị liệu. Giai đoạn này không bắt buộc ghép bác sĩ; app sẽ đóng vai trò hướng dẫn CBT số cho bạn.",
+                        "SELF_HELP",
+                        "Tự trị liệu có hướng dẫn",
+                        "Theo nhịp độ cá nhân hằng ngày",
+                        "Ưu tiên psychoeducation, Thought Record, Fear Ladder, Coping Cards, Daily Check-in và các công cụ tự ổn định cảm xúc.",
+                        "Không cần đặt lịch bác sĩ ở giai đoạn này. Hãy tập trung vào các bài tập CBT số hóa trên app.",
+                        null,
+                        false);
+                return ResponseEntity.ok(ApiResponse.success("OK", dto));
+            }
+
+            if (patient.getTherapist() == null && isReassuranceFlow(patient)) {
+                TherapistAssignmentStatusDto dto = new TherapistAssignmentStatusDto(
+                        patientId,
+                        false,
+                        null,
+                        null,
+                        "Kết quả LSAS hiện cho thấy bạn chưa nằm trong nhóm cần trị liệu chuyên sâu. App sẽ ưu tiên thông điệp an tâm và công cụ chăm sóc tinh thần cơ bản.",
+                        "REASSURANCE",
+                        "Theo dõi và an tâm",
+                        "Tự theo dõi linh hoạt",
+                        "Ưu tiên các mẹo chăm sóc tinh thần cơ bản, coping cards, check-in và theo dõi thay đổi theo thời gian.",
+                        "Chưa cần đặt lịch CBT với bác sĩ ở giai đoạn này.",
+                        null,
+                        false);
+                return ResponseEntity.ok(ApiResponse.success("OK", dto));
+            }
+
             if (patient.getTherapist() == null) {
                 TherapistAssignmentStatusDto dto = new TherapistAssignmentStatusDto(
                         patientId,
@@ -88,7 +122,7 @@ public class ClinicalController {
                         "STANDARD_WEEKLY",
                         "Điều trị tiêu chuẩn",
                         "1 lần / tuần",
-                        "Liệu trình chuẩn gồm 14 phiên CBT hàng tuần trước khi cân nhắc giãn cách.",
+                        "Liệu trình chuẩn gồm 14 phiên CBT hằng tuần trước khi cân nhắc giãn cách.",
                         "45-50 phút cho CBT chuẩn, 60 phút cho phiên khởi đầu, 90 phút cho thử nghiệm hành vi.",
                         "CBT_SESSION",
                         false);
@@ -135,6 +169,12 @@ public class ClinicalController {
     }
 
     private String deriveCarePhaseCode(PatientProfile patient) {
+        if (isSelfHelpFlow(patient)) {
+            return "SELF_HELP";
+        }
+        if (isReassuranceFlow(patient)) {
+            return "REASSURANCE";
+        }
         if (isOverrideAllowed(patient)) {
             return "RED_FLAG_OVERRIDE";
         }
@@ -152,6 +192,8 @@ public class ClinicalController {
 
     private String deriveCarePhaseLabel(PatientProfile patient) {
         return switch (deriveCarePhaseCode(patient)) {
+            case "SELF_HELP" -> "Tự trị liệu có hướng dẫn";
+            case "REASSURANCE" -> "Theo dõi và an tâm";
             case "RED_FLAG_OVERRIDE" -> "Ngoại lệ cờ đỏ";
             case "MAINTENANCE" -> "Duy trì sau điều trị";
             case "TAPERING_BIWEEKLY" -> "Giãn cách 2 tuần / lần";
@@ -162,6 +204,8 @@ public class ClinicalController {
 
     private String deriveFrequencyLabel(PatientProfile patient) {
         return switch (deriveCarePhaseCode(patient)) {
+            case "SELF_HELP" -> "Theo nhịp độ cá nhân hằng ngày";
+            case "REASSURANCE" -> "Tự theo dõi linh hoạt";
             case "RED_FLAG_OVERRIDE" -> "2-3 lần / tuần hoặc lịch dày hơn theo bác sĩ";
             case "MAINTENANCE" -> "Booster vào mốc 3 / 6 / 12 tháng";
             case "TAPERING_BIWEEKLY" -> "1 lần / 2 tuần";
@@ -172,26 +216,29 @@ public class ClinicalController {
 
     private String derivePlanSummary(PatientProfile patient) {
         return switch (deriveCarePhaseCode(patient)) {
+            case "SELF_HELP" -> "Nhóm LSAS 30-59 phù hợp với luồng tự trị liệu: psychoeducation, Thought Record, Fear Ladder, Coping Cards, Daily Check-in và thực hành tự chủ mỗi ngày.";
+            case "REASSURANCE" -> "Điểm LSAS hiện thấp; app ưu tiên theo dõi, trấn an và các mẹo chăm sóc tinh thần cơ bản thay vì ép vào phác đồ điều trị.";
             case "RED_FLAG_OVERRIDE" -> "Ưu tiên an toàn. Bác sĩ có thể tăng tần suất gặp hoặc xếp can thiệp cường độ cao khi cần.";
             case "MAINTENANCE" -> "Đã hoàn tất liệu trình chính và chuyển sang giai đoạn theo dõi tái phát bằng booster sessions.";
-            case "TAPERING_BIWEEKLY" -> "Triệu chứng đã cải thiện ở mức đủ để bắt đầu giãn lịch 2 tuần / lần.";
+            case "TAPERING_BIWEEKLY" -> "Triệu chứng đã cải thiện ở mức độ đủ để bắt đầu giãn lịch 2 tuần / lần.";
             case "TAPERING_3_TO_4_WEEKS" -> "Tiếp tục tự trị liệu nhiều hơn, bác sĩ theo dõi bằng nhịp hẹn 3-4 tuần / lần.";
-            default -> "Liệu trình CBT chuẩn gồm 14 phiên hàng tuần để đi qua giai đoạn khởi đầu và đi sâu.";
+            default -> "Liệu trình CBT chuẩn gồm 14 phiên hằng tuần để đi qua giai đoạn khởi đầu và đi sâu.";
         };
     }
 
     private String deriveDurationGuidance(PatientProfile patient) {
-        if ("RED_FLAG_OVERRIDE".equals(deriveCarePhaseCode(patient))) {
-            return "45-50 phút cho phiên hỗ trợ chuẩn; bác sĩ có thể nâng lên 90 phút hoặc sắp can thiệp dày hơn nếu nguy cơ cao.";
-        }
-        if ("MAINTENANCE".equals(deriveCarePhaseCode(patient))) {
-            return "Booster thường phù hợp 45-60 phút; dùng 90 phút khi cần làm Behavioral Experiment trực tiếp.";
-        }
-        return "45-50 phút cho CBT chuẩn, 60 phút cho phiên khởi đầu, 90 phút cho Behavioral Experiment.";
+        return switch (deriveCarePhaseCode(patient)) {
+            case "SELF_HELP" -> "Không cần lịch bác sĩ ở giai đoạn này. Hãy ưu tiên các bài tập CBT số hóa ngắn 3-15 phút mỗi ngày và Daily Check-in.";
+            case "REASSURANCE" -> "Chưa cần đặt lịch CBT. Bạn có thể theo dõi thêm, xem coping cards và quay lại đánh giá định kỳ khi cần.";
+            case "RED_FLAG_OVERRIDE" -> "45-50 phút cho phiên hỗ trợ chuẩn; bác sĩ có thể nâng lên 90 phút hoặc sắp can thiệp dày hơn nếu nguy cơ cao.";
+            case "MAINTENANCE" -> "Booster thường phù hợp 45-60 phút; dùng 90 phút khi cần làm Behavioral Experiment trực tiếp.";
+            default -> "45-50 phút cho CBT chuẩn, 60 phút cho phiên khởi đầu, 90 phút cho Behavioral Experiment.";
+        };
     }
 
     private String deriveRecommendedPurposeCode(PatientProfile patient) {
         return switch (deriveCarePhaseCode(patient)) {
+            case "SELF_HELP", "REASSURANCE" -> null;
             case "RED_FLAG_OVERRIDE" -> "CRISIS";
             case "MAINTENANCE" -> "BOOSTER_3M";
             default -> "CBT_SESSION";
@@ -201,5 +248,15 @@ public class ClinicalController {
     private boolean isOverrideAllowed(PatientProfile patient) {
         return Boolean.TRUE.equals(patient.getIsRedFlagActive())
                 || (patient.getCurrentRiskScore() != null && patient.getCurrentRiskScore() >= 70);
+    }
+
+    private boolean isSelfHelpFlow(PatientProfile patient) {
+        int score = patient.getCurrentLsasScore() != null ? patient.getCurrentLsasScore() : 0;
+        return score >= 30 && score <= 59;
+    }
+
+    private boolean isReassuranceFlow(PatientProfile patient) {
+        int score = patient.getCurrentLsasScore() != null ? patient.getCurrentLsasScore() : 0;
+        return score < 30;
     }
 }

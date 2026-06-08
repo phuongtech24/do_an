@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../../data/models/available_slot_model.dart';
 import '../../data/models/appointment_model.dart';
@@ -29,11 +29,13 @@ class TelehealthProvider extends ChangeNotifier {
   String get carePhaseLabel => _assignmentStatus?.carePhaseLabel ?? 'Điều trị tiêu chuẩn';
   String get recommendedFrequencyLabel => _assignmentStatus?.recommendedFrequencyLabel ?? '1 lần / tuần';
   String get recommendedPlanSummary =>
-      _assignmentStatus?.recommendedPlanSummary ?? 'Liệu trình chuẩn gồm 14 phiên CBT hàng tuần.';
-  String get durationGuidance =>
-      _assignmentStatus?.durationGuidance ?? '45-50 phút cho CBT chuẩn, 60 phút cho phiên khởi đầu, 90 phút cho Behavioral Experiment.';
+      _assignmentStatus?.recommendedPlanSummary ?? 'Liệu trình chuẩn gồm 14 phiên CBT hằng tuần.';
+  String get durationGuidance => _assignmentStatus?.durationGuidance ??
+      '45-50 phút cho CBT chuẩn, 60 phút cho phiên khởi đầu, 90 phút cho Behavioral Experiment.';
   String get recommendedPurposeCode => _assignmentStatus?.recommendedPurposeCode ?? 'CBT_SESSION';
   bool get allowOverride => _assignmentStatus?.allowOverride == true;
+  bool get isSelfHelpMode => carePhaseCode == 'SELF_HELP';
+  bool get isReassuranceMode => carePhaseCode == 'REASSURANCE';
 
   Future<void> loadAssignmentStatus(String patientId, {String? token}) async {
     _status = TelehealthStatus.loading;

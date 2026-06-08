@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import 'package:reconnect_app/features/assessment/presentation/providers/assessment_provider.dart';
 import 'package:reconnect_app/features/auth/presentation/providers/auth_provider.dart';
+import 'package:reconnect_app/features/onboarding/presentation/providers/onboarding_provider.dart';
 import 'package:reconnect_app/features/onboarding/presentation/utils/onboarding_route_resolver.dart';
 import 'package:reconnect_app/theme/app_colors.dart';
 import '../../../../shared/widgets/feature_card.dart';
@@ -77,6 +78,11 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     }
 
     setState(() => _isCheckingHomeGate = false);
+    final isReassuranceFlow =
+        context.read<OnboardingProvider>().onboardingStatus?.lsasClinicalRoute == 'REASSURANCE';
+    if (isReassuranceFlow) {
+      return;
+    }
     if (!_moodDialogShownThisSession) {
       _moodDialogShownThisSession = true;
       _showMoodCheckDialog();

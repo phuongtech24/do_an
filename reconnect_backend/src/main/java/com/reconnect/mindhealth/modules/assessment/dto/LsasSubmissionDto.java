@@ -18,7 +18,12 @@ public class LsasSubmissionDto {
     private LocalDateTime unlockedAt;
     private LocalDateTime nextEligibleAt;
     private String severityBand;
+    private String severityLabel;
+    private String clinicalRoute;
+    private String summaryMessage;
+    private String recommendedNextStep;
     private Boolean clinicalAttention;
+    private Boolean redFlagTriggered;
     private List<LsasAnswerRequestDto> answers = new ArrayList<>();
 
     public LsasSubmissionDto() {
@@ -53,8 +58,18 @@ public class LsasSubmissionDto {
     public void setNextEligibleAt(LocalDateTime nextEligibleAt) { this.nextEligibleAt = nextEligibleAt; }
     public String getSeverityBand() { return severityBand; }
     public void setSeverityBand(String severityBand) { this.severityBand = severityBand; }
+    public String getSeverityLabel() { return severityLabel; }
+    public void setSeverityLabel(String severityLabel) { this.severityLabel = severityLabel; }
+    public String getClinicalRoute() { return clinicalRoute; }
+    public void setClinicalRoute(String clinicalRoute) { this.clinicalRoute = clinicalRoute; }
+    public String getSummaryMessage() { return summaryMessage; }
+    public void setSummaryMessage(String summaryMessage) { this.summaryMessage = summaryMessage; }
+    public String getRecommendedNextStep() { return recommendedNextStep; }
+    public void setRecommendedNextStep(String recommendedNextStep) { this.recommendedNextStep = recommendedNextStep; }
     public Boolean getClinicalAttention() { return clinicalAttention; }
     public void setClinicalAttention(Boolean clinicalAttention) { this.clinicalAttention = clinicalAttention; }
+    public Boolean getRedFlagTriggered() { return redFlagTriggered; }
+    public void setRedFlagTriggered(Boolean redFlagTriggered) { this.redFlagTriggered = redFlagTriggered; }
     public List<LsasAnswerRequestDto> getAnswers() { return answers; }
     public void setAnswers(List<LsasAnswerRequestDto> answers) { this.answers = answers; }
 }
