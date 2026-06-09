@@ -1,17 +1,29 @@
 package com.reconnect.mindhealth.modules.auth.service.impl;
 
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reconnect.mindhealth.common.util.JwtUtil;
+import com.reconnect.mindhealth.modules.assessment.dto.LsasAnswerRequestDto;
+import com.reconnect.mindhealth.modules.assessment.dto.LsasSubmissionDto;
+import com.reconnect.mindhealth.modules.assessment.enums.LsasSubmissionType;
+import com.reconnect.mindhealth.modules.assessment.service.IAssessmentService;
+import com.reconnect.mindhealth.modules.auth.dto.GuestLinkAccountRequestDto;
 import com.reconnect.mindhealth.modules.auth.dto.LoginRequest;
+import com.reconnect.mindhealth.modules.auth.dto.LoginResponse;
+import com.reconnect.mindhealth.modules.auth.dto.RegisterRequest;
 import com.reconnect.mindhealth.modules.auth.dto.UserDto;
 import com.reconnect.mindhealth.modules.auth.entity.User;
 import com.reconnect.mindhealth.modules.auth.enums.Role;
 import com.reconnect.mindhealth.modules.auth.repository.UserRepository;
 import com.reconnect.mindhealth.modules.auth.service.IAuthService;
-import com.reconnect.mindhealth.modules.auth.dto.LoginResponse;
 import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
 import com.reconnect.mindhealth.modules.clinical.entity.TherapistProfile;
 import com.reconnect.mindhealth.modules.clinical.enums.ApprovalStatus;
@@ -19,14 +31,21 @@ import com.reconnect.mindhealth.modules.clinical.enums.Status;
 import com.reconnect.mindhealth.modules.clinical.enums.TaperingStage;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
 import com.reconnect.mindhealth.modules.clinical.repository.TherapistProfileRepository;
+import com.reconnect.mindhealth.modules.guest.entity.GuestProfile;
+import com.reconnect.mindhealth.modules.guest.repository.GuestProfileRepository;
 
 import jakarta.annotation.Resource;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
+
 @Transactional
 @Service
 public class AuthServiceImpl implements IAuthService {
+    private static final Logger log = LoggerFactory.getLogger(AuthServiceImpl.class);
+
     @Autowired
     private PasswordEncoder passwordEncoder;
+
     @Resource
     private UserRepository userRepository;
 
@@ -36,43 +55,74 @@ public class AuthServiceImpl implements IAuthService {
     @Resource
     private TherapistProfileRepository therapistProfileRepository;
 
+    @Resource
+    private GuestProfileRepository guestProfileRepository;
+
     @Autowired
     private JwtUtil jwtUtil;
+
+    @Autowired
+    private IAssessmentService assessmentService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
     @Override
-    public UserDto register(String email, String password, String role, Boolean isAnonymous, String nickname, String avatarIcon) {
-        if (userRepository.existsByEmail(email)) {
+    public UserDto register(RegisterRequest request) {
+        if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email đã được sử dụng!");
         }
 
-        // Validation cho trường hợp ẩn danh (theo đặc tả Module 1)
-        if (Boolean.TRUE.equals(isAnonymous)) {
-            if (nickname == null || nickname.trim().isEmpty()) {
-                throw new RuntimeException("Đăng ký ẩn danh bắt buộc phải có Nickname!");
+        if (Boolean.TRUE.equals(request.getIsAnonymous())) {
+            if (request.getNickname() == null || request.getNickname().trim().isEmpty()) {
+                throw new RuntimeException("Đăng ký ẩn danh bắt buộc phải có biệt danh!");
             }
-            if (avatarIcon == null || avatarIcon.trim().isEmpty()) {
-                throw new RuntimeException("Đăng ký ẩn danh bắt buộc phải có Avatar!");
+            if (request.getAvatarIcon() == null || request.getAvatarIcon().trim().isEmpty()) {
+                throw new RuntimeException("Đăng ký ẩn danh bắt buộc phải có avatar hệ thống!");
             }
         }
 
-        String encodedPassword = passwordEncoder.encode(password);
+        String encodedPassword = passwordEncoder.encode(request.getPassword());
         User entity = new User();
-        entity.setEmail(email);
-        entity.setUsername(nickname != null ? nickname : email.split("@")[0]);
+        entity.setEmail(request.getEmail());
+        entity.setUsername(request.getNickname() != null && !request.getNickname().trim().isEmpty()
+                ? request.getNickname().trim()
+                : request.getEmail().split("@")[0]);
         entity.setPasswordHash(encodedPassword);
-        entity.setRole(Role.valueOf(role));
-        entity.setIsAnonymous(isAnonymous != null ? isAnonymous : false);
-        
+        entity.setRole(Role.valueOf(request.getRole() != null ? request.getRole() : "PATIENT"));
+        entity.setIsAnonymous(request.getIsAnonymous() != null ? request.getIsAnonymous() : false);
+
         User savedUser = this.userRepository.save(entity);
 
-        // Nếu là bệnh nhân, tự động tạo Profile
         if (entity.getRole() == Role.PATIENT) {
             PatientProfile profile = new PatientProfile();
             profile.setUser(savedUser);
-            profile.setNickName(nickname);
-            profile.setAvatarIcon(avatarIcon);
-            profile.setStatus(Status.STABLE); // Mặc định
+            profile.setNickName(trimToNull(request.getNickname()));
+            profile.setAvatarIcon(trimToNull(request.getAvatarIcon()) != null ? request.getAvatarIcon().trim() : "avatar_boy_1");
+            profile.setAnonymousModeEnabled(request.getAnonymousModeEnabled() != null ? request.getAnonymousModeEnabled() : true);
+            profile.setRealFullName(trimToNull(request.getRealFullName()));
+            profile.setDateOfBirth(request.getDateOfBirth());
+            profile.setGender(trimToNull(request.getGender()));
+            profile.setPhoneNumber(trimToNull(request.getPhoneNumber()));
+            profile.setEmergencyContactPhone(trimToNull(request.getEmergencyContactPhone()));
+            profile.setEducationLevel(trimToNull(request.getEducationLevel()));
+            profile.setOccupation(trimToNull(request.getOccupation()));
+            profile.setRelationshipStatus(trimToNull(request.getRelationshipStatus()));
+            profile.setMedicalHistory(trimToNull(request.getMedicalHistory()));
+            profile.setStatus(Status.STABLE);
             profile.setTaperingStage(TaperingStage.NONE);
             profile.setCurrentRiskScore(0);
+            profile.setSafetyGateCompleted(profile.getRealFullName() != null && profile.getPhoneNumber() != null);
+            profile.setMedicalProfileCompleted(
+                    profile.getRealFullName() != null
+                            && profile.getDateOfBirth() != null
+                            && profile.getGender() != null
+                            && profile.getPhoneNumber() != null
+                            && profile.getEmergencyContactPhone() != null
+                            && profile.getEducationLevel() != null
+                            && profile.getOccupation() != null
+                            && profile.getRelationshipStatus() != null
+                            && profile.getMedicalHistory() != null);
             patientProfileRepository.save(profile);
         }
 
@@ -82,8 +132,8 @@ public class AuthServiceImpl implements IAuthService {
     @Override
     public LoginResponse login(LoginRequest request) {
         User entity = this.userRepository
-            .findByEmail(request.getEmail())
-            .orElseThrow(() -> new RuntimeException("Không tìm thấy email"));
+                .findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy email"));
 
         if (Boolean.FALSE.equals(entity.getIsActive())) {
             throw new RuntimeException("Tài khoản đã bị khóa");
@@ -92,7 +142,7 @@ public class AuthServiceImpl implements IAuthService {
         validatePasswordOrThrow(request, entity);
 
         if (entity.getRole() == Role.THERAPIST) {
-            enforceTherapistApproved(entity);
+            enforceTherapistNotRejected(entity);
         }
 
         String token = this.jwtUtil.generateToken(entity.getEmail());
@@ -104,7 +154,6 @@ public class AuthServiceImpl implements IAuthService {
             return;
         }
 
-        // Fallback cho mật khẩu dạng thô chưa mã hóa (dữ liệu seed từ CSV)
         if (request.getPassword() != null && request.getPassword().equals(user.getPasswordHash())) {
             return;
         }
@@ -112,55 +161,187 @@ public class AuthServiceImpl implements IAuthService {
         throw new RuntimeException("Sai mật khẩu");
     }
 
-    private void enforceTherapistApproved(User user) {
+    private void enforceTherapistNotRejected(User user) {
         TherapistProfile profile = therapistProfileRepository
-            .findById(user.getId())
-            .orElseThrow(() -> new RuntimeException("Tài khoản therapist chưa có profile"));
+                .findById(user.getId())
+                .orElseThrow(() -> new RuntimeException("Tài khoản therapist chưa có profile"));
 
         ApprovalStatus approvalStatus = profile.getApprovalStatus();
-        if (approvalStatus == ApprovalStatus.ACTIVE) {
-            return;
-        }
-
-        if (approvalStatus == ApprovalStatus.PENDING) {
-            throw new RuntimeException("Tài khoản therapist đang chờ duyệt. Vui lòng thử lại sau.");
-        }
-
         if (approvalStatus == ApprovalStatus.REJECTED) {
             throw new RuntimeException("Tài khoản therapist đã bị từ chối duyệt. Vui lòng liên hệ admin.");
         }
-
-        throw new RuntimeException("Tài khoản therapist chưa được duyệt.");
     }
 
     @Override
     public LoginResponse registerAnonymous(String deviceId) {
-        String guestEmail = deviceId + "@mindhealth.com";
-        User entity = this.userRepository.findByEmail(guestEmail)
-                                        .orElseGet(() -> {
-                                            User newGuest = new User();
-                                            newGuest.setEmail(guestEmail);
-                                            newGuest.setUsername("Guest_" + deviceId.substring(0, 4));
-                                            newGuest.setPasswordHash(passwordEncoder.encode(deviceId)); // Dùng chính deviceId làm pass ẩn
-                                            newGuest.setRole(Role.PATIENT);
-                                            newGuest.setIsAnonymous(true);
-                                            return userRepository.save(newGuest);
-                                        });
+        if (deviceId == null || deviceId.trim().isEmpty()) {
+            throw new RuntimeException("Thiếu mã thiết bị để tạo phiên ẩn danh.");
+        }
 
-        // Tự động tạo PatientProfile cho khách ẩn danh nếu chưa tồn tại
-        if (!patientProfileRepository.existsById(entity.getId())) {
-            PatientProfile profile = new PatientProfile();
-            profile.setUser(entity);
-            profile.setNickName(entity.getUsername());
-            profile.setAvatarIcon("avatar_boy_1"); // Default icon
-            profile.setStatus(Status.STABLE); // Mặc định
-            profile.setTaperingStage(TaperingStage.NONE);
-            profile.setCurrentRiskScore(0);
-            patientProfileRepository.save(profile);
+        String normalizedDeviceId = deviceId.trim();
+        String guestPrefix = normalizedDeviceId.length() >= 4
+                ? normalizedDeviceId.substring(0, 4)
+                : normalizedDeviceId;
+        String guestEmail = normalizedDeviceId + "@mindhealth.com";
+        final boolean[] createdUser = { false };
+        User entity = this.userRepository.findByEmail(guestEmail)
+                .orElseGet(() -> {
+                    User newGuest = new User();
+                    newGuest.setEmail(guestEmail);
+                    newGuest.setUsername("Guest_" + guestPrefix);
+                    newGuest.setPasswordHash(passwordEncoder.encode(normalizedDeviceId));
+                    newGuest.setRole(Role.GUEST);
+                    newGuest.setIsAnonymous(false);
+                    createdUser[0] = true;
+                    return userRepository.save(newGuest);
+                });
+
+        boolean guestProfileCreated = false;
+        if (!guestProfileRepository.existsById(entity.getId())) {
+            GuestProfile guestProfile = new GuestProfile();
+            guestProfile.setUser(entity);
+            guestProfile.setNickname(entity.getUsername());
+            guestProfile.setAvatarIcon("avatar_cat");
+            guestProfile.setLsasDemoCompleted(false);
+            guestProfileRepository.save(guestProfile);
+            guestProfileCreated = true;
         }
 
         String token = this.jwtUtil.generateToken(entity.getEmail());
+        log.info(
+                "Guest auth success deviceId={}, userId={}, createdUser={}, guestProfileCreated={}",
+                normalizedDeviceId,
+                entity.getId(),
+                createdUser[0],
+                guestProfileCreated);
         return new LoginResponse(new UserDto(entity), token);
     }
-    
+
+    @Override
+    public LoginResponse linkGuestAccount(GuestLinkAccountRequestDto request) {
+        if (request.getGuestId() == null) {
+            throw new IllegalArgumentException("Thiếu guestId.");
+        }
+        if (isBlank(request.getEmail())) {
+            throw new IllegalArgumentException("Email là bắt buộc.");
+        }
+        if (isBlank(request.getPassword()) || request.getPassword().trim().length() < 6) {
+            throw new IllegalArgumentException("Mật khẩu phải có ít nhất 6 ký tự.");
+        }
+        if (isBlank(request.getRealFullName())) {
+            throw new IllegalArgumentException("Họ tên thật là bắt buộc.");
+        }
+        if (isBlank(request.getPhoneNumber())) {
+            throw new IllegalArgumentException("Số điện thoại cá nhân là bắt buộc.");
+        }
+
+        User guestUser = userRepository.findById(request.getGuestId())
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy guest: " + request.getGuestId()));
+        if (guestUser.getRole() != Role.GUEST) {
+            throw new IllegalStateException("Tài khoản này không còn ở trạng thái guest.");
+        }
+
+        String normalizedEmail = request.getEmail().trim().toLowerCase();
+        userRepository.findByEmail(normalizedEmail)
+                .filter(existing -> !existing.getId().equals(guestUser.getId()))
+                .ifPresent(existing -> {
+                    throw new IllegalArgumentException("Email đã được sử dụng.");
+                });
+
+        GuestProfile guestProfile = guestProfileRepository.findById(guestUser.getId())
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy hồ sơ guest: " + guestUser.getId()));
+
+        String desiredNickname = firstNonBlank(guestProfile.getNickname(), guestUser.getUsername(), normalizedEmail);
+        String resolvedNickname = resolveAvailableNickname(desiredNickname, guestUser.getId());
+
+        guestUser.setEmail(normalizedEmail);
+        guestUser.setPasswordHash(passwordEncoder.encode(request.getPassword().trim()));
+        guestUser.setRole(Role.PATIENT);
+        guestUser.setIsAnonymous(false);
+        guestUser.setUsername(resolvedNickname);
+        userRepository.save(guestUser);
+
+        PatientProfile patientProfile = patientProfileRepository.findById(guestUser.getId())
+                .orElseGet(() -> {
+                    PatientProfile profile = new PatientProfile();
+                    profile.setUser(guestUser);
+                    return profile;
+                });
+        patientProfile.setNickName(resolvedNickname);
+        patientProfile.setAvatarIcon(firstNonBlank(guestProfile.getAvatarIcon(), "avatar_cat"));
+        patientProfile.setAnonymousModeEnabled(true);
+        patientProfile.setRealFullName(request.getRealFullName().trim());
+        patientProfile.setPhoneNumber(request.getPhoneNumber().trim());
+        patientProfile.setStatus(Status.STABLE);
+        patientProfile.setTaperingStage(TaperingStage.NONE);
+        patientProfile.setCurrentRiskScore(patientProfile.getCurrentRiskScore() != null ? patientProfile.getCurrentRiskScore() : 0);
+        patientProfile.setSafetyGateCompleted(true);
+        patientProfile.setMedicalProfileCompleted(false);
+        patientProfile.setLsasDemoCompleted(Boolean.TRUE.equals(guestProfile.getLsasDemoCompleted()));
+        patientProfileRepository.save(patientProfile);
+
+        migratePendingLsasIfPresent(patientProfile, guestProfile);
+        guestProfileRepository.delete(guestProfile);
+
+        String token = this.jwtUtil.generateToken(guestUser.getEmail());
+        log.info("Guest converted to patient guestId={}, patientId={}, email={}",
+                request.getGuestId(),
+                patientProfile.getId(),
+                normalizedEmail);
+        return new LoginResponse(new UserDto(guestUser), token);
+    }
+
+    private void migratePendingLsasIfPresent(PatientProfile patientProfile, GuestProfile guestProfile) {
+        if (guestProfile.getPendingLsasAnswersJson() == null || guestProfile.getPendingLsasAnswersJson().isBlank()) {
+            return;
+        }
+        try {
+            List<LsasAnswerRequestDto> answers = objectMapper.readValue(
+                    guestProfile.getPendingLsasAnswersJson(),
+                    new TypeReference<List<LsasAnswerRequestDto>>() {
+                    });
+            LsasSubmissionDto submissionDto = new LsasSubmissionDto();
+            submissionDto.setPatientId(patientProfile.getId());
+            submissionDto.setSubmissionType(LsasSubmissionType.BASELINE);
+            submissionDto.setAnswers(answers);
+            assessmentService.submitLsas(submissionDto);
+        } catch (Exception exception) {
+            throw new IllegalStateException("Không thể chuyển LSAS tạm của guest sang patient.", exception);
+        }
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (!isBlank(value)) {
+                return value.trim();
+            }
+        }
+        return null;
+    }
+
+    private String resolveAvailableNickname(String preferredNickname, java.util.UUID currentUserId) {
+        String baseNickname = firstNonBlank(preferredNickname, "khach_moi");
+        String candidate = baseNickname;
+        int suffix = 1;
+        while (true) {
+            PatientProfile existing = patientProfileRepository.findByNickName(candidate);
+            if (existing == null || existing.getId().equals(currentUserId)) {
+                return candidate;
+            }
+            suffix++;
+            candidate = baseNickname + "_" + suffix;
+        }
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
 }

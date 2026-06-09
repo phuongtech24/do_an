@@ -6,6 +6,7 @@ import java.util.UUID;
 import com.reconnect.mindhealth.common.dto.BaseObjectDto;
 import com.reconnect.mindhealth.modules.roadmap.entity.PatientQuest;
 import com.reconnect.mindhealth.modules.roadmap.enums.QuestCategory;
+import com.reconnect.mindhealth.modules.roadmap.enums.QuestSourceType;
 import com.reconnect.mindhealth.modules.roadmap.enums.QuestStatus;
 
 public class PatientQuestDto extends BaseObjectDto {
@@ -15,6 +16,7 @@ public class PatientQuestDto extends BaseObjectDto {
     private String title;
     private String description;
     private QuestCategory category;
+    private QuestSourceType sourceType;
     private QuestStatus status;
     private Integer masteryScore;
     private Integer pleasureScore;
@@ -51,6 +53,7 @@ public class PatientQuestDto extends BaseObjectDto {
             }
 
             this.status = entity.getStatus();
+            this.sourceType = entity.getSourceType();
             this.masteryScore = entity.getMasteryScore();
             this.pleasureScore = entity.getPleasureScore();
             this.proofImageUrl = entity.getProofImageUrl();
@@ -103,6 +106,14 @@ public class PatientQuestDto extends BaseObjectDto {
 
     public void setCategory(QuestCategory category) {
         this.category = category;
+    }
+
+    public QuestSourceType getSourceType() {
+        return sourceType;
+    }
+
+    public void setSourceType(QuestSourceType sourceType) {
+        this.sourceType = sourceType;
     }
 
     public QuestStatus getStatus() {

@@ -21,8 +21,9 @@ import com.reconnect.mindhealth.modules.clinical.enums.ApprovalStatus;
 import com.reconnect.mindhealth.modules.clinical.enums.Status;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
 import com.reconnect.mindhealth.modules.clinical.repository.TherapistProfileRepository;
-import com.reconnect.mindhealth.modules.assessment.entity.Phq9Question;
-import com.reconnect.mindhealth.modules.assessment.repository.Phq9QuestionRepository;
+import com.reconnect.mindhealth.modules.assessment.entity.LsasSituation;
+import com.reconnect.mindhealth.modules.assessment.enums.LsasSituationGroup;
+import com.reconnect.mindhealth.modules.assessment.repository.LsasSituationRepository;
 import com.reconnect.mindhealth.modules.journal.entity.Journal;
 import com.reconnect.mindhealth.modules.journal.enums.JournalType;
 import com.reconnect.mindhealth.modules.journal.repository.JournalRepository;
@@ -50,7 +51,7 @@ public class DatabaseSeeder implements CommandLineRunner {
     private TherapistProfileRepository therapistProfileRepository;
 
     @Autowired
-    private Phq9QuestionRepository phq9QuestionRepository;
+    private LsasSituationRepository lsasSituationRepository;
 
     @Autowired
     private JournalRepository journalRepository;
@@ -70,8 +71,8 @@ public class DatabaseSeeder implements CommandLineRunner {
     @Value("classpath:seed_data/therapist_profiles.csv")
     private Resource therapistProfilesCsv;
 
-    @Value("classpath:seed_data/phq9_questions.csv")
-    private Resource questionsCsv;
+    @Value("classpath:seed_data/lsas_situations.csv")
+    private Resource lsasSituationsCsv;
 
     @Value("classpath:seed_data/journals.csv")
     private Resource journalsCsv;
@@ -87,25 +88,37 @@ public class DatabaseSeeder implements CommandLineRunner {
         boolean needsSeed = userRepository.count() == 0
                 || therapistProfileRepository.count() == 0
                 || patientProfileRepository.count() == 0
-                || phq9QuestionRepository.count() == 0
+                || lsasSituationRepository.count() == 0
                 || questTemplateRepository.count() == 0;
 
         if (!needsSeed) {
+            safeSeed("lsas_situations", this::seedLsasSituations);
             System.out.println("====== RECONNECT: SKIP DATABASE SEEDING (DATA ALREADY EXISTS) ======");
             return;
         }
 
         System.out.println("====== RECONNECT: STARTING DATABASE SEEDING FROM CSV (AUTO) ======");
+
+        safeSeed("users", this::seedUsers);
+        safeSeed("therapist_profiles", this::seedTherapistProfiles);
+        safeSeed("patient_profiles", this::seedPatientProfiles);
+        safeSeed("lsas_situations", this::seedLsasSituations);
+        safeSeed("journals", this::seedJournals);
+        safeSeed("quest_templates", this::seedQuestTemplates);
+
+        System.out.println("====== RECONNECT: DATABASE SEEDING FINISHED (CHECK LOGS ABOVE) ======");
+    }
+
+    @FunctionalInterface
+    private interface SeedTask {
+        void run() throws Exception;
+    }
+
+    private void safeSeed(String name, SeedTask task) {
         try {
-            seedUsers();
-            seedTherapistProfiles();
-            seedPatientProfiles();
-            seedPhq9Questions();
-            seedJournals();
-            seedQuestTemplates();
-            System.out.println("====== RECONNECT: DATABASE SEEDING COMPLETED SUCCESSFULLY ======");
+            task.run();
         } catch (Exception e) {
-            System.err.println("====== RECONNECT: ERROR SEEDING DATABASE ======");
+            System.err.println("====== RECONNECT: SEED STEP FAILED: " + name + " ======");
             e.printStackTrace();
         }
     }
@@ -208,7 +221,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                 }
 
                 TherapistProfile profile = new TherapistProfile();
-                profile.setUser(user);
+                profile.setUser(userRepository.getReferenceById(user.getId()));
                 profile.setFullName(fullName.isBlank() ? user.getUsername() : fullName);
                 profile.setSpecialization(specialization.isBlank() ? null : specialization);
                 profile.setBio(bio.isBlank() ? null : bio);
@@ -220,8 +233,12 @@ public class DatabaseSeeder implements CommandLineRunner {
                 }
                 profile.setApprovalStatus(approvalStatus);
 
-                therapistProfileRepository.save(profile);
-                System.out.println("Successfully seeded therapist profile: " + profile.getFullName());
+                try {
+                    therapistProfileRepository.save(profile);
+                    System.out.println("Successfully seeded therapist profile: " + profile.getFullName());
+                } catch (Exception ex) {
+                    System.out.println("Skipping seed therapist profile (constraint): " + userId);
+                }
             }
         }
     }
@@ -254,46 +271,55 @@ public class DatabaseSeeder implements CommandLineRunner {
                 
                 if (user != null && !patientProfileRepository.existsById(user.getId())) {
                     PatientProfile profile = new PatientProfile();
-                    profile.setUser(user);
+                    profile.setUser(userRepository.getReferenceById(user.getId()));
                     profile.setNickName(nickname);
                     profile.setStatus(status);
                     profile.setAvatarIcon(avatarIcon);
                     profile.setIsRedFlagActive(isRedFlagActive);
-                    patientProfileRepository.save(profile);
-                    System.out.println("Successfully seeded patient profile: " + nickname);
+                    try {
+                        patientProfileRepository.save(profile);
+                        System.out.println("Successfully seeded patient profile: " + nickname);
+                    } catch (Exception ex) {
+                        System.out.println("Skipping seed patient profile (constraint): " + user.getId());
+                    }
                 }
             }
         }
     }
 
-    private void seedPhq9Questions() throws Exception {
-        if (!questionsCsv.exists()) {
-            System.out.println("PHQ-9 questions CSV file not found at classpath:seed_data/phq9_questions.csv");
+    private void seedLsasSituations() throws Exception {
+        if (!lsasSituationsCsv.exists()) {
+            System.out.println("LSAS situations CSV file not found at classpath:seed_data/lsas_situations.csv");
             return;
         }
-        if (phq9QuestionRepository.count() == 0) {
-            System.out.println("Seeding PHQ-9 questions into database...");
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(questionsCsv.getInputStream(), StandardCharsets.UTF_8))) {
-                String line;
-                boolean isHeader = true;
-                while ((line = reader.readLine()) != null) {
-                    if (isHeader) {
-                        isHeader = false;
-                        continue;
-                    }
-                    String[] data = line.split(",", 2);
-                    if (data.length < 2) continue;
-
-                    Integer questionNumber = Integer.parseInt(data[0].trim());
-                    String text = data[1].trim().replace("\"", "");
-
-                    Phq9Question question = new Phq9Question(questionNumber, text);
-                    phq9QuestionRepository.save(question);
-                    System.out.println("Successfully seeded PHQ-9 question " + questionNumber + ": " + text);
+        System.out.println("Upserting LSAS situations into database...");
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(lsasSituationsCsv.getInputStream(), StandardCharsets.UTF_8))) {
+            String line;
+            boolean isHeader = true;
+            while ((line = reader.readLine()) != null) {
+                if (isHeader) {
+                    isHeader = false;
+                    continue;
                 }
+                String[] data = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+                if (data.length < 3) continue;
+
+                Integer situationNumber = Integer.parseInt(data[0].trim());
+                LsasSituationGroup group = LsasSituationGroup.valueOf(data[1].trim());
+                String text = data[2].trim().replace("\"", "");
+
+                LsasSituation situation = lsasSituationRepository.findBySituationNumber(situationNumber);
+                if (situation == null) {
+                    situation = new LsasSituation();
+                    situation.setSituationNumber(situationNumber);
+                } else {
+                    situation.setSituationNumber(situationNumber);
+                }
+                situation.setSituationGroup(group);
+                situation.setText(text);
+                lsasSituationRepository.save(situation);
+                System.out.println("Successfully upserted LSAS situation " + situationNumber + ": " + text);
             }
-        } else {
-            System.out.println("PHQ-9 questions already exist in database.");
         }
     }
 

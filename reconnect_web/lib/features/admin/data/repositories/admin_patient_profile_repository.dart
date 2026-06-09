@@ -50,5 +50,25 @@ class AdminPatientProfileRepository {
       throw Exception(res.message.isNotEmpty ? res.message : 'Cannot assign therapist');
     }
   }
-}
 
+  Future<String> runDemoAction({
+    required String token,
+    required String patientId,
+    required String action,
+    Map<String, String>? query,
+  }) async {
+    final queryString = query == null || query.isEmpty
+        ? ''
+        : '?${query.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&')}';
+    final res = await _api.post<Map<String, dynamic>>(
+      '/admin/demo/patients/$patientId/$action$queryString',
+      headers: {'Authorization': 'Bearer $token'},
+      parseData: (raw) => raw as Map<String, dynamic>? ?? <String, dynamic>{},
+    );
+    if (res.status != 200) {
+      throw Exception(res.message.isNotEmpty ? res.message : 'Demo action failed');
+    }
+    final dataMessage = res.data?['message']?.toString();
+    return dataMessage?.isNotEmpty == true ? dataMessage! : res.message;
+  }
+}

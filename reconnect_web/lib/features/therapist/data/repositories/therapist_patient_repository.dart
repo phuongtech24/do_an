@@ -1,5 +1,8 @@
-import '../../../core/network/api_client.dart';
+import '../../../../core/network/api_client.dart';
+import '../../../admin/data/models/quest_template_model.dart';
 import '../models/therapist_patient_list_item.dart';
+import '../models/therapist_quest_progress_model.dart';
+import '../models/therapist_risk_analytics_model.dart';
 
 class TherapistPatientRepository {
   final ApiClient _api = ApiClient();
@@ -21,5 +24,65 @@ class TherapistPatientRepository {
     }
     return res.data!;
   }
-}
 
+  Future<List<QuestTemplateModel>> listQuestTemplates({required String token}) async {
+    final res = await _api.get<List<QuestTemplateModel>>(
+      '/therapist/quest-templates',
+      headers: {'Authorization': 'Bearer $token'},
+      parseData: (raw) {
+        final list = (raw as List<dynamic>? ?? []);
+        return list.map((e) => QuestTemplateModel.fromJson(e as Map<String, dynamic>)).toList();
+      },
+    );
+    if (res.status != 200 || res.data == null) {
+      throw Exception(res.message.isNotEmpty ? res.message : 'Cannot load CBT templates');
+    }
+    return res.data!;
+  }
+
+  Future<void> assignQuest({
+    required String token,
+    required String patientId,
+    required String questTemplateId,
+  }) async {
+    final res = await _api.post<Object?>(
+      '/therapist/patients/$patientId/quests',
+      headers: {'Authorization': 'Bearer $token'},
+      body: {'questTemplateId': questTemplateId},
+    );
+    if (res.status != 200) {
+      throw Exception(res.message.isNotEmpty ? res.message : 'Cannot assign CBT quest');
+    }
+  }
+
+  Future<TherapistQuestProgressModel> getQuestProgress({
+    required String token,
+    required String patientId,
+  }) async {
+    final res = await _api.get<TherapistQuestProgressModel>(
+      '/therapist/patients/$patientId/quest-progress',
+      headers: {'Authorization': 'Bearer $token'},
+      parseData: (raw) => raw is Map<String, dynamic> ? TherapistQuestProgressModel.fromJson(raw) : null,
+    );
+    if (res.status != 200 || res.data == null) {
+      throw Exception(res.message.isNotEmpty ? res.message : 'Cannot load CBT progress');
+    }
+    return res.data!;
+  }
+
+  Future<TherapistRiskAnalyticsModel> getRiskAnalytics({
+    required String token,
+    required String patientId,
+    int days = 14,
+  }) async {
+    final res = await _api.get<TherapistRiskAnalyticsModel>(
+      '/therapist/patients/$patientId/risk-analytics?days=$days',
+      headers: {'Authorization': 'Bearer $token'},
+      parseData: (raw) => raw is Map<String, dynamic> ? TherapistRiskAnalyticsModel.fromJson(raw) : null,
+    );
+    if (res.status != 200 || res.data == null) {
+      throw Exception(res.message.isNotEmpty ? res.message : 'Cannot load risk analytics');
+    }
+    return res.data!;
+  }
+}

@@ -34,8 +34,23 @@ public class TherapistProfile extends BaseObject {
     @Column(name = "bio", columnDefinition = "TEXT")
     private String bio;
 
+    @Column(name = "hometown")
+    private String hometown;
+
+    @Column(name = "birth_year")
+    private Integer birthYear;
+
+    @Column(name = "voice_description", columnDefinition = "TEXT")
+    private String voiceDescription;
+
+    @Column(name = "therapy_style", columnDefinition = "TEXT")
+    private String therapyStyle;
+
     @Column(name = "meeting_link")
     private String meetingLink;
+
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "approval_status")
@@ -80,6 +95,38 @@ public class TherapistProfile extends BaseObject {
         this.bio = bio;
     }
 
+    public String getHometown() {
+        return hometown;
+    }
+
+    public void setHometown(String hometown) {
+        this.hometown = hometown;
+    }
+
+    public Integer getBirthYear() {
+        return birthYear;
+    }
+
+    public void setBirthYear(Integer birthYear) {
+        this.birthYear = birthYear;
+    }
+
+    public String getVoiceDescription() {
+        return voiceDescription;
+    }
+
+    public void setVoiceDescription(String voiceDescription) {
+        this.voiceDescription = voiceDescription;
+    }
+
+    public String getTherapyStyle() {
+        return therapyStyle;
+    }
+
+    public void setTherapyStyle(String therapyStyle) {
+        this.therapyStyle = therapyStyle;
+    }
+
 
     public String getMeetingLink() {
         return meetingLink;
@@ -88,6 +135,14 @@ public class TherapistProfile extends BaseObject {
 
     public void setMeetingLink(String meetingLink) {
         this.meetingLink = meetingLink;
+    }
+
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
     }
 
     public ApprovalStatus getApprovalStatus() {

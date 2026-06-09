@@ -7,6 +7,7 @@ import 'dart:io';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/roadmap_provider.dart';
 import '../../data/models/verify_quest_proof_result.dart';
+import '../../../../shared/widgets/therapy_guide_card.dart';
 
 class QuestDetailScreen extends StatefulWidget {
   final String id;
@@ -37,9 +38,10 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
   VerifyQuestProofResult? _proofResult;
   String? _proofImageUrl;
 
-  bool get _requiresPhotoProof => widget.category == 'Hành vi' || widget.category == 'Xã hội';
+  bool get _requiresPhotoProof =>
+      widget.category == 'Hành vi' || widget.category == 'Xã hội';
 
-  Future<void> _captureAndVerifyProof() async {
+  Future<void> _pickAndVerifyProof(ImageSource source) async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final patientId = auth.loginResponse?.user.id ?? '';
     final token = auth.loginResponse?.token;
@@ -54,7 +56,7 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
 
     final picker = ImagePicker();
     final xfile = await picker.pickImage(
-      source: ImageSource.camera,
+      source: source,
       imageQuality: 75,
       maxWidth: 1280,
       maxHeight: 1280,
@@ -99,7 +101,12 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result.reason ?? 'Minh chứng chưa phù hợp, vui lòng chụp lại.')),
+        SnackBar(
+          content: Text(
+            result.reason ??
+                'Minh chứng chưa phù hợp, vui lòng chọn/chụp lại.',
+          ),
+        ),
       );
     }
   }
@@ -119,7 +126,11 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
         _isSubmitting = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng chụp và xác minh ảnh minh chứng trước khi hoàn thành nhiệm vụ.')),
+        const SnackBar(
+          content: Text(
+            'Vui lòng chụp hoặc chọn ảnh minh chứng trước khi hoàn thành nhiệm vụ.',
+          ),
+        ),
       );
       return;
     }
@@ -233,6 +244,19 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
               ),
             ),
             const SizedBox(height: 24),
+            TherapyGuideCard(
+              title: _requiresPhotoProof
+                  ? 'Làm trước để tạo năng lượng'
+                  : 'Bài nhận thức',
+              message: _requiresPhotoProof
+                  ? 'Trong CBT, mình bắt đầu bằng hành động nhỏ trước, rồi năng lượng và cảm giác làm chủ thường đến sau. Bạn không cần chờ có động lực mới làm.'
+                  : 'Bài nhận thức giúp bạn luyện quan sát suy nghĩ và phản ứng của mình một cách nhẹ nhàng, không phải viết cho hoàn hảo.',
+              icon: _requiresPhotoProof
+                  ? Icons.directions_walk_outlined
+                  : Icons.psychology_outlined,
+              accentColor: widget.categoryColor,
+              dismissible: true,
+            ),
             
             // Submission Area
             const Text(
@@ -242,41 +266,80 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
             const SizedBox(height: 12),
             
             if (widget.category == 'Hành vi' || widget.category == 'Xã hội') ...[
-              // Camera Placeholder cho Hành vi / Xã hội
-              GestureDetector(
-                onTap: _isVerifyingProof ? null : _captureAndVerifyProof,
-                child: Container(
-                  height: 150,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey[300]!, style: BorderStyle.solid),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (_isVerifyingProof)
-                        const CircularProgressIndicator()
-                      else
-                        Icon(
-                          _proofResult?.accepted == true ? Icons.check_circle : Icons.add_a_photo_outlined,
-                          size: 40,
-                          color: _proofResult?.accepted == true ? Colors.green : Colors.grey[400],
-                        ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _proofResult == null
-                            ? 'Bấm để chụp ảnh minh chứng'
-                            : (_proofResult!.accepted
-                                ? 'Minh chứng hợp lệ (score: ${_proofResult!.score ?? '-'})'
-                                : 'Chưa phù hợp: ${_proofResult!.reason ?? 'Vui lòng chụp lại'}'),
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey[600]),
-                      ),
-                    ],
+              TherapyGuideCard(
+                title: 'Minh chứng ảnh',
+                message:
+                    'Bạn có thể chụp hoặc chọn ảnh minh chứng. AI chỉ kiểm tra ảnh có phù hợp với nhiệm vụ hay không, không chấm “đẹp/xấu” hay đánh giá con người bạn.',
+                icon: Icons.photo_camera_outlined,
+                accentColor: widget.categoryColor,
+              ),
+              Container(
+                height: 150,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.grey[300]!,
+                    style: BorderStyle.solid,
                   ),
                 ),
-                            ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (_isVerifyingProof)
+                      const CircularProgressIndicator()
+                    else
+                      Icon(
+                        _proofResult?.accepted == true
+                            ? Icons.check_circle
+                            : Icons.add_photo_alternate_outlined,
+                        size: 40,
+                        color: _proofResult?.accepted == true
+                            ? Colors.green
+                            : Colors.grey[400],
+                      ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _proofResult == null
+                          ? 'Chụp hoặc chọn ảnh minh chứng'
+                          : (_proofResult!.accepted
+                              ? 'Minh chứng hợp lệ (score: ${_proofResult!.score ?? '-'})'
+                              : 'Chưa phù hợp: ${_proofResult!.reason ?? 'Vui lòng chọn/chụp lại'}'),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _isVerifyingProof
+                          ? null
+                          : () => _pickAndVerifyProof(ImageSource.camera),
+                      icon: const Icon(Icons.photo_camera_outlined),
+                      label: const Text('Chụp ảnh'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _isVerifyingProof
+                          ? null
+                          : () => _pickAndVerifyProof(ImageSource.gallery),
+                      icon: const Icon(Icons.photo_library_outlined),
+                      label: const Text('Chọn ảnh'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: widget.categoryColor,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ] else ...[
               // Text Placeholder cho Nhận thức / Cảm xúc
               TextField(
@@ -303,6 +366,13 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
             const Text(
               'Tự đánh giá kết quả (Kích hoạt hành vi)',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blueGrey),
+            ),
+            const TherapyGuideCard(
+              title: 'Pleasure/Mastery là tự đánh giá',
+              message:
+                  'Đây là cảm nhận của chính bạn sau khi làm bài: mức vui vẻ và mức thành tựu. Nó không phải điểm chất lượng hay điểm chấm của hệ thống.',
+              icon: Icons.favorite_border,
+              accentColor: Color(0xFF0F8B7F),
             ),
             const SizedBox(height: 24),
             

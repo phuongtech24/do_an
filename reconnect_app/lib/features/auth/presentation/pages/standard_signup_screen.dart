@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../shared/widgets/mindhealth_scaffold.dart';
+import '../../../../theme/app_colors.dart';
 import '../providers/auth_provider.dart';
 
 class StandardSignupScreen extends StatefulWidget {
@@ -33,39 +34,41 @@ class _StandardSignupScreenState extends State<StandardSignupScreen> {
   Future<void> _onSignup(BuildContext context, AuthProvider auth) async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Mặc định đăng ký là chưa ẩn danh (False), sẽ chọn ở bước Profile Setup
     final success = await auth.register(
       _emailController.text.trim(),
       _passwordController.text.trim(),
       nickname: _nicknameController.text.trim(),
-      avatarIcon: 'default_user_icon',
+      avatarIcon: 'avatar_cat',
       isAnonymous: false,
+      anonymousModeEnabled: true,
     );
 
-    if (mounted) {
-      if (success) {
-        await auth.login(
-          _emailController.text.trim(),
-          _passwordController.text.trim(),
-        );
+    if (!mounted) return;
 
-        if (mounted && auth.status == AuthStatus.success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Đăng ký thành công! Hãy hoàn thiện hồ sơ của bạn.'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          context.go('/profile-setup');
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Đăng ký thất bại: ${auth.errorMessage}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+    if (!success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Đăng ký thất bại: ${auth.errorMessage}'),
+          backgroundColor: AppColors.alert,
+        ),
+      );
+      return;
+    }
+
+    await auth.login(
+      _emailController.text.trim(),
+      _passwordController.text.trim(),
+    );
+    if (!mounted) return;
+
+    if (auth.status == AuthStatus.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Đăng ký thành công. Hãy hoàn thiện hồ sơ ban đầu của bạn.'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+      context.go('/profile-setup?mode=standard');
     }
   }
 
@@ -82,9 +85,12 @@ class _StandardSignupScreenState extends State<StandardSignupScreen> {
             children: [
               Text(
                 'Tạo tài khoản mới',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Sau khi tạo tài khoản, bạn sẽ có cả hồ sơ ẩn danh để dùng trong app và hồ sơ thật để bác sĩ/admin hỗ trợ an toàn y tế.',
+                style: TextStyle(color: AppColors.textSecondary, height: 1.45),
               ),
               const SizedBox(height: 24),
               TextFormField(
@@ -95,8 +101,8 @@ class _StandardSignupScreenState extends State<StandardSignupScreen> {
                 ),
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
-                  if (value == null || value.isEmpty) return 'Vui lòng nhập email';
-                  if (!value.contains('@')) return 'Email không hợp lệ';
+                  if (value == null || value.trim().isEmpty) return 'Vui lòng nhập email.';
+                  if (!value.contains('@')) return 'Email không hợp lệ.';
                   return null;
                 },
               ),
@@ -104,11 +110,11 @@ class _StandardSignupScreenState extends State<StandardSignupScreen> {
               TextFormField(
                 controller: _nicknameController,
                 decoration: const InputDecoration(
-                  labelText: 'Biệt danh (Nickname)',
-                  prefixIcon: Icon(Icons.face),
+                  labelText: 'Biệt danh hiển thị',
+                  prefixIcon: Icon(Icons.face_outlined),
                 ),
                 validator: (value) {
-                  if (value == null || value.isEmpty) return 'Vui lòng nhập biệt danh';
+                  if (value == null || value.trim().isEmpty) return 'Vui lòng nhập biệt danh.';
                   return null;
                 },
               ),
@@ -125,8 +131,8 @@ class _StandardSignupScreenState extends State<StandardSignupScreen> {
                   ),
                 ),
                 validator: (value) {
-                  if (value == null || value.isEmpty) return 'Vui lòng nhập mật khẩu';
-                  if (value.length < 6) return 'Mật khẩu tối thiểu 6 ký tự';
+                  if (value == null || value.isEmpty) return 'Vui lòng nhập mật khẩu.';
+                  if (value.length < 6) return 'Mật khẩu tối thiểu 6 ký tự.';
                   return null;
                 },
               ),
@@ -143,21 +149,24 @@ class _StandardSignupScreenState extends State<StandardSignupScreen> {
                   ),
                 ),
                 validator: (value) {
-                  if (value != _passwordController.text) return 'Mật khẩu xác nhận không khớp';
+                  if (value != _passwordController.text) return 'Mật khẩu xác nhận không khớp.';
                   return null;
                 },
               ),
               const SizedBox(height: 32),
               Consumer<AuthProvider>(
                 builder: (context, auth, child) {
+                  final isLoading = auth.status == AuthStatus.loading;
                   return SizedBox(
                     width: double.infinity,
                     child: FilledButton(
-                      onPressed: auth.status == AuthStatus.loading
-                          ? null
-                          : () => _onSignup(context, auth),
-                      child: auth.status == AuthStatus.loading
-                          ? const CircularProgressIndicator(color: Colors.white)
+                      onPressed: isLoading ? null : () => _onSignup(context, auth),
+                      child: isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            )
                           : const Text('Đăng ký ngay'),
                     ),
                   );

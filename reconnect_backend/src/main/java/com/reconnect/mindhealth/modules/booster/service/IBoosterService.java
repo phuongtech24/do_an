@@ -7,6 +7,11 @@ import java.util.UUID;
 import com.reconnect.mindhealth.modules.booster.dto.AppointmentDto;
 import com.reconnect.mindhealth.modules.booster.dto.AvailableSlotDto;
 import com.reconnect.mindhealth.modules.booster.dto.BookAppointmentRequestDto;
+import com.reconnect.mindhealth.modules.booster.dto.TherapistScheduleSlotDto;
+import com.reconnect.mindhealth.modules.booster.dto.TherapistWeeklyScheduleSlotDto;
+import com.reconnect.mindhealth.modules.booster.dto.ToggleSlotRequestDto;
+import com.reconnect.mindhealth.modules.booster.dto.ToggleWeeklySlotRequestDto;
+import com.reconnect.mindhealth.modules.booster.enums.AppointmentStatus;
 
 public interface IBoosterService {
     AppointmentDto bookAppointment(BookAppointmentRequestDto request);
@@ -14,5 +19,18 @@ public interface IBoosterService {
     List<AppointmentDto> getMyAppointments(UUID patientId);
 
     List<AvailableSlotDto> getAvailableSlots(UUID patientId, LocalDate date);
-}
 
+    List<TherapistScheduleSlotDto> getTherapistSchedule(UUID therapistId, LocalDate date);
+
+    TherapistScheduleSlotDto toggleSlot(ToggleSlotRequestDto request);
+
+    List<TherapistWeeklyScheduleSlotDto> getWeeklySchedule(UUID therapistId);
+
+    TherapistWeeklyScheduleSlotDto toggleWeeklySlot(ToggleWeeklySlotRequestDto request);
+
+    List<AppointmentDto> getTherapistAppointments(UUID therapistId);
+
+    AppointmentDto updateAppointmentStatus(UUID appointmentId, AppointmentStatus status);
+
+    AppointmentDto updateAppointmentNotes(UUID appointmentId, String notes);
+}

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/custom_button.dart';
 import 'ai_journal_screen.dart';
-import 'assessment_test_screen.dart';
+import '../../features/assessment/presentation/pages/phq9_screen.dart';
 import 'profile_screen.dart';
 import 'quest_list_screen.dart';
 import 'therapist_booking_screen.dart';
@@ -86,7 +86,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
               // Assessment Test Banner
               InkWell(
                 onTap: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const AssessmentTestScreen(testType: 'PHQ-9')));
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const Phq9Screen()));
                 },
                 borderRadius: BorderRadius.circular(16),
                 child: Container(

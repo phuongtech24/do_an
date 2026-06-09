@@ -5,6 +5,8 @@ import '../../core/auth/auth_provider.dart';
 import '../../theme/app_colors.dart';
 import '../admin/main_admin_screen.dart';
 import '../therapist/main_therapist_screen.dart';
+import '../therapist/therapist_credentials_upload_screen.dart';
+import '../../features/therapist/data/repositories/therapist_credential_repository.dart';
 
 class TherapistLoginScreen extends StatefulWidget {
   const TherapistLoginScreen({super.key});
@@ -16,6 +18,7 @@ class TherapistLoginScreen extends StatefulWidget {
 class _TherapistLoginScreenState extends State<TherapistLoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final TherapistCredentialRepository _credentialRepo = TherapistCredentialRepository();
 
   bool _loading = false;
   String _error = '';
@@ -44,6 +47,15 @@ class _TherapistLoginScreenState extends State<TherapistLoginScreen> {
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const MainAdminScreen()));
         return;
       }
+
+      final token = auth.token ?? '';
+      final status = await _credentialRepo.myStatus(token: token);
+      if (!mounted) return;
+      if (status.approvalStatus != 'ACTIVE') {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const TherapistCredentialsUploadScreen()));
+        return;
+      }
+
       Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const MainTherapistScreen()));
     } catch (e) {
       setState(() => _error = e.toString().replaceAll('Exception: ', ''));
@@ -138,4 +150,3 @@ class _TherapistLoginScreenState extends State<TherapistLoginScreen> {
     );
   }
 }
-

@@ -7,6 +7,9 @@ public class BookAppointmentRequestDto {
     private UUID patientId;
     private LocalDateTime startAt;
     private Boolean isAnonymous = true;
+    private Integer durationMinutes;
+    private String purpose;
+    private String carePhaseCode;
 
     public BookAppointmentRequestDto() {
     }
@@ -34,5 +37,28 @@ public class BookAppointmentRequestDto {
     public void setIsAnonymous(Boolean isAnonymous) {
         this.isAnonymous = isAnonymous;
     }
-}
 
+    public Integer getDurationMinutes() {
+        return durationMinutes;
+    }
+
+    public void setDurationMinutes(Integer durationMinutes) {
+        this.durationMinutes = durationMinutes;
+    }
+
+    public String getPurpose() {
+        return purpose;
+    }
+
+    public void setPurpose(String purpose) {
+        this.purpose = purpose;
+    }
+
+    public String getCarePhaseCode() {
+        return carePhaseCode;
+    }
+
+    public void setCarePhaseCode(String carePhaseCode) {
+        this.carePhaseCode = carePhaseCode;
+    }
+}

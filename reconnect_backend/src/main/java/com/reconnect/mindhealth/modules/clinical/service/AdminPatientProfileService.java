@@ -33,8 +33,8 @@ public class AdminPatientProfileService {
         }
 
         List<PatientProfile> list = redFlagOnly
-                ? patientProfileRepository.findByIsRedFlagActiveTrueOrderByCurrentRiskScoreDesc()
-                : patientProfileRepository.findByIsActiveTrue();
+                ? patientProfileRepository.findRedFlagWithRelations()
+                : patientProfileRepository.findActiveWithRelations();
 
         String query = q == null ? "" : q.trim().toLowerCase();
         if (!query.isEmpty()) {
@@ -53,4 +53,3 @@ public class AdminPatientProfileService {
                 .toList();
     }
 }
-

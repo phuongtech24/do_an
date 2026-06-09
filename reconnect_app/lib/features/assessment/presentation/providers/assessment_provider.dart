@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:reconnect_app/features/assessment/data/models/phq9_question_model.dart';
-import 'package:reconnect_app/features/assessment/data/models/phq9_submission_model.dart';
+import 'package:reconnect_app/features/assessment/data/models/lsas_situation_model.dart';
+import 'package:reconnect_app/features/assessment/data/models/lsas_submission_model.dart';
 import 'package:reconnect_app/features/assessment/data/models/user_mood_model.dart';
 import 'package:reconnect_app/features/assessment/data/repositories/assessment_repository.dart';
 
@@ -11,29 +11,28 @@ class AssessmentProvider extends ChangeNotifier {
 
   AssessmentStatus _status = AssessmentStatus.idle;
   String _errorMessage = '';
-  Phq9QuestionnaireModel? _questionnaire;
+  List<LsasSituationModel> _situations = [];
   bool _isCooldown = false;
-  Phq9SubmissionModel? _lastSubmission;
+  LsasSubmissionModel? _lastSubmission;
+  List<LsasSubmissionModel> _lsasHistory = [];
+  bool _historyLoading = false;
   UserMoodModel? _lastMood;
 
-  // Getters
   AssessmentStatus get status => _status;
   String get errorMessage => _errorMessage;
-  Phq9QuestionnaireModel? get questionnaire => _questionnaire;
+  List<LsasSituationModel> get situations => _situations;
   bool get isCooldown => _isCooldown;
-  Phq9SubmissionModel? get lastSubmission => _lastSubmission;
+  LsasSubmissionModel? get lastSubmission => _lastSubmission;
+  List<LsasSubmissionModel> get lsasHistory => _lsasHistory;
+  bool get historyLoading => _historyLoading;
   UserMoodModel? get lastMood => _lastMood;
 
-  // ======================================================
-  // LẤY BỘ CÂU HỎI & ĐÁP ÁN PHQ-9 ĐỘNG
-  // ======================================================
-  Future<void> loadQuestionnaire({String? token}) async {
+  Future<void> loadSituations({String? token}) async {
     _status = AssessmentStatus.loading;
     _errorMessage = '';
     notifyListeners();
-
     try {
-      _questionnaire = await _repository.getPhq9Questionnaire(token: token);
+      _situations = await _repository.getLsasSituations(token: token);
       _status = AssessmentStatus.success;
     } catch (e) {
       _status = AssessmentStatus.error;
@@ -42,16 +41,12 @@ class AssessmentProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ======================================================
-  // KIỂM TRA COOLDOWN 14 NGÀY CỦA BỆNH NHÂN
-  // ======================================================
   Future<void> checkCooldown(String patientId, {String? token}) async {
     _status = AssessmentStatus.loading;
     _errorMessage = '';
     notifyListeners();
-
     try {
-      _isCooldown = await _repository.isPhq9OnCooldown(patientId, token: token);
+      _isCooldown = await _repository.isLsasOnCooldown(patientId, token: token);
       _status = AssessmentStatus.success;
     } catch (e) {
       _status = AssessmentStatus.error;
@@ -60,22 +55,24 @@ class AssessmentProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ======================================================
-  // NỘP KẾT QUẢ BÀI TEST PHQ-9
-  // ======================================================
-  Future<bool> submitPhq9(String patientId, List<int> answers, {String? token, String submissionType = 'PERIODIC'}) async {
+  Future<bool> submitLsas(
+    String patientId,
+    List<LsasAnswerInput> answers, {
+    String? token,
+    String submissionType = 'PERIODIC',
+  }) async {
     _status = AssessmentStatus.loading;
     _errorMessage = '';
     notifyListeners();
-
     try {
-      final submission = Phq9SubmissionModel(
+      _lastSubmission = await _repository.submitLsas(
         patientId: patientId,
-        answers: answers,
         submissionType: submissionType,
+        answers: answers,
+        token: token,
       );
-      _lastSubmission = await _repository.submitPhq9(submission, token: token);
-      _isCooldown = true; // Tự động khóa nút làm bài test
+      _lsasHistory = await _repository.getLsasHistory(patientId, token: token);
+      _isCooldown = true;
       _status = AssessmentStatus.success;
       notifyListeners();
       return true;
@@ -87,26 +84,51 @@ class AssessmentProvider extends ChangeNotifier {
     }
   }
 
-  // ======================================================
-  // GHI NHẬN TÂM TRẠNG HÀNG NGÀY
-  // ======================================================
-  Future<bool> submitUserMood(String patientId, int moodScore, String dailyAgenda, {String? token}) async {
+  Future<void> loadLsasHistory(String patientId, {String? token}) async {
+    _historyLoading = true;
+    notifyListeners();
+    try {
+      _lsasHistory = await _repository.getLsasHistory(patientId, token: token);
+    } catch (e) {
+      debugPrint('AssessmentProvider: Error loading LSAS history: $e');
+    } finally {
+      _historyLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> submitUserMood(
+    String patientId, {
+    required int anxietyScore,
+    required int avoidanceUrgeScore,
+    required int sadnessScore,
+    required int anticipatoryAnxietyScore,
+    required int postEventRuminationScore,
+    required String dailyAgenda,
+    bool safetyCheckRequired = false,
+    String? safetyResponse,
+    String? token,
+  }) async {
     _status = AssessmentStatus.loading;
     _errorMessage = '';
     notifyListeners();
-
     try {
       final mood = UserMoodModel(
         patientId: patientId,
-        moodScore: moodScore,
+        anxietyScore: anxietyScore,
+        avoidanceUrgeScore: avoidanceUrgeScore,
+        sadnessScore: sadnessScore,
+        anticipatoryAnxietyScore: anticipatoryAnxietyScore,
+        postEventRuminationScore: postEventRuminationScore,
         dailyAgenda: dailyAgenda,
+        safetyCheckRequired: safetyCheckRequired,
+        safetyResponse: safetyResponse,
       );
       _lastMood = await _repository.submitUserMood(mood, token: token);
       _status = AssessmentStatus.success;
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint('AssessmentProvider: Error submitting user mood: $e');
       _status = AssessmentStatus.error;
       _errorMessage = e.toString().replaceAll('Exception: ', '');
       notifyListeners();

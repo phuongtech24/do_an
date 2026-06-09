@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../../features/assessment/presentation/pages/phq9_screen.dart';
 import '../../features/assessment/presentation/pages/progress_screen.dart';
+import '../../features/assessment/presentation/pages/lsas_light_tips_screen.dart';
 import '../../features/auth/presentation/pages/anonymous_auth_screen.dart';
+import '../../features/auth/presentation/pages/auth_gate_screen.dart';
 import '../../features/auth/presentation/pages/profile_setup_screen.dart';
 import '../../features/auth/presentation/pages/standard_signup_screen.dart';
+import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/home/presentation/pages/patient_home_screen.dart';
+import '../../features/home/presentation/pages/safety_support_screen.dart';
 import '../../features/journal_ai/presentation/pages/cbt_chat_screen.dart';
-import '../../features/journal_ai/presentation/pages/agenda_setting_screen.dart';
 import '../../features/journal_ai/presentation/pages/coping_cards_screen.dart';
 import '../../features/journal_ai/presentation/pages/journal_ai_screen.dart';
 import '../../features/journal_ai/presentation/pages/risk_index_screen.dart';
@@ -20,9 +24,9 @@ import '../../features/settings/presentation/pages/settings_screen.dart';
 import '../../features/telehealth/booking_calendar_screen.dart';
 import '../../features/telehealth/my_appointments_screen.dart';
 import '../../features/telehealth/presentation/pages/telehealth_screen.dart';
-import '../../features/telehealth/therapist_directory_screen.dart';
 import '../../features/onboarding/presentation/pages/goal_setting_screen.dart';
 import '../../features/onboarding/presentation/pages/psycho_education_screen.dart';
+import '../../features/onboarding/presentation/pages/therapist_matching_screen.dart';
 
 class AppRouter {
   static final GlobalKey<NavigatorState> _rootNavigatorKey =
@@ -32,8 +36,13 @@ class AppRouter {
 
   static final GoRouter router = GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/auth',
+    initialLocation: '/',
     routes: [
+      GoRoute(
+        path: '/',
+        name: 'auth-gate',
+        builder: (context, state) => const AuthGateScreen(),
+      ),
       GoRoute(
         path: '/auth',
         name: 'auth',
@@ -47,7 +56,16 @@ class AppRouter {
       GoRoute(
         path: '/profile-setup',
         name: 'profile-setup',
-        builder: (context, state) => const ProfileSetupScreen(),
+        builder: (context, state) {
+          final modeParam = state.uri.queryParameters['mode'];
+          final redirectAfter = state.uri.queryParameters['after'];
+          final mode = switch (modeParam) {
+            'anonymous-demo' => ProfileSetupMode.anonymousDemo,
+            'medical-profile' => ProfileSetupMode.medicalProfile,
+            _ => ProfileSetupMode.standard,
+          };
+          return ProfileSetupScreen(mode: mode, redirectAfter: redirectAfter);
+        },
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => PatientShellScreen(shell: shell),
@@ -58,6 +76,7 @@ class AppRouter {
               GoRoute(
                 path: '/home',
                 name: 'home',
+                redirect: _patientOnlyRedirect,
                 builder: (context, state) => const PatientHomeScreen(),
               ),
             ],
@@ -67,6 +86,7 @@ class AppRouter {
               GoRoute(
                 path: '/journal',
                 name: 'journal',
+                redirect: _patientOnlyRedirect,
                 builder: (context, state) => const JournalAiScreen(),
               ),
             ],
@@ -76,6 +96,7 @@ class AppRouter {
               GoRoute(
                 path: '/roadmap',
                 name: 'roadmap',
+                redirect: _patientOnlyRedirect,
                 builder: (context, state) => const RoadmapScreen(),
               ),
             ],
@@ -85,6 +106,7 @@ class AppRouter {
               GoRoute(
                 path: '/telehealth',
                 name: 'telehealth',
+                redirect: _patientOnlyRedirect,
                 builder: (context, state) => const TelehealthScreen(),
               ),
             ],
@@ -94,11 +116,17 @@ class AppRouter {
               GoRoute(
                 path: '/settings',
                 name: 'settings',
+                redirect: _patientOnlyRedirect,
                 builder: (context, state) => const SettingsScreen(),
               ),
             ],
           ),
         ],
+      ),
+      GoRoute(
+        path: '/lsas',
+        name: 'lsas',
+        builder: (context, state) => const Phq9Screen(),
       ),
       GoRoute(
         path: '/phq9',
@@ -108,49 +136,91 @@ class AppRouter {
       GoRoute(
         path: '/thought-record',
         name: 'thought-record',
+        redirect: _patientOnlyRedirect,
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
-          return ThoughtRecordScreen(agenda: extra?['agenda'] as String?);
+          return ThoughtRecordScreen(
+            agenda: extra?['agenda'] as String?,
+            initialAnxietyScore: (extra?['anxietyScore'] as num?)?.toInt(),
+            initialAvoidanceUrgeScore: (extra?['avoidanceUrgeScore'] as num?)?.toInt(),
+            initialAnticipatoryAnxietyScore: (extra?['anticipatoryAnxietyScore'] as num?)?.toInt(),
+            initialPostEventRuminationScore: (extra?['postEventRuminationScore'] as num?)?.toInt(),
+          );
         },
       ),
       GoRoute(
         path: '/progress',
         name: 'progress',
+        redirect: _patientOnlyRedirect,
         builder: (context, state) => const ProgressScreen(),
+      ),
+      GoRoute(
+        path: '/lsas-light-tips',
+        name: 'lsas-light-tips',
+        redirect: _patientOnlyRedirect,
+        builder: (context, state) => const LsasLightTipsScreen(),
+      ),
+      GoRoute(
+        path: '/safety-support',
+        name: 'safety-support',
+        redirect: _patientOnlyRedirect,
+        builder: (context, state) => const SafetySupportScreen(),
       ),
       GoRoute(
         path: '/goal-setting',
         name: 'goal-setting',
+        redirect: _patientOnlyRedirect,
         builder: (context, state) => const GoalSettingScreen(),
       ),
       GoRoute(
         path: '/psycho-education',
         name: 'psycho-education',
+        redirect: _patientOnlyRedirect,
         builder: (context, state) => const PsychoeducationScreen(),
+      ),
+      GoRoute(
+        path: '/therapist-matching',
+        name: 'therapist-matching',
+        redirect: _patientOnlyRedirect,
+        builder: (context, state) => const TherapistMatchingScreen(),
       ),
       GoRoute(
         path: '/agenda-setting',
         name: 'agenda-setting',
-        builder: (context, state) => const AgendaSettingScreen(),
+        redirect: _patientOnlyRedirect,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          return ThoughtRecordScreen(
+            agenda: extra?['agenda'] as String?,
+            initialAnxietyScore: (extra?['anxietyScore'] as num?)?.toInt(),
+            initialAvoidanceUrgeScore: (extra?['avoidanceUrgeScore'] as num?)?.toInt(),
+            initialAnticipatoryAnxietyScore: (extra?['anticipatoryAnxietyScore'] as num?)?.toInt(),
+            initialPostEventRuminationScore: (extra?['postEventRuminationScore'] as num?)?.toInt(),
+          );
+        },
       ),
       GoRoute(
         path: '/coping-cards',
         name: 'coping-cards',
+        redirect: _patientOnlyRedirect,
         builder: (context, state) => const CopingCardsScreen(),
       ),
       GoRoute(
         path: '/cbt-chat',
         name: 'cbt-chat',
+        redirect: _patientOnlyRedirect,
         builder: (context, state) => const CbtChatScreen(),
       ),
       GoRoute(
         path: '/risk-index',
         name: 'risk-index',
+        redirect: _patientOnlyRedirect,
         builder: (context, state) => const RiskIndexScreen(),
       ),
       GoRoute(
         path: '/quest-detail',
         name: 'quest-detail',
+        redirect: _patientOnlyRedirect,
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>? ?? {};
           return QuestDetailScreen(
@@ -163,20 +233,37 @@ class AppRouter {
         },
       ),
       GoRoute(
-        path: '/telehealth/directory',
-        name: 'telehealth-directory',
-        builder: (context, state) => const TherapistDirectoryScreen(),
-      ),
-      GoRoute(
         path: '/telehealth/booking',
         name: 'telehealth-booking',
+        redirect: _patientOnlyRedirect,
         builder: (context, state) => const BookingCalendarScreen(),
       ),
       GoRoute(
         path: '/telehealth/my-appointments',
         name: 'telehealth-appointments',
+        redirect: _patientOnlyRedirect,
         builder: (context, state) => const MyAppointmentsScreen(),
       ),
     ],
   );
+
+  static String? _patientOnlyRedirect(BuildContext context, GoRouterState state) {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (!auth.isLoggedIn) {
+      return '/auth';
+    }
+    if (!auth.isGuest) {
+      return null;
+    }
+
+    final guestProfile = auth.guestProfile;
+    final guestReady = guestProfile != null &&
+        guestProfile.nickname.trim().isNotEmpty &&
+        guestProfile.avatarIcon.trim().isNotEmpty;
+
+    if (!guestReady) {
+      return '/profile-setup?mode=anonymous-demo';
+    }
+    return '/lsas';
+  }
 }

@@ -41,13 +41,22 @@ public class Appointment extends BaseObject {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "purpose", nullable = false)
-    private AppointmentPurpose purpose = AppointmentPurpose.TAPERING;
+    private AppointmentPurpose purpose = AppointmentPurpose.CBT_SESSION;
+
+    @Column(name = "clinical_purpose_code")
+    private String clinicalPurposeCode;
+
+    @Column(name = "care_phase_code")
+    private String carePhaseCode;
 
     @Column(name = "is_anonymous", nullable = false)
     private Boolean isAnonymous = true;
 
     @Column(name = "meeting_link")
     private String meetingLink;
+
+    @Column(name = "therapist_notes", columnDefinition = "TEXT")
+    private String therapistNotes;
 
     public PatientProfile getPatientProfile() {
         return patientProfile;
@@ -97,6 +106,22 @@ public class Appointment extends BaseObject {
         this.purpose = purpose;
     }
 
+    public String getClinicalPurposeCode() {
+        return clinicalPurposeCode;
+    }
+
+    public void setClinicalPurposeCode(String clinicalPurposeCode) {
+        this.clinicalPurposeCode = clinicalPurposeCode;
+    }
+
+    public String getCarePhaseCode() {
+        return carePhaseCode;
+    }
+
+    public void setCarePhaseCode(String carePhaseCode) {
+        this.carePhaseCode = carePhaseCode;
+    }
+
     public Boolean getIsAnonymous() {
         return isAnonymous;
     }
@@ -111,5 +136,13 @@ public class Appointment extends BaseObject {
 
     public void setMeetingLink(String meetingLink) {
         this.meetingLink = meetingLink;
+    }
+
+    public String getTherapistNotes() {
+        return therapistNotes;
+    }
+
+    public void setTherapistNotes(String therapistNotes) {
+        this.therapistNotes = therapistNotes;
     }
 }

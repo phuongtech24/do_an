@@ -3,39 +3,39 @@ import 'package:http/http.dart' as http;
 
 import '../../../../core/constants/api_constants.dart';
 import '../models/onboarding_status_model.dart';
+import '../models/patient_goal_model.dart';
+import '../models/therapist_directory_item_model.dart';
 
 class OnboardingRepository {
-  Future<List<String>> saveGoals(String patientId, List<String> goals, {String? token}) async {
+  Future<PatientGoalModel> saveGoal(String patientId, String goalType, String description, {String? token}) async {
     try {
       final response = await http.post(
-        Uri.parse(ApiConstants.saveGoals),
+        Uri.parse(ApiConstants.patientGoals),
         headers: {
           'Content-Type': 'application/json; charset=utf-8',
           if (token != null) 'Authorization': 'Bearer $token',
         },
         body: jsonEncode({
           'patientId': patientId,
-          'goals': goals,
+          'goalType': goalType,
+          'description': description,
         }),
       );
 
       final json = jsonDecode(utf8.decode(response.bodyBytes));
       if (json['status'] == 200 && json['data'] != null) {
-        final data = json['data'];
-        final List<dynamic> list = (data['goals'] ?? []) as List<dynamic>;
-        return list.map((e) => e.toString()).toList();
-      } else {
-        throw Exception(json['message'] ?? 'Không thể lưu mục tiêu trị liệu');
+        return PatientGoalModel.fromJson(json['data'] as Map<String, dynamic>);
       }
+      throw Exception(json['message'] ?? 'Không thể lưu mục tiêu trị liệu');
     } catch (e) {
       throw Exception('Lỗi mạng khi lưu mục tiêu: $e');
     }
   }
 
-  Future<List<String>> getGoals(String patientId, {String? token}) async {
+  Future<List<PatientGoalModel>> getGoals(String patientId, {String? token}) async {
     try {
       final response = await http.get(
-        Uri.parse('${ApiConstants.saveGoals}?patientId=$patientId'),
+        Uri.parse('${ApiConstants.patientGoals}?patientId=$patientId'),
         headers: {
           'Content-Type': 'application/json; charset=utf-8',
           if (token != null) 'Authorization': 'Bearer $token',
@@ -44,12 +44,10 @@ class OnboardingRepository {
 
       final json = jsonDecode(utf8.decode(response.bodyBytes));
       if (json['status'] == 200 && json['data'] != null) {
-        final data = json['data'];
-        final List<dynamic> list = (data['goals'] ?? []) as List<dynamic>;
-        return list.map((e) => e.toString()).toList();
-      } else {
-        throw Exception(json['message'] ?? 'Không thể tải mục tiêu trị liệu');
+        final list = json['data'] as List<dynamic>;
+        return list.map((e) => PatientGoalModel.fromJson(e as Map<String, dynamic>)).toList();
       }
+      throw Exception(json['message'] ?? 'Không thể tải mục tiêu trị liệu');
     } catch (e) {
       throw Exception('Lỗi mạng khi tải mục tiêu: $e');
     }
@@ -67,12 +65,75 @@ class OnboardingRepository {
 
       final json = jsonDecode(utf8.decode(response.bodyBytes));
       if (json['status'] == 200 && json['data'] != null) {
-        return OnboardingStatusModel.fromJson(json['data']);
-      } else {
-        throw Exception(json['message'] ?? 'Không thể tải onboarding status');
+        return OnboardingStatusModel.fromJson(json['data'] as Map<String, dynamic>);
       }
+      throw Exception(json['message'] ?? 'Không thể tải onboarding status');
     } catch (e) {
       throw Exception('Lỗi mạng khi tải onboarding status: $e');
+    }
+  }
+
+  Future<List<TherapistDirectoryItemModel>> getTherapists({String? token}) async {
+    try {
+      final response = await http.get(
+        Uri.parse(ApiConstants.patientTherapists),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      if (json['status'] == 200 && json['data'] != null) {
+        final list = json['data'] as List<dynamic>;
+        return list.map((e) => TherapistDirectoryItemModel.fromJson(e as Map<String, dynamic>)).toList();
+      }
+      throw Exception(json['message'] ?? 'Không thể tải danh sách chuyên gia');
+    } catch (e) {
+      throw Exception('Lỗi mạng khi tải danh sách chuyên gia: $e');
+    }
+  }
+
+  Future<TherapistDirectoryItemModel> getTherapistDetail(String therapistId, {String? token}) async {
+    try {
+      final response = await http.get(
+        Uri.parse(ApiConstants.patientTherapistDetail(therapistId)),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      if (json['status'] == 200 && json['data'] != null) {
+        return TherapistDirectoryItemModel.fromJson(json['data'] as Map<String, dynamic>);
+      }
+      throw Exception(json['message'] ?? 'Không thể tải chi tiết chuyên gia');
+    } catch (e) {
+      throw Exception('Lỗi mạng khi tải chi tiết chuyên gia: $e');
+    }
+  }
+
+  Future<void> selectTherapist(String patientId, String therapistId, {String? token}) async {
+    try {
+      final response = await http.post(
+        Uri.parse(ApiConstants.selectTherapist),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'patientId': patientId,
+          'therapistId': therapistId,
+        }),
+      );
+
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      if (json['status'] != 200) {
+        throw Exception(json['message'] ?? 'Không thể chọn chuyên gia');
+      }
+    } catch (e) {
+      throw Exception('Lỗi mạng khi chọn chuyên gia: $e');
     }
   }
 
@@ -87,9 +148,7 @@ class OnboardingRepository {
       );
 
       final json = jsonDecode(utf8.decode(response.bodyBytes));
-      if (json['status'] == 200) {
-        return;
-      } else {
+      if (json['status'] != 200) {
         throw Exception(json['message'] ?? 'Không thể cập nhật psychoeducation');
       }
     } catch (e) {

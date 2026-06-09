@@ -1,13 +1,28 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:reconnect_app/core/constants/api_constants.dart';
 import 'package:reconnect_app/features/auth/data/models/login_request.dart';
 import 'package:reconnect_app/features/auth/data/models/login_response.dart';
 
 class AuthRepository {
-  // ========================================
-  // ĐĂNG NHẬP
-  // ========================================
+  Map<String, dynamic> _decodeApiResponse(http.Response response, String endpointName) {
+    final body = utf8.decode(response.bodyBytes);
+    if (body.trim().isEmpty) {
+      throw Exception('Không nhận được phản hồi hợp lệ từ máy chủ ở bước $endpointName.');
+    }
+
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+      throw Exception('Phản hồi từ máy chủ ở bước $endpointName không đúng định dạng.');
+    } on FormatException {
+      throw Exception('Phản hồi từ máy chủ ở bước $endpointName bị lỗi định dạng.');
+    }
+  }
+
   Future<LoginResponse> login(LoginRequest request) async {
     final response = await http.post(
       Uri.parse(ApiConstants.login),
@@ -15,18 +30,13 @@ class AuthRepository {
       body: jsonEncode(request.toJson()),
     );
 
-    final json = jsonDecode(utf8.decode(response.bodyBytes));
-
+    final json = _decodeApiResponse(response, 'đăng nhập');
     if (json['status'] == 200 && json['data'] != null) {
       return LoginResponse.fromJson(json['data']);
-    } else {
-      throw Exception(json['message'] ?? 'Đăng nhập thất bại');
     }
+    throw Exception(json['message'] ?? 'Đăng nhập thất bại.');
   }
 
-  // ========================================
-  // ĐĂNG KÝ
-  // ========================================
   Future<void> register({
     required String email,
     required String password,
@@ -34,6 +44,16 @@ class AuthRepository {
     String? avatarIcon,
     String role = 'PATIENT',
     bool isAnonymous = false,
+    bool anonymousModeEnabled = true,
+    String? realFullName,
+    String? dateOfBirth,
+    String? gender,
+    String? phoneNumber,
+    String? emergencyContactPhone,
+    String? educationLevel,
+    String? occupation,
+    String? relationshipStatus,
+    String? medicalHistory,
   }) async {
     final response = await http.post(
       Uri.parse(ApiConstants.register),
@@ -45,31 +65,65 @@ class AuthRepository {
         'avatarIcon': avatarIcon,
         'role': role,
         'isAnonymous': isAnonymous,
+        'anonymousModeEnabled': anonymousModeEnabled,
+        'realFullName': realFullName,
+        'dateOfBirth': dateOfBirth,
+        'gender': gender,
+        'phoneNumber': phoneNumber,
+        'emergencyContactPhone': emergencyContactPhone,
+        'educationLevel': educationLevel,
+        'occupation': occupation,
+        'relationshipStatus': relationshipStatus,
+        'medicalHistory': medicalHistory,
       }),
     );
 
-    final json = jsonDecode(utf8.decode(response.bodyBytes));
-
-  if (json['status'] != 200) {
-      throw Exception(json['message'] ?? 'Đăng ký thất bại');
+    final json = _decodeApiResponse(response, 'đăng ký');
+    if (json['status'] != 200) {
+      throw Exception(json['message'] ?? 'Đăng ký thất bại.');
     }
   }
 
-  // ========================================
-  // ĐĂNG NHẬP ẨN DANH
-  // ========================================
   Future<LoginResponse> loginAnonymous(String deviceId) async {
     final response = await http.post(
-      Uri.parse('${ApiConstants.baseUrl}/api/auth/register-anonymous?deviceId=$deviceId'),
+      Uri.parse('${ApiConstants.registerAnonymous}?deviceId=$deviceId'),
       headers: {'Content-Type': 'application/json'},
     );
 
-    final json = jsonDecode(utf8.decode(response.bodyBytes));
-
+    final json = _decodeApiResponse(response, 'đăng nhập ẩn danh');
     if (json['status'] == 200 && json['data'] != null) {
       return LoginResponse.fromJson(json['data']);
-    } else {
-      throw Exception(json['message'] ?? 'Đăng nhập ẩn danh thất bại');
     }
+    throw Exception(json['message'] ?? 'Đăng nhập ẩn danh thất bại.');
+  }
+
+  Future<LoginResponse> linkGuestAccount({
+    required String guestId,
+    required String email,
+    required String password,
+    required String realFullName,
+    required String phoneNumber,
+    String? token,
+  }) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.guestLinkAccount),
+      headers: {
+        'Content-Type': 'application/json',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'guestId': guestId,
+        'email': email,
+        'password': password,
+        'realFullName': realFullName,
+        'phoneNumber': phoneNumber,
+      }),
+    );
+
+    final json = _decodeApiResponse(response, 'liên kết tài khoản guest');
+    if (json['status'] == 200 && json['data'] != null) {
+      return LoginResponse.fromJson(json['data']);
+    }
+    throw Exception(json['message'] ?? 'Không thể liên kết tài khoản guest.');
   }
 }

@@ -12,6 +12,7 @@ import com.reconnect.mindhealth.modules.auth.repository.UserRepository;
 import com.reconnect.mindhealth.modules.clinical.dto.CreateTherapistAccountRequestDto;
 import com.reconnect.mindhealth.modules.clinical.entity.TherapistProfile;
 import com.reconnect.mindhealth.modules.clinical.enums.ApprovalStatus;
+import com.reconnect.mindhealth.modules.clinical.repository.TherapistCredentialRepository;
 import com.reconnect.mindhealth.modules.clinical.repository.TherapistProfileRepository;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -21,15 +22,21 @@ public class AdminTherapistAccountService {
 
     private final UserRepository userRepository;
     private final TherapistProfileRepository therapistProfileRepository;
+    private final TherapistCredentialRepository therapistCredentialRepository;
     private final PasswordEncoder passwordEncoder;
+    private final TherapistDirectoryCacheService therapistDirectoryCacheService;
 
     public AdminTherapistAccountService(
             UserRepository userRepository,
             TherapistProfileRepository therapistProfileRepository,
-            PasswordEncoder passwordEncoder) {
+            TherapistCredentialRepository therapistCredentialRepository,
+            PasswordEncoder passwordEncoder,
+            TherapistDirectoryCacheService therapistDirectoryCacheService) {
         this.userRepository = userRepository;
         this.therapistProfileRepository = therapistProfileRepository;
+        this.therapistCredentialRepository = therapistCredentialRepository;
         this.passwordEncoder = passwordEncoder;
+        this.therapistDirectoryCacheService = therapistDirectoryCacheService;
     }
 
     @Transactional
@@ -56,15 +63,25 @@ public class AdminTherapistAccountService {
         profile.setFullName(request.getFullName().trim());
         profile.setSpecialization(request.getSpecialization());
         profile.setApprovalStatus(ApprovalStatus.PENDING);
-        return therapistProfileRepository.save(profile);
+        TherapistProfile savedProfile = therapistProfileRepository.save(profile);
+        therapistDirectoryCacheService.evictAll();
+        return savedProfile;
     }
 
     @Transactional
     public TherapistProfile setApproval(UUID therapistId, ApprovalStatus status) {
         TherapistProfile profile = therapistProfileRepository.findById(therapistId)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy therapist: " + therapistId));
+        if (status == ApprovalStatus.ACTIVE) {
+            long credentialCount = therapistCredentialRepository.countByTherapistProfile_Id(therapistId);
+            if (credentialCount <= 0) {
+                throw new IllegalStateException("Chưa có chứng chỉ. Không thể duyệt ACTIVE.");
+            }
+        }
+
         profile.setApprovalStatus(status);
-        return therapistProfileRepository.save(profile);
+        TherapistProfile savedProfile = therapistProfileRepository.save(profile);
+        therapistDirectoryCacheService.evictAll();
+        return savedProfile;
     }
 }
-

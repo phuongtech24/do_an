@@ -1,35 +1,41 @@
 package com.reconnect.mindhealth.modules.assessment.service.impl;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.reconnect.mindhealth.modules.assessment.dto.Phq9QuestionDto;
-import com.reconnect.mindhealth.modules.assessment.dto.Phq9SubmissionDto;
+import com.reconnect.mindhealth.modules.assessment.dto.LsasAnswerRequestDto;
+import com.reconnect.mindhealth.modules.assessment.dto.LsasSituationDto;
+import com.reconnect.mindhealth.modules.assessment.dto.LsasSubmissionDto;
 import com.reconnect.mindhealth.modules.assessment.dto.UserMoodDto;
-import com.reconnect.mindhealth.modules.assessment.entity.Phq9Submission;
-import com.reconnect.mindhealth.modules.assessment.entity.Phq9Question;
+import com.reconnect.mindhealth.modules.assessment.entity.LsasAnswer;
+import com.reconnect.mindhealth.modules.assessment.entity.LsasSituation;
+import com.reconnect.mindhealth.modules.assessment.entity.LsasSubmission;
 import com.reconnect.mindhealth.modules.assessment.entity.UserMood;
-import com.reconnect.mindhealth.modules.assessment.enums.Phq9Type;
-import com.reconnect.mindhealth.modules.assessment.enums.SeverityLevel;
-import com.reconnect.mindhealth.modules.assessment.repository.Phq9Repository;
-import com.reconnect.mindhealth.modules.assessment.repository.Phq9QuestionRepository;
+import com.reconnect.mindhealth.modules.assessment.enums.LsasSubmissionType;
+import com.reconnect.mindhealth.modules.assessment.repository.LsasSituationRepository;
+import com.reconnect.mindhealth.modules.assessment.repository.LsasSubmissionRepository;
 import com.reconnect.mindhealth.modules.assessment.repository.UserMoodRepository;
 import com.reconnect.mindhealth.modules.assessment.service.IAssessmentService;
+import com.reconnect.mindhealth.modules.auth.entity.User;
+import com.reconnect.mindhealth.modules.auth.enums.Role;
+import com.reconnect.mindhealth.modules.auth.repository.UserRepository;
 import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
-import com.reconnect.mindhealth.modules.clinical.enums.Status;
-import com.reconnect.mindhealth.modules.clinical.enums.TaperingStage;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
+import com.reconnect.mindhealth.modules.guest.entity.GuestProfile;
+import com.reconnect.mindhealth.modules.guest.repository.GuestProfileRepository;
+import com.reconnect.mindhealth.modules.roadmap.service.FearLadderService;
+import com.reconnect.mindhealth.modules.risk.service.IRiskScoringService;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -38,336 +44,419 @@ public class AssessmentServiceImpl implements IAssessmentService {
 
     private static final Logger log = LoggerFactory.getLogger(AssessmentServiceImpl.class);
 
-    @Autowired
-    private Phq9Repository phq9Repository;
+    private final LsasSituationRepository lsasSituationRepository;
+    private final LsasSubmissionRepository lsasSubmissionRepository;
+    private final UserMoodRepository userMoodRepository;
+    private final PatientProfileRepository patientProfileRepository;
+    private final UserRepository userRepository;
+    private final GuestProfileRepository guestProfileRepository;
+    private final FearLadderService fearLadderService;
+    private final IRiskScoringService riskScoringService;
+    private final ObjectMapper objectMapper;
 
-    @Autowired
-    private UserMoodRepository userMoodRepository;
-
-    @Autowired
-    private PatientProfileRepository patientProfileRepository;
-
-    @Autowired
-    private Phq9QuestionRepository phq9QuestionRepository;
-
-    @Override
-    public Phq9SubmissionDto submitPhq9(Phq9SubmissionDto dto) {
-        log.info("AssessmentService: Received PHQ-9 submission request for patient: {}", dto.getPatientId());
-
-        PatientProfile patientProfile = this.patientProfileRepository.findById(dto.getPatientId())
-                .orElseThrow(() -> {
-                    log.error("AssessmentService: Patient profile not found for ID: {}", dto.getPatientId());
-                    return new EntityNotFoundException("Bệnh nhân không tồn tại với ID: " + dto.getPatientId());
-                });
-        
-        List<Integer> answers = dto.getAnswers();
-        if (answers == null || answers.size() != 9) {
-            log.error("AssessmentService: Invalid number of answers. Expected 9, got {}", answers == null ? "null" : answers.size());
-            throw new IllegalArgumentException("Bài test PHQ-9 bắt buộc phải có đúng 9 câu trả lời.");
-        }
-        for (Integer score : answers) {
-            if (score == null || score < 0 || score > 3) {
-                log.error("AssessmentService: Answer score out of bounds: {}", score);
-                throw new IllegalArgumentException("Điểm của từng câu trả lời phải nằm trong khoảng từ 0 đến 3.");
-            }
-        }
-
-        // 2. Tính toán điểm lâm sàng
-        int totalScore = 0;
-        for (Integer score : answers) {
-            totalScore += score;
-        }
-        // BRD: q2_score is PHQ-9 question #2 only (0-3)
-        int q2Score = answers.get(1);
-        int q9Score = answers.get(8);
-
-        // 3. Phân loại mức độ trầm cảm
-        SeverityLevel severityLevel;
-        if (totalScore <= 4) {
-            severityLevel = SeverityLevel.MINIMAL;
-        } else if (totalScore <= 9) {
-            severityLevel = SeverityLevel.MILD;
-        } else if (totalScore <= 14) {
-            severityLevel = SeverityLevel.MODERATE;
-        } else if (totalScore <= 19) {
-            severityLevel = SeverityLevel.MODERATELY_SEVERE;
-        } else {
-            severityLevel = SeverityLevel.SEVERE;
-        }
-
-        log.info("AssessmentService: Calculated PHQ-9 clinical metrics - Total Score: {}, Q2 Score: {}, Q9 Score: {}, Severity Level: {}",
-                totalScore, q2Score, q9Score, severityLevel);
-
-        // 3.5 Resolve submission type (Baseline first-time only)
-        boolean hasBaseline = phq9Repository.existsByPatientProfile_IdAndSubmissionType(patientProfile.getId(),
-                Phq9Type.BASELINE);
-        Phq9Type effectiveSubmissionType = dto.getSubmissionType();
-        if (!hasBaseline) {
-            effectiveSubmissionType = Phq9Type.BASELINE;
-        } else if (effectiveSubmissionType == null) {
-            effectiveSubmissionType = Phq9Type.PERIODIC;
-        } else if (effectiveSubmissionType == Phq9Type.BASELINE) {
-            throw new IllegalArgumentException("Bài test Baseline PHQ-9 chỉ được thực hiện duy nhất 1 lần (ngày đầu).");
-        }
-
-        // 4. Kích hoạt Cảnh báo đỏ (Red Flag) nếu phát hiện nguy cơ tự hại ở câu số 9
-        if (q9Score > 0) {
-            log.warn("AssessmentService: RED FLAG CRITICAL WARNING triggered for patient ID: {}. Suicidal ideation score (Q9) is positive: {}", 
-                    patientProfile.getId(), q9Score);
-            patientProfile.setIsRedFlagActive(true);
-            patientProfile.setStatus(Status.WARNING);
-        }
-        patientProfile.setLastPhq9Date(LocalDateTime.now());
-        patientProfileRepository.save(patientProfile);
-
-        // 5. Lưu bài test PHQ-9 mới
-        Phq9Submission submission = new Phq9Submission();
-        submission.setPatientProfile(patientProfile);
-        submission.setTotalScore(totalScore);
-        submission.setQ2Score(q2Score);
-        submission.setQ9Score(q9Score);
-        submission.setSubmissionType(effectiveSubmissionType);
-        submission.setSeverityLevel(severityLevel);
-        submission.setUnlockedAt(effectiveSubmissionType == Phq9Type.TRIGGERED ? LocalDateTime.now()
-                : LocalDateTime.now().plusDays(14));
-
-        // Nén danh sách câu trả lời List<Integer> thành mảng String JSON
-        ObjectMapper mapper = new ObjectMapper();
-        try {
-            String jsonString = mapper.writeValueAsString(answers);
-            submission.setAnswersJson(jsonString);
-        } catch (Exception e) {
-            log.error("AssessmentService: Failed to serialize answers list to JSON string", e);
-            throw new IllegalArgumentException("Không thể nén danh sách câu trả lời thành JSON String", e);
-        }
-
-        Phq9Submission savedSubmission = phq9Repository.save(submission);
-        log.info("AssessmentService: PHQ-9 submission successfully saved into database with ID: {}", savedSubmission.getId());
-
-        // Graduation rule (BRD): 2 consecutive PERIODIC submissions with totalScore < 5
-        boolean graduatedNow = false;
-        if (effectiveSubmissionType == Phq9Type.PERIODIC && totalScore < 5) {
-            try {
-                List<Phq9Submission> lastTwo = phq9Repository
-                        .findTop2ByPatientProfile_IdAndSubmissionTypeOrderByCreateDateDesc(patientProfile.getId(),
-                                Phq9Type.PERIODIC);
-                if (lastTwo != null && lastTwo.size() >= 2) {
-                    Integer s1 = lastTwo.get(0).getTotalScore();
-                    Integer s2 = lastTwo.get(1).getTotalScore();
-                    boolean bothMinimal = (s1 != null && s1 < 5) && (s2 != null && s2 < 5);
-                    if (bothMinimal && patientProfile.getTaperingStage() == TaperingStage.NONE) {
-                        patientProfile.setTaperingStage(TaperingStage.WEEKLY);
-                        if (patientProfile.getGraduatedAt() == null) {
-                            patientProfile.setGraduatedAt(LocalDateTime.now());
-                        }
-                        patientProfileRepository.save(patientProfile);
-                        graduatedNow = true;
-                        log.info("AssessmentService: Patient {} graduated. Tapering stage set to WEEKLY.",
-                                patientProfile.getId());
-                    }
-                }
-            } catch (Exception e) {
-                log.warn("AssessmentService: Graduation evaluation failed: {}", e.getMessage());
-            }
-        }
-
-        Phq9SubmissionDto out = new Phq9SubmissionDto(savedSubmission);
-        out.setGraduatedNow(graduatedNow);
-        out.setTaperingStage(patientProfile.getTaperingStage());
-        return out;
+    public AssessmentServiceImpl(
+            LsasSituationRepository lsasSituationRepository,
+            LsasSubmissionRepository lsasSubmissionRepository,
+            UserMoodRepository userMoodRepository,
+            PatientProfileRepository patientProfileRepository,
+            UserRepository userRepository,
+            GuestProfileRepository guestProfileRepository,
+            FearLadderService fearLadderService,
+            IRiskScoringService riskScoringService,
+            ObjectMapper objectMapper) {
+        this.lsasSituationRepository = lsasSituationRepository;
+        this.lsasSubmissionRepository = lsasSubmissionRepository;
+        this.userMoodRepository = userMoodRepository;
+        this.patientProfileRepository = patientProfileRepository;
+        this.userRepository = userRepository;
+        this.guestProfileRepository = guestProfileRepository;
+        this.fearLadderService = fearLadderService;
+        this.riskScoringService = riskScoringService;
+        this.objectMapper = objectMapper;
     }
 
     @Override
-    public boolean isPhq9OnCoolDown(UUID patientId) {
-        log.info("AssessmentService: Checking PHQ-9 14-day cooldown for patient: {}", patientId);
+    @Transactional(readOnly = true)
+    public List<LsasSituationDto> getLsasSituations() {
+        return lsasSituationRepository.findAllByOrderBySituationNumberAsc()
+                .stream()
+                .map(LsasSituationDto::new)
+                .toList();
+    }
 
-        PatientProfile patientProfile = this.patientProfileRepository.findById(patientId)
-                .orElseThrow(() -> {
-                    log.error("AssessmentService: Patient profile not found for ID: {}", patientId);
-                    return new EntityNotFoundException("Bệnh nhân không tồn tại với ID: " + patientId);
-                });
-        
-        if (patientProfile.getLastPhq9Date() == null) {
-            log.info("AssessmentService: Patient has never taken PHQ-9 before. Cooldown inactive.");
+    @Override
+    @Transactional
+    public LsasSubmissionDto submitLsas(LsasSubmissionDto dto) {
+        if (dto.getAnswers() == null || dto.getAnswers().size() != 24) {
+            throw new IllegalArgumentException("LSAS c?n ?? 24 c?u tr? l?i.");
+        }
+        validateUniqueSituations(dto.getAnswers());
+
+        PatientProfile patient = patientProfileRepository.findById(dto.getPatientId()).orElse(null);
+        if (patient == null) {
+            User guestUser = userRepository.findById(dto.getPatientId())
+                    .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy user: " + dto.getPatientId()));
+            if (guestUser.getRole() != Role.GUEST) {
+                throw new EntityNotFoundException("Không tìm thấy bệnh nhân: " + dto.getPatientId());
+            }
+            return saveGuestLsas(guestUser, dto);
+        }
+
+        boolean hasBaseline = lsasSubmissionRepository.existsByPatientProfile_IdAndSubmissionType(
+                patient.getId(), LsasSubmissionType.BASELINE);
+        LsasSubmissionType type = dto.getSubmissionType();
+        if (!hasBaseline) {
+            type = LsasSubmissionType.BASELINE;
+        } else if (type == null || type == LsasSubmissionType.BASELINE) {
+            type = LsasSubmissionType.PERIODIC;
+        }
+
+        LsasSubmission submission = new LsasSubmission();
+        submission.setPatientProfile(patient);
+        submission.setSubmissionType(type);
+        submission.setUnlockedAt(LocalDateTime.now().plusDays(14));
+
+        int fearTotal = 0;
+        int avoidanceTotal = 0;
+        List<LsasAnswer> answers = new ArrayList<>();
+        for (LsasAnswerRequestDto answerDto : dto.getAnswers()) {
+            LsasSituation situation = lsasSituationRepository.findById(answerDto.getSituationId())
+                    .orElseThrow(() -> new EntityNotFoundException("Kh?ng t?m th?y t?nh hu?ng LSAS."));
+            int fear = normalizeLsasScore(answerDto.getFearScore());
+            int avoidance = normalizeLsasScore(answerDto.getAvoidanceScore());
+            LsasAnswer answer = new LsasAnswer();
+            answer.setSubmission(submission);
+            answer.setSituation(situation);
+            answer.setFearScore(fear);
+            answer.setAvoidanceScore(avoidance);
+            answer.setTotalScore(fear + avoidance);
+            answers.add(answer);
+            fearTotal += fear;
+            avoidanceTotal += avoidance;
+        }
+        submission.setFearTotal(fearTotal);
+        submission.setAvoidanceTotal(avoidanceTotal);
+        submission.setTotalScore(fearTotal + avoidanceTotal);
+        submission.setAnswers(answers);
+
+        LsasSubmission saved = lsasSubmissionRepository.save(submission);
+        patient.setLastLsasDate(LocalDateTime.now());
+        patient.setCurrentLsasScore(saved.getTotalScore());
+        patient.setLsasDemoCompleted(true);
+        if (patient.getCurrentCycleStartDate() == null || type == LsasSubmissionType.BASELINE) {
+            patient.setCurrentCycleStartDate(LocalDateTime.now());
+        }
+        boolean redFlagTriggered = isUrgentRedFlag(saved.getTotalScore());
+        boolean clinicalAttention = isClinicalAttention(saved.getTotalScore());
+        if (redFlagTriggered) {
+            patient.setStatus(com.reconnect.mindhealth.modules.clinical.enums.Status.WARNING);
+            patient.setIsRedFlagActive(true);
+            patient.setCurrentRiskScore(Math.max(patient.getCurrentRiskScore() != null ? patient.getCurrentRiskScore() : 0, 100));
+            log.warn("LSAS urgent red flag triggered patientId={}, totalScore={}, route={}, clinicalAttention={}",
+                    patient.getId(), saved.getTotalScore(), resolveClinicalRoute(saved.getTotalScore()), clinicalAttention);
+        }
+        patientProfileRepository.save(patient);
+
+        if (type == LsasSubmissionType.BASELINE) {
+            List<?> ladder = fearLadderService.rebuildFromBaseline(patient, answers);
+            log.info("LSAS baseline triggered fear ladder rebuild patientId={}, ladderItems={}",
+                    patient.getId(),
+                    ladder != null ? ladder.size() : 0);
+        }
+
+        boolean tipsOnly = "REASSURANCE".equals(resolveClinicalRoute(saved.getTotalScore()));
+        boolean exerciseFlowEnabled = !tipsOnly;
+        log.info("LSAS submitted patientId={}, type={}, fearTotal={}, avoidanceTotal={}, totalScore={}, severityBand={}, severityLabel={}, clinicalRoute={}, clinicalAttention={}, redFlagTriggered={}, tipsOnly={}, exerciseFlowEnabled={}",
+                patient.getId(),
+                type,
+                fearTotal,
+                avoidanceTotal,
+                saved.getTotalScore(),
+                resolveSeverityBand(saved.getTotalScore()),
+                resolveSeverityLabel(saved.getTotalScore()),
+                resolveClinicalRoute(saved.getTotalScore()),
+                clinicalAttention,
+                redFlagTriggered,
+                tipsOnly,
+                exerciseFlowEnabled);
+        return toSubmissionDto(saved);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isLsasOnCoolDown(UUID patientId) {
+        PatientProfile patient = patientProfileRepository.findById(patientId).orElse(null);
+        if (patient == null) {
+            User user = userRepository.findById(patientId)
+                    .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy user: " + patientId));
+            if (user.getRole() == Role.GUEST) {
+                return false;
+            }
+            throw new EntityNotFoundException("Kh?ng t?m th?y b?nh nh?n: " + patientId);
+        }
+        if (patient.getLastLsasDate() == null) {
             return false;
         }
-        
-        // Trả về true nếu lần làm gần nhất trong vòng 14 ngày
-        LocalDateTime cooldownLimit = LocalDateTime.now().minusDays(14);
-        boolean isCooldownActive = patientProfile.getLastPhq9Date().isAfter(cooldownLimit);
-        
-        log.info("AssessmentService: Patient last PHQ-9 date: {}. Cooldown Active: {}", 
-                patientProfile.getLastPhq9Date(), isCooldownActive);
-        
-        return isCooldownActive;
+        return patient.getLastLsasDate().isAfter(LocalDateTime.now().minusDays(14));
     }
 
     @Override
-    public UserMoodDto saveUserMood(UserMoodDto dto) {
-        log.info("AssessmentService: Receiving daily mood submission for patient: {}. Mood Score: {}", 
-                dto.getPatientId(), dto.getMoodScore());
-
-        PatientProfile patientProfile = this.patientProfileRepository.findById(dto.getPatientId())
-                .orElseThrow(() -> {
-                    log.error("AssessmentService: Patient profile not found for ID: {}", dto.getPatientId());
-                    return new EntityNotFoundException("Bệnh nhân không tồn tại với ID: " + dto.getPatientId());
-                });
-
-        // 1. Find today's mood record if exists
-        Optional<UserMood> todayMoodOpt = findTodayMoodForPatient(dto.getPatientId());
-
-        UserMood userMood = new UserMood();
-        userMood.setPatientProfile(patientProfile);
-        userMood.setMoodScore(dto.getMoodScore());
-        userMood.setDailyAgenda(dto.getDailyAgenda());
-
-        if (todayMoodOpt.isPresent()) {
-            // Found existing: assign ID and creation date to trigger UPDATE
-            UserMood existingMood = todayMoodOpt.get();
-            userMood.setId(existingMood.getId());
-            userMood.setCreateDate(existingMood.getCreateDate());
-            log.info("AssessmentService: Existing mood found for today (ID: {}). Performing update.", existingMood.getId());
-        } else {
-            log.info("AssessmentService: No existing mood found for today. Performing insert.");
+    @Transactional(readOnly = true)
+    public List<LsasSubmissionDto> getLsasHistory(UUID patientId) {
+        PatientProfile patient = patientProfileRepository.findById(patientId).orElse(null);
+        if (patient == null) {
+            User user = userRepository.findById(patientId)
+                    .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy user: " + patientId));
+            if (user.getRole() == Role.GUEST) {
+                return List.of();
+            }
+            throw new EntityNotFoundException("Kh?ng t?m th?y b?nh nh?n: " + patientId);
         }
-
-        UserMood savedMood = userMoodRepository.save(userMood);
-        log.info("AssessmentService: Daily mood log successfully saved/updated with ID: {}", savedMood.getId());
-        
-        return new UserMoodDto(savedMood);
+        return lsasSubmissionRepository.findByPatientProfile_IdOrderByCreateDateDesc(patientId)
+                .stream()
+                .map(this::toSubmissionDto)
+                .toList();
     }
 
-    /**
-     * Helper method to find a patient's mood record for the current day.
-     * Extracts date range logic for better readability and unit testing.
-     */
-    private Optional<UserMood> findTodayMoodForPatient(UUID patientId) {
-        Calendar cal = Calendar.getInstance();
-        cal.set(Calendar.HOUR_OF_DAY, 0);
-        cal.set(Calendar.MINUTE, 0);
-        cal.set(Calendar.SECOND, 0);
-        cal.set(Calendar.MILLISECOND, 0);
-        Date startOfDay = cal.getTime();
+    private LsasSubmissionDto saveGuestLsas(User guestUser, LsasSubmissionDto dto) {
+        GuestProfile guestProfile = guestProfileRepository.findById(guestUser.getId())
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy hồ sơ guest: " + guestUser.getId()));
 
-        cal.set(Calendar.HOUR_OF_DAY, 23);
-        cal.set(Calendar.MINUTE, 59);
-        cal.set(Calendar.SECOND, 59);
-        cal.set(Calendar.MILLISECOND, 999);
-        Date endOfDay = cal.getTime();
+        int fearTotal = 0;
+        int avoidanceTotal = 0;
+        for (LsasAnswerRequestDto answerDto : dto.getAnswers()) {
+            normalizeLsasScore(answerDto.getFearScore());
+            normalizeLsasScore(answerDto.getAvoidanceScore());
+            fearTotal += answerDto.getFearScore();
+            avoidanceTotal += answerDto.getAvoidanceScore();
+        }
+        int totalScore = fearTotal + avoidanceTotal;
 
-        List<UserMood> existingMoods = userMoodRepository.findMoodByPatientAndDateRange(
-                patientId, startOfDay, endOfDay);
+        guestProfile.setLsasDemoCompleted(true);
+        guestProfile.setPendingLsasTotalScore(totalScore);
+        guestProfile.setPendingLsasSubmissionType(LsasSubmissionType.BASELINE.name());
+        guestProfile.setPendingLsasCompletedAt(LocalDateTime.now());
+        guestProfile.setPendingLsasAnswersJson(writeGuestLsasAnswers(dto.getAnswers()));
+        guestProfileRepository.save(guestProfile);
 
-        return existingMoods.isEmpty() ? Optional.empty() : Optional.of(existingMoods.get(0));
+        LsasSubmissionDto result = new LsasSubmissionDto();
+        result.setPatientId(guestUser.getId());
+        result.setSubmissionType(LsasSubmissionType.BASELINE);
+        result.setFearTotal(fearTotal);
+        result.setAvoidanceTotal(avoidanceTotal);
+        result.setTotalScore(totalScore);
+        result.setAnswers(dto.getAnswers());
+        result.setSeverityBand(resolveSeverityBand(totalScore));
+        result.setSeverityLabel(resolveSeverityLabel(totalScore));
+        result.setClinicalRoute(resolveClinicalRoute(totalScore));
+        result.setSummaryMessage(buildSummaryMessage(totalScore));
+        result.setRecommendedNextStep(buildRecommendedNextStep(totalScore));
+        result.setClinicalAttention(isClinicalAttention(totalScore));
+        result.setRedFlagTriggered(false);
+        result.setNextEligibleAt(null);
+
+        log.info("Guest LSAS submitted guestId={}, totalScore={}, severityBand={}, clinicalRoute={}",
+                guestUser.getId(),
+                totalScore,
+                result.getSeverityBand(),
+                result.getClinicalRoute());
+        return result;
     }
 
-    @Override
-    public Map<String, Object> getPhq9Questionnaire() {
-        log.info("AssessmentService: Loading PHQ-9 questionnaire from database...");
-
-        List<Map<String, Object>> questionsList = new java.util.ArrayList<>();
-
+    private String writeGuestLsasAnswers(List<LsasAnswerRequestDto> answers) {
         try {
-            List<Phq9Question> questions = phq9QuestionRepository.findAll();
-            
-            // Sắp xếp tăng dần theo question_number để thứ tự luôn chuẩn từ 1 đến 9
-            questions.sort(java.util.Comparator.comparing(Phq9Question::getQuestionNumber));
-            
-            for (Phq9Question q : questions) {
-                Map<String, Object> question = new java.util.HashMap<>();
-                question.put("id", q.getId()); // UUID chính chủ
-                question.put("questionNumber", q.getQuestionNumber()); // Số thứ tự câu hỏi (1-9)
-                question.put("text", q.getText());
-                questionsList.add(question);
-            }
-        } catch (Exception e) {
-            log.error("AssessmentService: Error fetching PHQ-9 questions from database", e);
+            return objectMapper.writeValueAsString(answers);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Không thể lưu tạm câu trả lời LSAS của guest.", exception);
         }
-
-        // Dự phòng (Fallback) nếu Database chưa được seed hoặc có lỗi kết nối
-        if (questionsList.isEmpty()) {
-            log.info("AssessmentService: Database is empty. Using static fallback PHQ-9 questions.");
-            String[] fallbackTexts = {
-                "Ít hứng thú hoặc không có niềm vui khi thực hiện các hoạt động hàng ngày.",
-                "Cảm thấy tinh thần đi xuống, trầm cảm, hoặc tuyệt vọng.",
-                "Khó ngủ, ngủ chập chờn, hoặc ngủ quá nhiều.",
-                "Cảm thấy mệt mỏi hoặc không có năng lượng.",
-                "Ăn không ngon miệng hoặc ăn quá nhiều.",
-                "Cảm thấy thất vọng về bản thân - hoặc thấy mình là người thất bại, làm gia đình thất vọng.",
-                "Gặp khó khăn khi tập trung vào việc gì đó, chẳng hạn như đọc báo hoặc xem tivi.",
-                "Di chuyển hoặc nói quá chậm khiến người khác chú ý. Hoặc ngược lại - bồn chồn, đứng ngồi không yên nhiều hơn bình thường.",
-                "Có suy nghĩ rằng mình nên chết đi hoặc muốn tự làm tổn thương bản thân bằng cách nào đó."
-            };
-            for (int i = 0; i < fallbackTexts.length; i++) {
-                Map<String, Object> question = new java.util.HashMap<>();
-                question.put("id", UUID.randomUUID());
-                question.put("questionNumber", i + 1);
-                question.put("text", fallbackTexts[i]);
-                questionsList.add(question);
-            }
-        }
-
-        // Danh sách các tùy chọn chấm điểm tĩnh của PHQ-9
-        List<Map<String, Object>> optionsList = new java.util.ArrayList<>();
-        String[] optionTexts = {
-            "Không ngày nào",
-            "Vài ngày",
-            "Hơn nửa số ngày",
-            "Gần như hằng ngày"
-        };
-        for (int i = 0; i < optionTexts.length; i++) {
-            Map<String, Object> option = new java.util.HashMap<>();
-            option.put("score", i);
-            option.put("text", optionTexts[i]);
-            optionsList.add(option);
-        }
-
-        Map<String, Object> questionnaire = new java.util.HashMap<>();
-        questionnaire.put("questions", questionsList);
-        questionnaire.put("options", optionsList);
-
-        log.info("AssessmentService: Loaded {} questions and {} options from database.", questionsList.size(), optionsList.size());
-        return questionnaire;
     }
 
     @Override
-    public Phq9QuestionDto savePhq9Question(Phq9QuestionDto dto) {
-        log.info("AssessmentService: Received save PHQ-9 question request. ID: {}", dto.getId());
+    @Transactional
+    public UserMoodDto saveUserMood(UserMoodDto dto) {
+        PatientProfile patient = patientProfileRepository.findById(dto.getPatientId())
+                .orElseThrow(() -> new EntityNotFoundException("Kh?ng t?m th?y b?nh nh?n: " + dto.getPatientId()));
+        UserMood userMood = new UserMood();
+        userMood.setPatientProfile(patient);
+        Integer anxietyScore = normalizePercentageScore(dto.getAnxietyScore(), "anxietyScore");
+        Integer avoidanceUrgeScore = normalizePercentageScore(dto.getAvoidanceUrgeScore(), "avoidanceUrgeScore");
+        Integer sadnessScore = normalizePercentageScore(dto.getSadnessScore(), "sadnessScore");
+        Integer anticipatoryAnxietyScore = normalizeEightPointScore(dto.getAnticipatoryAnxietyScore(),
+                "anticipatoryAnxietyScore");
+        Integer postEventRuminationScore = normalizeEightPointScore(dto.getPostEventRuminationScore(),
+                "postEventRuminationScore");
+        Boolean safetyCheckRequired = Boolean.TRUE.equals(dto.getSafetyCheckRequired());
+        String safetyResponse = normalizeSafetyResponse(dto.getSafetyResponse(), safetyCheckRequired);
+        userMood.setAnxietyScore(anxietyScore);
+        userMood.setAvoidanceUrgeScore(avoidanceUrgeScore);
+        userMood.setSadnessScore(sadnessScore);
+        userMood.setAnticipatoryAnxietyScore(anticipatoryAnxietyScore);
+        userMood.setPostEventRuminationScore(postEventRuminationScore);
+        userMood.setSafetyCheckRequired(safetyCheckRequired);
+        userMood.setSafetyResponse(safetyResponse);
+        userMood.setSafetyRespondedAt(safetyCheckRequired ? LocalDateTime.now() : null);
+        userMood.setMoodScore(resolveLegacyMoodScore(dto, anxietyScore));
+        userMood.setDailyAgenda(dto.getDailyAgenda());
+        UserMood saved = userMoodRepository.save(userMood);
+        riskScoringService.calculateAndPersist(patient.getId());
+        return new UserMoodDto(saved);
+    }
 
-        // Validation kiểm tra hợp lệ của dữ liệu đầu vào
-        if (dto.getQuestionNumber() == null) {
-            log.error("AssessmentService: Validation failed - questionNumber is empty.");
-            throw new IllegalArgumentException("Số thứ tự câu hỏi (questionNumber) không được phép rỗng.");
+    private Integer resolveLegacyMoodScore(UserMoodDto dto, Integer anxietyScore) {
+        if (dto.getMoodScore() != null) {
+            return normalizePercentageScore(dto.getMoodScore(), "moodScore");
         }
-        if (dto.getText() == null || dto.getText().trim().isEmpty()) {
-            log.error("AssessmentService: Validation failed - question text is empty.");
-            throw new IllegalArgumentException("Nội dung câu hỏi (text) không được phép rỗng.");
+        if (anxietyScore == null) {
+            return null;
         }
+        return 100 - anxietyScore;
+    }
 
-        Phq9Question question;
-        if (dto.getId() != null) {
-            // Sửa đổi (Update) câu hỏi đang tồn tại
-            question = phq9QuestionRepository.findById(dto.getId())
-                    .orElseThrow(() -> {
-                        log.error("AssessmentService: Question not found with ID: {}", dto.getId());
-                        return new EntityNotFoundException("Không tìm thấy câu hỏi với ID: " + dto.getId());
-                    });
-            log.info("AssessmentService: Updating existing question. Old number: {}, New number: {}", 
-                    question.getQuestionNumber(), dto.getQuestionNumber());
-        } else {
-            // Thêm mới (Create) câu hỏi
-            question = new Phq9Question();
-            log.info("AssessmentService: Creating new PHQ-9 question with number: {}", dto.getQuestionNumber());
+    private Integer normalizePercentageScore(Integer score, String fieldName) {
+        if (score == null) {
+            return null;
         }
+        if (score < 0 || score > 100) {
+            throw new IllegalArgumentException(fieldName + " phai nam trong khoang 0-100.");
+        }
+        return score;
+    }
 
-        // Đồng bộ dữ liệu từ DTO sang Entity
-        question.setQuestionNumber(dto.getQuestionNumber());
-        question.setText(dto.getText().trim());
+    private Integer normalizeEightPointScore(Integer score, String fieldName) {
+        if (score == null) {
+            return null;
+        }
+        if (score < 0 || score > 8) {
+            throw new IllegalArgumentException(fieldName + " phai nam trong khoang 0-8.");
+        }
+        return score;
+    }
 
-        Phq9Question savedQuestion = phq9QuestionRepository.save(question);
-        log.info("AssessmentService: PHQ-9 question successfully saved into database. ID: {}, Number: {}", 
-                savedQuestion.getId(), savedQuestion.getQuestionNumber());
+    private String normalizeSafetyResponse(String safetyResponse, boolean safetyCheckRequired) {
+        if (!safetyCheckRequired) {
+            return null;
+        }
+        if (safetyResponse == null || safetyResponse.isBlank()) {
+            throw new IllegalArgumentException("safetyResponse khong duoc de trong khi safetyCheckRequired = true.");
+        }
+        String normalized = safetyResponse.trim().toUpperCase();
+        if (!"SAFE".equals(normalized) && !"UNSAFE".equals(normalized)) {
+            throw new IllegalArgumentException("safetyResponse chi duoc la SAFE hoac UNSAFE.");
+        }
+        return normalized;
+    }
 
-        return new Phq9QuestionDto(savedQuestion);
+    private void validateUniqueSituations(List<LsasAnswerRequestDto> answers) {
+        Set<UUID> seen = new HashSet<>();
+        for (LsasAnswerRequestDto answer : answers) {
+            if (answer.getSituationId() == null) {
+                throw new IllegalArgumentException("Thi?u situationId trong c?u tr? l?i LSAS.");
+            }
+            if (!seen.add(answer.getSituationId())) {
+                throw new IllegalArgumentException("LSAS kh?ng ???c ch?a situation tr?ng l?p.");
+            }
+        }
+    }
+
+    private int normalizeLsasScore(Integer score) {
+        if (score == null) {
+            throw new IllegalArgumentException("Fear/Avoidance score kh?ng ???c ?? tr?ng.");
+        }
+        if (score < 0 || score > 3) {
+            throw new IllegalArgumentException("Fear/Avoidance score ph?i n?m trong kho?ng 0-3.");
+        }
+        return score;
+    }
+
+    private LsasSubmissionDto toSubmissionDto(LsasSubmission submission) {
+        LsasSubmissionDto dto = new LsasSubmissionDto(submission);
+        Integer totalScore = submission.getTotalScore();
+        dto.setSeverityBand(resolveSeverityBand(totalScore));
+        dto.setSeverityLabel(resolveSeverityLabel(totalScore));
+        dto.setClinicalRoute(resolveClinicalRoute(totalScore));
+        dto.setSummaryMessage(buildSummaryMessage(totalScore));
+        dto.setRecommendedNextStep(buildRecommendedNextStep(totalScore));
+        dto.setClinicalAttention(isClinicalAttention(totalScore));
+        dto.setRedFlagTriggered(isUrgentRedFlag(totalScore));
+        dto.setNextEligibleAt(submission.getUnlockedAt());
+        return dto;
+    }
+
+    private String resolveSeverityBand(Integer totalScore) {
+        int safeScore = totalScore == null ? 0 : totalScore;
+        if (safeScore >= 90) {
+            return "VERY_SEVERE_IMPAIRMENT";
+        }
+        if (safeScore >= 60) {
+            return "MARKED_SOCIAL_ANXIETY";
+        }
+        if (safeScore >= 30) {
+            return "MILD_TO_MODERATE";
+        }
+        return "UNLIKELY_SAD";
+    }
+
+    private String resolveSeverityLabel(Integer totalScore) {
+        int safeScore = totalScore == null ? 0 : totalScore;
+        if (safeScore >= 90) {
+            return "Rất nặng và suy giảm chức năng";
+        }
+        if (safeScore >= 60) {
+            return "Lo âu xã hội rõ rệt";
+        }
+        if (safeScore >= 30) {
+            return "Lo âu nhẹ đến vừa";
+        }
+        return "Rất ít khả năng mắc";
+    }
+
+    private String resolveClinicalRoute(Integer totalScore) {
+        int safeScore = totalScore == null ? 0 : totalScore;
+        if (safeScore >= 90) {
+            return "URGENT_RED_FLAG";
+        }
+        if (safeScore >= 60) {
+            return "THERAPIST_TRACK_14_WEEKS";
+        }
+        if (safeScore >= 30) {
+            return "SELF_HELP";
+        }
+        return "REASSURANCE";
+    }
+
+    private String buildSummaryMessage(Integer totalScore) {
+        int safeScore = totalScore == null ? 0 : totalScore;
+        return "%d/144: Bạn đang ở mức %s. %s".formatted(
+                safeScore,
+                resolveSeverityLabel(safeScore).toLowerCase(),
+                switch (resolveClinicalRoute(safeScore)) {
+                    case "SELF_HELP" -> "Đây là nhóm phù hợp với luồng tự trị liệu trên app.";
+                    case "THERAPIST_TRACK_14_WEEKS" -> "Nhóm này cần đi theo lộ trình 14 tuần chuyên sâu cùng bác sĩ.";
+                    case "URGENT_RED_FLAG" -> "Hệ thống sẽ ưu tiên đánh giá an toàn và theo dõi lâm sàng khẩn cấp.";
+                    default -> "Hệ thống sẽ cung cấp thông điệp an tâm và mẹo chăm sóc tinh thần cơ bản.";
+                });
+    }
+
+    private String buildRecommendedNextStep(Integer totalScore) {
+        return switch (resolveClinicalRoute(totalScore)) {
+            case "SELF_HELP" ->
+                "App sẽ mở luồng tự trị liệu với psychoeducation, Thought Record, Fear Ladder, Coping Cards, Daily Check-in và các công cụ thư giãn/chánh niệm.";
+            case "THERAPIST_TRACK_14_WEEKS" ->
+                "Hệ thống sẽ ưu tiên lộ trình CBT 14 tuần chuyên sâu, gợi ý ghép cặp với bác sĩ và tiếp tục Fear Ladder theo trị liệu có hướng dẫn.";
+            case "URGENT_RED_FLAG" ->
+                "Hệ thống sẽ bật cờ đỏ khẩn cấp, ưu tiên theo dõi lâm sàng và đẩy cảnh báo lên dashboard bác sĩ.";
+            default ->
+                "App sẽ hiển thị thông điệp an tâm, cùng các mẹo chăm sóc tinh thần cơ bản để bạn tự theo dõi thêm.";
+        };
+    }
+
+    private boolean isUrgentRedFlag(Integer totalScore) {
+        int safeScore = totalScore == null ? 0 : totalScore;
+        return safeScore >= 90;
+    }
+
+    private boolean isClinicalAttention(Integer totalScore) {
+        int safeScore = totalScore == null ? 0 : totalScore;
+        return safeScore >= 95;
     }
 }

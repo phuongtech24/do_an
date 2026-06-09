@@ -18,11 +18,15 @@ class GuidedDiscoveryRepository {
     required String automaticThought,
     String? emotion,
     int? moodScore,
+    String? token,
   }) async {
     try {
       final response = await http.post(
         Uri.parse(ApiConstants.guidedDiscovery),
-        headers: {'Content-Type': 'application/json; charset=utf-8'},
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+        },
         body: jsonEncode({
           'situation': situation,
           'automaticThought': automaticThought,
@@ -50,4 +54,3 @@ class GuidedDiscoveryRepository {
     }
   }
 }
-

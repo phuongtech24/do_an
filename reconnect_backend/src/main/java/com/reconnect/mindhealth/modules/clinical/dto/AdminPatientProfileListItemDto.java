@@ -1,5 +1,6 @@
 package com.reconnect.mindhealth.modules.clinical.dto;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -19,6 +20,17 @@ public class AdminPatientProfileListItemDto {
 
     private String therapistId;
     private String therapistName;
+    private String avatarIcon;
+    private Boolean anonymousModeEnabled;
+    private String realFullName;
+    private String phoneNumber;
+    private String emergencyContactPhone;
+    private LocalDate dateOfBirth;
+    private String gender;
+    private String educationLevel;
+    private String occupation;
+    private String relationshipStatus;
+    private String medicalHistory;
 
     public AdminPatientProfileListItemDto() {
     }
@@ -33,6 +45,17 @@ public class AdminPatientProfileListItemDto {
         this.redFlagActive = p.getIsRedFlagActive();
         this.graduatedAt = p.getGraduatedAt();
         this.active = p.getUser() != null ? p.getUser().getIsActive() : null;
+        this.avatarIcon = p.getAvatarIcon();
+        this.anonymousModeEnabled = p.getAnonymousModeEnabled();
+        this.realFullName = p.getRealFullName();
+        this.phoneNumber = p.getPhoneNumber();
+        this.emergencyContactPhone = p.getEmergencyContactPhone();
+        this.dateOfBirth = p.getDateOfBirth();
+        this.gender = p.getGender();
+        this.educationLevel = p.getEducationLevel();
+        this.occupation = p.getOccupation();
+        this.relationshipStatus = p.getRelationshipStatus();
+        this.medicalHistory = p.getMedicalHistory();
 
         if (p.getTherapist() != null) {
             this.therapistId = p.getTherapist().getId() != null ? p.getTherapist().getId().toString() : null;
@@ -119,5 +142,92 @@ public class AdminPatientProfileListItemDto {
     public void setTherapistName(String therapistName) {
         this.therapistName = therapistName;
     }
-}
 
+    public String getAvatarIcon() {
+        return avatarIcon;
+    }
+
+    public void setAvatarIcon(String avatarIcon) {
+        this.avatarIcon = avatarIcon;
+    }
+
+    public Boolean getAnonymousModeEnabled() {
+        return anonymousModeEnabled;
+    }
+
+    public void setAnonymousModeEnabled(Boolean anonymousModeEnabled) {
+        this.anonymousModeEnabled = anonymousModeEnabled;
+    }
+
+    public String getRealFullName() {
+        return realFullName;
+    }
+
+    public void setRealFullName(String realFullName) {
+        this.realFullName = realFullName;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    public String getEmergencyContactPhone() {
+        return emergencyContactPhone;
+    }
+
+    public void setEmergencyContactPhone(String emergencyContactPhone) {
+        this.emergencyContactPhone = emergencyContactPhone;
+    }
+
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
+
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
+    }
+
+    public String getGender() {
+        return gender;
+    }
+
+    public void setGender(String gender) {
+        this.gender = gender;
+    }
+
+    public String getEducationLevel() {
+        return educationLevel;
+    }
+
+    public void setEducationLevel(String educationLevel) {
+        this.educationLevel = educationLevel;
+    }
+
+    public String getOccupation() {
+        return occupation;
+    }
+
+    public void setOccupation(String occupation) {
+        this.occupation = occupation;
+    }
+
+    public String getRelationshipStatus() {
+        return relationshipStatus;
+    }
+
+    public void setRelationshipStatus(String relationshipStatus) {
+        this.relationshipStatus = relationshipStatus;
+    }
+
+    public String getMedicalHistory() {
+        return medicalHistory;
+    }
+
+    public void setMedicalHistory(String medicalHistory) {
+        this.medicalHistory = medicalHistory;
+    }
+}

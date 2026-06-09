@@ -18,8 +18,10 @@ import com.reconnect.mindhealth.modules.clinical.dto.OnboardingStatusDto;
 import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
 import com.reconnect.mindhealth.modules.clinical.service.IClinicalService;
-import com.reconnect.mindhealth.modules.assessment.enums.Phq9Type;
-import com.reconnect.mindhealth.modules.assessment.repository.Phq9Repository;
+import com.reconnect.mindhealth.modules.assessment.enums.LsasSubmissionType;
+import com.reconnect.mindhealth.modules.assessment.repository.LsasSubmissionRepository;
+import com.reconnect.mindhealth.modules.roadmap.enums.PatientGoalStatus;
+import com.reconnect.mindhealth.modules.roadmap.repository.PatientGoalRepository;
 
 import jakarta.persistence.EntityNotFoundException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -34,7 +36,10 @@ public class ClinicalServiceImpl implements IClinicalService {
     private PatientProfileRepository patientProfileRepository;
 
     @Autowired
-    private Phq9Repository phq9Repository;
+    private LsasSubmissionRepository lsasSubmissionRepository;
+
+    @Autowired
+    private PatientGoalRepository patientGoalRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -141,15 +146,45 @@ public class ClinicalServiceImpl implements IClinicalService {
         PatientProfile patientProfile = patientProfileRepository.findById(patientId)
                 .orElseThrow(() -> new EntityNotFoundException("Bệnh nhân không tồn tại với ID: " + patientId));
 
-        boolean hasBaseline = phq9Repository.existsByPatientProfile_IdAndSubmissionType(patientId, Phq9Type.BASELINE);
-        boolean hasGoals = patientProfile.getGoalsJson() != null && !patientProfile.getGoalsJson().trim().isEmpty();
+        boolean hasBaseline = lsasSubmissionRepository.existsByPatientProfile_IdAndSubmissionType(patientId, LsasSubmissionType.BASELINE);
+        boolean hasGoals = !patientGoalRepository
+                .findByPatientProfile_IdAndStatusOrderByCreateDateDesc(patientId, PatientGoalStatus.ACTIVE)
+                .isEmpty()
+                || (patientProfile.getGoalsJson() != null && !patientProfile.getGoalsJson().trim().isEmpty());
         boolean hasPsycho = Boolean.TRUE.equals(patientProfile.getPsychoeducationCompleted());
+        boolean hasSelectedTherapist = patientProfile.getTherapist() != null;
+        String lsasClinicalRoute = resolveLsasClinicalRoute(patientProfile);
+        boolean requiresTherapistSelection = requiresTherapistSelection(patientProfile);
 
         OnboardingStatusDto dto = new OnboardingStatusDto();
         dto.setPatientId(patientId);
-        dto.setHasBaselinePhq9(hasBaseline);
+        dto.setHasBaselineLsas(hasBaseline);
         dto.setHasGoals(hasGoals);
         dto.setHasCompletedPsychoeducation(hasPsycho);
+        dto.setHasSelectedTherapist(hasSelectedTherapist);
+        dto.setRequiresTherapistSelection(requiresTherapistSelection);
+        dto.setLsasClinicalRoute(lsasClinicalRoute);
+        log.info("Onboarding status patientId={}, hasBaselineLsas={}, hasGoals={}, hasCompletedPsychoeducation={}, hasSelectedTherapist={}, requiresTherapistSelection={}, lsasClinicalRoute={}",
+                patientId, hasBaseline, hasGoals, hasPsycho, hasSelectedTherapist, requiresTherapistSelection, lsasClinicalRoute);
         return dto;
+    }
+
+    private boolean requiresTherapistSelection(PatientProfile patientProfile) {
+        String route = resolveLsasClinicalRoute(patientProfile);
+        return "THERAPIST_TRACK_14_WEEKS".equals(route) || "URGENT_RED_FLAG".equals(route);
+    }
+
+    private String resolveLsasClinicalRoute(PatientProfile patientProfile) {
+        int score = patientProfile.getCurrentLsasScore() != null ? patientProfile.getCurrentLsasScore() : 0;
+        if (score >= 90) {
+            return "URGENT_RED_FLAG";
+        }
+        if (score >= 60) {
+            return "THERAPIST_TRACK_14_WEEKS";
+        }
+        if (score >= 30) {
+            return "SELF_HELP";
+        }
+        return "REASSURANCE";
     }
 }

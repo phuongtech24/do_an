@@ -1,5 +1,6 @@
 package com.reconnect.mindhealth.modules.clinical.entity;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 import com.reconnect.mindhealth.common.domain.BaseObject;
@@ -47,6 +48,45 @@ public class PatientProfile extends BaseObject {
     @Column(name = "avatar_icon")
     private String avatarIcon = "default_avatar";
 
+    @Column(name = "anonymous_mode_enabled")
+    private Boolean anonymousModeEnabled = true;
+
+    @Column(name = "real_full_name")
+    private String realFullName;
+
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
+
+    @Column(name = "gender")
+    private String gender;
+
+    @Column(name = "phone_number")
+    private String phoneNumber;
+
+    @Column(name = "emergency_contact_phone")
+    private String emergencyContactPhone;
+
+    @Column(name = "education_level")
+    private String educationLevel;
+
+    @Column(name = "occupation")
+    private String occupation;
+
+    @Column(name = "relationship_status")
+    private String relationshipStatus;
+
+    @Column(name = "medical_history", columnDefinition = "TEXT")
+    private String medicalHistory;
+
+    @Column(name = "lsas_demo_completed")
+    private Boolean lsasDemoCompleted = false;
+
+    @Column(name = "safety_gate_completed")
+    private Boolean safetyGateCompleted = false;
+
+    @Column(name = "medical_profile_completed")
+    private Boolean medicalProfileCompleted = false;
+
     @Column(name = "goals_json", columnDefinition = "json")
     private String goalsJson;
 
@@ -60,8 +100,14 @@ public class PatientProfile extends BaseObject {
     @Column(name = "is_red_flag_active")
     private Boolean isRedFlagActive = false;
 
-    @Column(name = "last_phq9_date")
-    private java.time.LocalDateTime lastPhq9Date;
+    @Column(name = "last_lsas_date")
+    private java.time.LocalDateTime lastLsasDate;
+
+    @Column(name = "current_lsas_score")
+    private Integer currentLsasScore = 0;
+
+    @Column(name = "current_cycle_start_date")
+    private java.time.LocalDateTime currentCycleStartDate;
 
     @Column(name = "graduated_at")
     private java.time.LocalDateTime graduatedAt;
@@ -120,6 +166,110 @@ public class PatientProfile extends BaseObject {
         this.avatarIcon = avatarIcon;
     }
 
+    public Boolean getAnonymousModeEnabled() {
+        return anonymousModeEnabled;
+    }
+
+    public void setAnonymousModeEnabled(Boolean anonymousModeEnabled) {
+        this.anonymousModeEnabled = anonymousModeEnabled;
+    }
+
+    public String getRealFullName() {
+        return realFullName;
+    }
+
+    public void setRealFullName(String realFullName) {
+        this.realFullName = realFullName;
+    }
+
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
+
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
+    }
+
+    public String getGender() {
+        return gender;
+    }
+
+    public void setGender(String gender) {
+        this.gender = gender;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    public String getEmergencyContactPhone() {
+        return emergencyContactPhone;
+    }
+
+    public void setEmergencyContactPhone(String emergencyContactPhone) {
+        this.emergencyContactPhone = emergencyContactPhone;
+    }
+
+    public String getEducationLevel() {
+        return educationLevel;
+    }
+
+    public void setEducationLevel(String educationLevel) {
+        this.educationLevel = educationLevel;
+    }
+
+    public String getOccupation() {
+        return occupation;
+    }
+
+    public void setOccupation(String occupation) {
+        this.occupation = occupation;
+    }
+
+    public String getRelationshipStatus() {
+        return relationshipStatus;
+    }
+
+    public void setRelationshipStatus(String relationshipStatus) {
+        this.relationshipStatus = relationshipStatus;
+    }
+
+    public String getMedicalHistory() {
+        return medicalHistory;
+    }
+
+    public void setMedicalHistory(String medicalHistory) {
+        this.medicalHistory = medicalHistory;
+    }
+
+    public Boolean getLsasDemoCompleted() {
+        return lsasDemoCompleted;
+    }
+
+    public void setLsasDemoCompleted(Boolean lsasDemoCompleted) {
+        this.lsasDemoCompleted = lsasDemoCompleted;
+    }
+
+    public Boolean getSafetyGateCompleted() {
+        return safetyGateCompleted;
+    }
+
+    public void setSafetyGateCompleted(Boolean safetyGateCompleted) {
+        this.safetyGateCompleted = safetyGateCompleted;
+    }
+
+    public Boolean getMedicalProfileCompleted() {
+        return medicalProfileCompleted;
+    }
+
+    public void setMedicalProfileCompleted(Boolean medicalProfileCompleted) {
+        this.medicalProfileCompleted = medicalProfileCompleted;
+    }
+
     public String getGoalsJson() {
         return goalsJson;
     }
@@ -163,12 +313,28 @@ public class PatientProfile extends BaseObject {
         this.isRedFlagActive = isRedFlagActive;
     }
 
-    public java.time.LocalDateTime getLastPhq9Date() {
-        return lastPhq9Date;
+    public java.time.LocalDateTime getLastLsasDate() {
+        return lastLsasDate;
     }
 
-    public void setLastPhq9Date(java.time.LocalDateTime lastPhq9Date) {
-        this.lastPhq9Date = lastPhq9Date;
+    public void setLastLsasDate(java.time.LocalDateTime lastLsasDate) {
+        this.lastLsasDate = lastLsasDate;
+    }
+
+    public Integer getCurrentLsasScore() {
+        return currentLsasScore;
+    }
+
+    public void setCurrentLsasScore(Integer currentLsasScore) {
+        this.currentLsasScore = currentLsasScore;
+    }
+
+    public java.time.LocalDateTime getCurrentCycleStartDate() {
+        return currentCycleStartDate;
+    }
+
+    public void setCurrentCycleStartDate(java.time.LocalDateTime currentCycleStartDate) {
+        this.currentCycleStartDate = currentCycleStartDate;
     }
 
     public java.time.LocalDateTime getGraduatedAt() {

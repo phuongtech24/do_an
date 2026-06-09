@@ -1,280 +1,636 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../shared/widgets/mindhealth_scaffold.dart';
+import '../../../../theme/app_colors.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../data/models/behavioral_experiment_model.dart';
+import '../../data/models/fear_ladder_item_model.dart';
 import '../providers/roadmap_provider.dart';
 
-class RoadmapScreen extends StatelessWidget {
+class RoadmapScreen extends StatefulWidget {
   const RoadmapScreen({super.key});
 
   @override
+  State<RoadmapScreen> createState() => _RoadmapScreenState();
+}
+
+class _RoadmapScreenState extends State<RoadmapScreen> {
+  bool _loaded = false;
+
+  String _decodeSafetyBehaviorsToText(String? rawValue) {
+    if (rawValue == null || rawValue.trim().isEmpty) {
+      return '';
+    }
+
+    final trimmed = rawValue.trim();
+    try {
+      final decoded = jsonDecode(trimmed);
+      if (decoded is List) {
+        return decoded
+            .map((item) => item?.toString().trim() ?? '')
+            .where((item) => item.isNotEmpty)
+            .join('\n');
+      }
+      if (decoded is String) {
+        return decoded;
+      }
+    } catch (_) {
+      return trimmed;
+    }
+    return trimmed;
+  }
+
+  List<String> _parseSafetyBehaviorsInput(String rawValue) {
+    return rawValue
+        .split(RegExp(r'[\r\n,]+'))
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final auth = Provider.of<AuthProvider>(context);
+    final auth = context.watch<AuthProvider>();
+    final provider = context.watch<RoadmapProvider>();
     final patientId = auth.loginResponse?.user.id ?? '';
     final token = auth.loginResponse?.token;
-    final roadmapProvider = Provider.of<RoadmapProvider>(context);
 
-    if (patientId.isNotEmpty && roadmapProvider.status == RoadmapStatus.idle) {
+    if (!_loaded && patientId.isNotEmpty) {
+      _loaded = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        Provider.of<RoadmapProvider>(context, listen: false).loadDailyQuests(patientId, token: token);
+        context.read<RoadmapProvider>().loadJourney(patientId, token: token);
       });
     }
 
-    final quests = roadmapProvider.dailyQuests
-        .map((q) => _QuestItem(
-              id: q.id,
-              title: q.title,
-              description: q.description,
-              category: _toVietnameseCategory(q.category),
-              categoryColor: _categoryColor(q.category),
-              icon: _categoryIcon(q.category),
-              isCompleted: q.status == 'DONE',
-              isLocked: q.status == 'LOCKED',
-            ))
-        .toList();
-
     return MindHealthScaffold(
-      title: 'Lộ trình Kích hoạt hành vi',
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Clinical justification banner
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFE3F2FD), Color(0xFFBBDEFB)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.blue.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                )
+      title: 'Lộ trình tiếp xúc',
+      body: provider.status == RoadmapStatus.loading && provider.fearLadder.isEmpty
+          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          : provider.status == RoadmapStatus.error && provider.fearLadder.isEmpty
+              ? Center(child: Text(provider.errorMessage))
+              : ListView(
+                  padding: const EdgeInsets.only(bottom: 24),
+                  children: [
+                    if (provider.safetyOverlay.active) ...[
+                      _SafetyBanner(message: provider.safetyOverlay.message),
+                      const SizedBox(height: 16),
+                    ],
+                    _ScreenHero(
+                      totalItems: provider.fearLadder.length,
+                      unlockedItems: provider.fearLadder.where((item) => item.unlocked).length,
+                    ),
+                    const SizedBox(height: 18),
+                    _ExperimentCard(
+                      experiment: provider.todayExperiment,
+                      onStart: provider.todayExperiment == null
+                          ? null
+                          : () => _showStartDialog(context, provider.todayExperiment!, token),
+                      onDebrief: provider.todayExperiment == null
+                          ? null
+                          : () => _showDebriefDialog(context, provider.todayExperiment!, token),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Thang sợ của bạn',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Đi từ bước dễ hơn tới bước khó hơn. Mỗi lần hoàn thành tốt, hệ thống sẽ mở dần nấc tiếp theo.',
+                      style: TextStyle(color: AppColors.textSecondary, height: 1.45),
+                    ),
+                    const SizedBox(height: 14),
+                    if (provider.fearLadder.isEmpty)
+                      Container(
+                        margin: const EdgeInsets.only(top: 28),
+                        padding: const EdgeInsets.all(22),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: AppColors.primary.withOpacity(0.08)),
+                        ),
+                        child: const Text(
+                          'Chưa có thang sợ. Hãy hoàn tất LSAS và chọn mục tiêu trị liệu để hệ thống tạo lộ trình phù hợp.',
+                          style: TextStyle(color: AppColors.textSecondary, height: 1.45),
+                        ),
+                      )
+                    else
+                      ...provider.fearLadder.asMap().entries.map(
+                            (entry) => _FearLadderCard(
+                              item: entry.value,
+                              showConnector: entry.key != provider.fearLadder.length - 1,
+                            ),
+                          ),
+                  ],
+                ),
+    );
+  }
+
+  Future<void> _showStartDialog(
+    BuildContext context,
+    BehavioralExperimentModel experiment,
+    String? token,
+  ) async {
+    final predictionController = TextEditingController(text: experiment.prediction ?? '');
+    final safetyController = TextEditingController(
+      text: _decodeSafetyBehaviorsToText(experiment.safetyBehaviorsJson),
+    );
+    double belief = (experiment.predictionBelief ?? 50).toDouble();
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: const Text('Bắt đầu bài thực hành'),
+          content: SizedBox(
+            width: 440,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: predictionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Dự đoán điều bạn lo sẽ xảy ra',
+                  ),
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: safetyController,
+                  decoration: const InputDecoration(
+                    labelText: 'Những hành vi an toàn bạn muốn giảm',
+                    helperText: 'Mỗi dòng là một hành vi riêng để hệ thống lưu thành danh sách.',
+                  ),
+                  maxLines: 4,
+                ),
+                const SizedBox(height: 12),
+                Text('Mức tin vào dự đoán: ${belief.round()}%'),
+                Slider(
+                  value: belief,
+                  min: 0,
+                  max: 100,
+                  divisions: 20,
+                  activeColor: AppColors.primary,
+                  onChanged: (value) => setState(() => belief = value),
+                ),
               ],
             ),
-            child: Row(
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Hủy'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Lưu và bắt đầu'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (ok != true) return;
+    final provider = context.read<RoadmapProvider>();
+    final safetyBehaviors = _parseSafetyBehaviorsInput(safetyController.text);
+    final success = await provider.startTodayExperiment(
+      experimentId: experiment.id,
+      prediction: predictionController.text.trim(),
+      predictionBelief: belief.round(),
+      safetyBehaviors: safetyBehaviors,
+      token: token,
+    );
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success ? 'Đã bắt đầu bài thực hành.' : provider.errorMessage,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showDebriefDialog(
+    BuildContext context,
+    BehavioralExperimentModel experiment,
+    String? token,
+  ) async {
+    final executionController = TextEditingController(text: experiment.executionNotes ?? '');
+    final debriefController = TextEditingController(text: experiment.debrief ?? '');
+    double fear = (experiment.postFearScore ?? experiment.ladderItem.currentFearScore).toDouble();
+    double avoidance =
+        (experiment.postAvoidanceScore ?? experiment.ladderItem.currentAvoidanceScore).toDouble();
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: const Text('Tổng kết bài thực hành'),
+          content: SizedBox(
+            width: 440,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.info_outline, color: Colors.blue),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        'Nguyên tắc: "Thà quá dễ còn hơn quá khó"',
-                        style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue, fontSize: 14),
-                      ),
-                      Text(
-                        'CBT khuyến nghị bắt đầu bằng những việc siêu nhỏ (5-10 phút) để tránh cảm giác quá tải và củng cố niềm tin vào bản thân.',
-                        style: TextStyle(color: Colors.black87, fontSize: 12),
-                      ),
-                    ],
+                TextField(
+                  controller: executionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Bạn đã làm như thế nào?',
+                  ),
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: debriefController,
+                  decoration: const InputDecoration(
+                    labelText: 'Điều thực sự xảy ra và bài học rút ra',
+                  ),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 12),
+                Text('Mức sợ sau bài: ${fear.round()}'),
+                Slider(
+                  value: fear,
+                  min: 0,
+                  max: 3,
+                  divisions: 3,
+                  activeColor: AppColors.primary,
+                  onChanged: (value) => setState(() => fear = value),
+                ),
+                Text('Mức né tránh sau bài: ${avoidance.round()}'),
+                Slider(
+                  value: avoidance,
+                  min: 0,
+                  max: 3,
+                  divisions: 3,
+                  activeColor: AppColors.primary,
+                  onChanged: (value) => setState(() => avoidance = value),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Hủy'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Lưu tổng kết'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (ok != true) return;
+    final provider = context.read<RoadmapProvider>();
+    final success = await provider.debriefTodayExperiment(
+      experimentId: experiment.id,
+      executionNotes: executionController.text.trim(),
+      debrief: debriefController.text.trim(),
+      postFearScore: fear.round(),
+      postAvoidanceScore: avoidance.round(),
+      token: token,
+    );
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success ? 'Đã lưu tổng kết và cập nhật thang sợ.' : provider.errorMessage,
+        ),
+      ),
+    );
+  }
+}
+
+class _ScreenHero extends StatelessWidget {
+  const _ScreenHero({
+    required this.totalItems,
+    required this.unlockedItems,
+  });
+
+  final int totalItems;
+  final int unlockedItems;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppColors.primary, Color(0xFF159489)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.18),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Thang tiếp xúc cá nhân',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Đã mở $unlockedItems/$totalItems nấc. Hãy đi từng bước nhỏ, đều và thực tế.',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.9),
+                    height: 1.45,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 24),
+          Container(
+            width: 58,
+            height: 58,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.16),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: const Icon(Icons.alt_route_rounded, color: Colors.white, size: 30),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
+class _SafetyBanner extends StatelessWidget {
+  const _SafetyBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF4E8),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.warning.withOpacity(0.28)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.health_and_safety_outlined, color: AppColors.warning),
+          const SizedBox(width: 10),
           Expanded(
-            child: Builder(
-              builder: (context) {
-                if (roadmapProvider.status == RoadmapStatus.loading && quests.isEmpty) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (roadmapProvider.status == RoadmapStatus.error) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
-                          const SizedBox(height: 8),
-                          Text('Lỗi: ${roadmapProvider.errorMessage}', textAlign: TextAlign.center),
-                          const SizedBox(height: 12),
-                          FilledButton(
-                            onPressed: patientId.isEmpty
-                                ? null
-                                : () => roadmapProvider.loadDailyQuests(patientId, token: token),
-                            child: const Text('Thử lại'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-                if (quests.isEmpty) {
-                  return const Center(child: Text('Hôm nay chưa có nhiệm vụ nào.'));
-                }
-
-                return RefreshIndicator(
-                  onRefresh: () async {
-                    if (patientId.isNotEmpty) {
-                      await roadmapProvider.loadDailyQuests(patientId, token: token);
-                    }
-                  },
-                  child: ListView.builder(
-                    itemCount: quests.length,
-                    itemBuilder: (context, index) {
-                      final quest = quests[index];
-                      return _buildRoadmapNode(context, quest, index, isLast: index == quests.length - 1);
-                    },
-                  ),
-                );
-              },
+            child: Text(
+              message,
+              style: const TextStyle(color: AppColors.textPrimary, height: 1.45),
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildRoadmapNode(BuildContext context, _QuestItem quest, int index, {required bool isLast}) {
-    return IntrinsicHeight(
+class _ExperimentCard extends StatelessWidget {
+  const _ExperimentCard({
+    required this.experiment,
+    required this.onStart,
+    required this.onDebrief,
+  });
+
+  final BehavioralExperimentModel? experiment;
+  final VoidCallback? onStart;
+  final VoidCallback? onDebrief;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: AppColors.primary.withOpacity(0.08)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: experiment == null
+          ? const Text(
+              'Hôm nay chưa có bài thực hành hành vi. Khi có một nấc đang mở phù hợp, hệ thống sẽ gợi ý tại đây.',
+              style: TextStyle(color: AppColors.textSecondary, height: 1.45),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Bài thực hành hôm nay',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  experiment!.ladderItem.situationText,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _pill(_mapExperimentStatus(experiment!.status)),
+                    _pill(_mapBucket(experiment!.ladderItem.bucket)),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    FilledButton(
+                      onPressed: onStart,
+                      child: Text(_resolveStartButtonLabel(experiment!.status)),
+                    ),
+                    const SizedBox(width: 10),
+                    OutlinedButton(
+                      onPressed: onDebrief,
+                      child: const Text('Tổng kết'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _pill(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: AppColors.primary,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  String _resolveStartButtonLabel(String status) {
+    switch (status.toUpperCase()) {
+      case 'IN_PROGRESS':
+        return 'Tiếp tục';
+      case 'DONE':
+        return 'Xem lại';
+      default:
+        return 'Bắt đầu';
+    }
+  }
+}
+
+class _FearLadderCard extends StatelessWidget {
+  const _FearLadderCard({
+    required this.item,
+    required this.showConnector,
+  });
+
+  final FearLadderItemModel item;
+  final bool showConnector;
+
+  @override
+  Widget build(BuildContext context) {
+    final locked = !item.unlocked;
+    final mastered = item.status == 'MASTERED';
+    final accent = mastered
+        ? AppColors.success
+        : locked
+            ? AppColors.textSecondary
+            : AppColors.primary;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Timeline indicator
           SizedBox(
-            width: 48,
+            width: 62,
             child: Column(
               children: [
                 Container(
-                  width: 32,
-                  height: 32,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
+                    color: accent.withOpacity(0.12),
                     shape: BoxShape.circle,
-                    color: quest.isCompleted
-                        ? quest.categoryColor
-                        : quest.isLocked ? Colors.grey[300] : Colors.white,
-                    border: Border.all(
-                      color: quest.isLocked ? Colors.grey[400]! : quest.categoryColor,
-                      width: 2,
-                    ),
+                    border: Border.all(color: accent.withOpacity(0.18)),
                   ),
                   child: Center(
-                    child: quest.isCompleted
-                        ? const Icon(Icons.check, size: 16, color: Colors.white)
-                        : Text(
-                            '${index + 1}',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: quest.isLocked ? Colors.grey : quest.categoryColor,
-                            ),
-                          ),
+                    child: Text(
+                      '${item.ladderOrder}',
+                      style: TextStyle(
+                        color: accent,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 18,
+                      ),
+                    ),
                   ),
                 ),
-                if (!isLast)
-                  Expanded(
-                    child: Container(
-                      width: 2,
-                      color: quest.isCompleted ? quest.categoryColor : Colors.grey[300],
+                if (showConnector)
+                  Container(
+                    width: 3,
+                    height: 52,
+                    margin: const EdgeInsets.symmetric(vertical: 6),
+                    decoration: BoxDecoration(
+                      color: accent.withOpacity(0.18),
+                      borderRadius: BorderRadius.circular(999),
                     ),
                   ),
               ],
             ),
           ),
-          const SizedBox(width: 12),
-          // Content Card
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 24.0),
-              child: Opacity(
-                opacity: quest.isLocked ? 0.6 : 1.0,
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey[200]!),
-                    boxShadow: [
-                      BoxShadow(
-                        color: quest.isLocked ? Colors.transparent : quest.categoryColor.withOpacity(0.1),
-                        blurRadius: 15,
-                        offset: const Offset(0, 5),
-                      )
-                    ],
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: locked ? Colors.white.withOpacity(0.85) : Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: accent.withOpacity(0.12)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 14,
+                    offset: const Offset(0, 6),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: quest.categoryColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
+                ],
+              ),
+              child: Opacity(
+                opacity: locked ? 0.68 : 1,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.situationText,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                              height: 1.35,
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(quest.icon, size: 14, color: quest.categoryColor),
-                                const SizedBox(width: 4),
-                                Text(
-                                  quest.category,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: quest.categoryColor,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Spacer(),
-                          if (quest.isLocked)
-                            const Icon(Icons.lock_outline, size: 16, color: Colors.grey),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        quest.title,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        quest.description,
-                        style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                      ),
-                      const SizedBox(height: 16),
-                      if (!quest.isLocked && !quest.isCompleted)
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              context.push(
-                                '/quest-detail',
-                                extra: {
-                                  'id': quest.id,
-                                  'title': quest.title,
-                                  'category': quest.category,
-                                  'categoryColor': quest.categoryColor,
-                                  'icon': quest.icon,
-                                },
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: quest.categoryColor,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            ),
-                            icon: const Icon(Icons.photo_camera_outlined, size: 18),
-                            label: const Text('Nộp minh chứng', style: TextStyle(fontSize: 12)),
                           ),
                         ),
-                    ],
-                  ),
+                        const SizedBox(width: 10),
+                        _statusBadge(item),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _metaChip('Mức sợ ${item.currentFearScore}/3'),
+                        _metaChip('Né tránh ${item.currentAvoidanceScore}/3'),
+                        _metaChip(_mapBucket(item.bucket)),
+                        if (item.goalMatch) _metaChip('Khớp mục tiêu'),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -283,68 +639,79 @@ class RoadmapScreen extends StatelessWidget {
       ),
     );
   }
-}
 
-class _QuestItem {
-  const _QuestItem({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.category,
-    required this.categoryColor,
-    required this.icon,
-    required this.isCompleted,
-    required this.isLocked,
-  });
+  Widget _statusBadge(FearLadderItemModel item) {
+    final locked = !item.unlocked;
+    final mastered = item.status == 'MASTERED';
+    final label = locked
+        ? 'Đang khóa'
+        : mastered
+            ? 'Đã làm chủ'
+            : 'Đang mở';
+    final color = locked
+        ? AppColors.textSecondary
+        : mastered
+            ? AppColors.success
+            : AppColors.primary;
 
-  final String id;
-  final String title;
-  final String description;
-  final String category;
-  final Color categoryColor;
-  final IconData icon;
-  final bool isCompleted;
-  final bool isLocked;
-}
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w700,
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
 
-String _toVietnameseCategory(String category) {
-  switch (category) {
-    case 'BEHAVIORAL':
-      return 'Hành vi';
-    case 'SOCIAL':
-      return 'Xã hội';
-    case 'EMOTIONAL':
-      return 'Cảm xúc';
-    case 'COGNITIVE':
-    default:
-      return 'Nhận thức';
+  Widget _metaChip(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: AppColors.textSecondary,
+          fontWeight: FontWeight.w600,
+          fontSize: 12.5,
+        ),
+      ),
+    );
   }
 }
 
-Color _categoryColor(String category) {
-  switch (category) {
-    case 'BEHAVIORAL':
-      return const Color(0xFF2DC653);
-    case 'SOCIAL':
-      return const Color(0xFFFF9E00);
-    case 'EMOTIONAL':
-      return const Color(0xFF00B4D8);
-    case 'COGNITIVE':
+String _mapBucket(String bucket) {
+  switch (bucket.toUpperCase()) {
+    case 'EASY':
+      return 'Mức dễ';
+    case 'MEDIUM':
+      return 'Mức vừa';
+    case 'HARD':
+      return 'Mức khó';
     default:
-      return const Color(0xFF9D4EDD);
+      return bucket;
   }
 }
 
-IconData _categoryIcon(String category) {
-  switch (category) {
-    case 'BEHAVIORAL':
-      return Icons.directions_run_outlined;
-    case 'SOCIAL':
-      return Icons.people_outline;
-    case 'EMOTIONAL':
-      return Icons.water_drop_outlined;
-    case 'COGNITIVE':
+String _mapExperimentStatus(String status) {
+  switch (status.toUpperCase()) {
+    case 'PLANNED':
+      return 'Đã lên kế hoạch';
+    case 'IN_PROGRESS':
+      return 'Đang thực hành';
+    case 'DONE':
+      return 'Đã hoàn thành';
     default:
-      return Icons.psychology_outlined;
+      return status;
   }
 }

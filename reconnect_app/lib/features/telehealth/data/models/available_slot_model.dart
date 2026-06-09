@@ -13,5 +13,6 @@ class AvailableSlotModel {
       available: json['available'] == true,
     );
   }
-}
 
+  bool get isAvailable => available;
+}

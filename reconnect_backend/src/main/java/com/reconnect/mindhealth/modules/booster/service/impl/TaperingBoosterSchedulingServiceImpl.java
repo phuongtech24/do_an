@@ -50,43 +50,24 @@ public class TaperingBoosterSchedulingServiceImpl implements ITaperingBoosterSch
     }
 
     private int scheduleForPatient(PatientProfile patient) {
-        if (patient.getTaperingStage() == null || patient.getTaperingStage() == TaperingStage.NONE) {
-            return 0;
-        }
-        if (patient.getGraduatedAt() == null) {
-            return 0;
-        }
         if (patient.getTherapist() == null) {
             return 0;
         }
 
         LocalDateTime now = LocalDateTime.now();
 
-        // 1) Update tapering stage based on time since graduation (simple rule)
-        long days = java.time.Duration.between(patient.getGraduatedAt(), now).toDays();
-        TaperingStage desiredStage;
-        if (days < 90) {
-            desiredStage = TaperingStage.WEEKLY;
-        } else if (days < 180) {
-            desiredStage = TaperingStage.MONTHLY;
-        } else {
-            desiredStage = TaperingStage.QUARTERLY;
-        }
-
-        if (patient.getTaperingStage() != desiredStage) {
-            patient.setTaperingStage(desiredStage);
-            patientProfileRepository.save(patient);
-        }
-
         int created = 0;
 
-        // 2) Schedule next tapering appointment
-        created += ensureNextTaperingAppointment(patient, now);
-
-        // 3) Schedule booster sessions (3/6/12 months) when they are within next 30 days
-        created += ensureBooster(patient, AppointmentPurpose.BOOSTER_3M, patient.getGraduatedAt().plusMonths(3), now);
-        created += ensureBooster(patient, AppointmentPurpose.BOOSTER_6M, patient.getGraduatedAt().plusMonths(6), now);
-        created += ensureBooster(patient, AppointmentPurpose.BOOSTER_12M, patient.getGraduatedAt().plusMonths(12), now);
+        if (patient.getGraduatedAt() == null) {
+            if (patient.getTaperingStage() == null || patient.getTaperingStage() == TaperingStage.NONE) {
+                return 0;
+            }
+            created += ensureNextTaperingAppointment(patient, now);
+        } else {
+            created += ensureBooster(patient, AppointmentPurpose.BOOSTER_3M, patient.getGraduatedAt().plusMonths(3), now);
+            created += ensureBooster(patient, AppointmentPurpose.BOOSTER_6M, patient.getGraduatedAt().plusMonths(6), now);
+            created += ensureBooster(patient, AppointmentPurpose.BOOSTER_12M, patient.getGraduatedAt().plusMonths(12), now);
+        }
 
         return created;
     }
@@ -94,8 +75,8 @@ public class TaperingBoosterSchedulingServiceImpl implements ITaperingBoosterSch
     private int ensureNextTaperingAppointment(PatientProfile patient, LocalDateTime now) {
         int intervalDays = switch (patient.getTaperingStage()) {
             case WEEKLY -> 7;
-            case MONTHLY -> 30;
-            case QUARTERLY -> 90;
+            case MONTHLY -> 14;
+            case QUARTERLY -> 28;
             default -> 0;
         };
         if (intervalDays <= 0) {
@@ -105,7 +86,7 @@ public class TaperingBoosterSchedulingServiceImpl implements ITaperingBoosterSch
         Appointment last = appointmentRepository.findTopByPatientProfile_IdAndPurposeOrderByStartAtDesc(patient.getId(),
                 AppointmentPurpose.TAPERING);
 
-        LocalDateTime base = last != null && last.getStartAt() != null ? last.getStartAt() : patient.getGraduatedAt();
+        LocalDateTime base = last != null && last.getStartAt() != null ? last.getStartAt() : now;
         LocalDateTime nextStart = base.plusDays(intervalDays)
                 .withHour(DEFAULT_START_TIME.getHour())
                 .withMinute(DEFAULT_START_TIME.getMinute())
@@ -137,6 +118,8 @@ public class TaperingBoosterSchedulingServiceImpl implements ITaperingBoosterSch
         appt.setIsAnonymous(true);
         appt.setMeetingLink(patient.getTherapist().getMeetingLink());
         appt.setPurpose(AppointmentPurpose.TAPERING);
+        appt.setClinicalPurposeCode(AppointmentPurpose.TAPERING.name());
+        appt.setCarePhaseCode(mapTaperingPhaseCode(patient.getTaperingStage()));
         appointmentRepository.save(appt);
         return 1;
     }
@@ -172,8 +155,18 @@ public class TaperingBoosterSchedulingServiceImpl implements ITaperingBoosterSch
         appt.setIsAnonymous(true);
         appt.setMeetingLink(patient.getTherapist().getMeetingLink());
         appt.setPurpose(purpose);
+        appt.setClinicalPurposeCode(purpose.name());
+        appt.setCarePhaseCode("MAINTENANCE");
         appointmentRepository.save(appt);
         return 1;
     }
-}
 
+    private String mapTaperingPhaseCode(TaperingStage taperingStage) {
+        return switch (taperingStage) {
+            case WEEKLY -> "STANDARD_WEEKLY";
+            case MONTHLY -> "TAPERING_BIWEEKLY";
+            case QUARTERLY -> "TAPERING_3_TO_4_WEEKS";
+            default -> "STANDARD_WEEKLY";
+        };
+    }
+}

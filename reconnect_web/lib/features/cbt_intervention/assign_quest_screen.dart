@@ -1,228 +1,217 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-class AssignQuestScreen extends StatelessWidget {
-  const AssignQuestScreen({super.key});
+import '../../core/auth/auth_provider.dart';
+import '../../features/admin/data/models/quest_template_model.dart';
+import '../../features/therapist/data/repositories/therapist_patient_repository.dart';
+import '../../theme/app_colors.dart';
+
+class AssignQuestScreen extends StatefulWidget {
+  final String patientId;
+  final String patientName;
+
+  const AssignQuestScreen({
+    super.key,
+    required this.patientId,
+    required this.patientName,
+  });
+
+  @override
+  State<AssignQuestScreen> createState() => _AssignQuestScreenState();
+}
+
+class _AssignQuestScreenState extends State<AssignQuestScreen> {
+  final TherapistPatientRepository _repo = TherapistPatientRepository();
+  List<QuestTemplateModel> _templates = [];
+  String _query = '';
+  bool _loading = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadTemplates());
+  }
+
+  Future<void> _loadTemplates() async {
+    final token = Provider.of<AuthProvider>(context, listen: false).token;
+    if (token == null || token.isEmpty) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final list = await _repo.listQuestTemplates(token: token);
+      if (!mounted) return;
+      setState(() => _templates = list);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _assign(QuestTemplateModel quest) async {
+    final token = Provider.of<AuthProvider>(context, listen: false).token;
+    if (token == null || token.isEmpty) return;
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      await _repo.assignQuest(
+        token: token,
+        patientId: widget.patientId,
+        questTemplateId: quest.id,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Đã gán bài tập "${quest.title}" cho ${widget.patientName}.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final filtered = _templates.where((quest) {
+      final keyword = _query.trim().toLowerCase();
+      if (keyword.isEmpty) return true;
+      return quest.title.toLowerCase().contains(keyword) ||
+          quest.description.toLowerCase().contains(keyword) ||
+          quest.category.toLowerCase().contains(keyword) ||
+          quest.difficulty.toLowerCase().contains(keyword);
+    }).toList();
+
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Gán Nhiệm vụ (CBT Intervention)', style: TextStyle(color: Colors.black87)),
+        title: Text('Gán bài tập CBT - ${widget.patientName}', style: const TextStyle(color: AppColors.textPrimary)),
         backgroundColor: Colors.white,
         elevation: 1,
-        iconTheme: const IconThemeData(color: Colors.black),
-      ),
-      body: Row(
-        children: [
-          // CỘT 1: Thư viện Thử thách (Nguồn kéo)
-          Container(
-            width: 350,
-            color: Colors.white,
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Thư viện Thử thách CBT', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 16),
-                TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Tìm kiếm nhiệm vụ...',
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Expanded(
-                  child: ListView(
-                    children: [
-                      _buildDraggableQuestCard('10 phút đi bộ', 'Khuyến khích vận động ngoài trời', 'Dễ', Colors.green),
-                      _buildDraggableQuestCard('Thiền chánh niệm', '5 phút nhắm mắt và thở sâu', 'Dễ', Colors.green),
-                      _buildDraggableQuestCard('Ghi lời biết ơn', 'Viết ra 3 điều biết ơn hôm nay', 'Trung bình', Colors.orange),
-                      _buildDraggableQuestCard('Thử nghiệm xã hội', chủ đề bắt chuyện với 1 người lạ', 'Khó', Colors.red),
-                    ],
-                  ),
-                )
-              ],
-            ),
-          ),
-          
-          const VerticalDivider(width: 1, color: Colors.black12),
-          
-          // CỘT 2: Bản đồ Lộ trình (Đích thả)
-          Expanded(
-            child: Container(
-              color: Colors.blueGrey.shade50,
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Roadmap: Bệnh nhân [Cáo Bạc]', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                      ElevatedButton.icon(
-                        onPressed: () {},
-                        icon: const Icon(Icons.save),
-                        label: const Text('Lưu Lộ trình'),
-                        style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white),
-                      )
-                    ],
-                  ),
-                  const SizedBox(height: 32),
-                  
-                  // Vùng thả
-                  Expanded(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildDragTargetMilestone('Chặng 1: Ổn định', [
-                           // Các nhiệm vụ đã được thả vào đây
-                           _buildAssignedQuestBlock('10 phút đi bộ'),
-                        ]),
-                        const SizedBox(width: 40),
-                        _buildDragTargetMilestone('Chặng 2: Can thiệp', []),
-                      ],
-                    ),
-                  )
-                ],
-              ),
-            ),
-          )
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
+        actions: [
+          IconButton(onPressed: _loading ? null : _loadTemplates, icon: const Icon(Icons.refresh)),
         ],
       ),
-    );
-  }
-
-  Widget _buildDraggableQuestCard(String title, String desc, String level, Color levelColor) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      // Sử dụng Draggable của Flutter
-      child: Draggable<String>(
-        data: title,
-        feedback: Material(
-          elevation: 8,
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            width: 310,
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
-            child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ),
-        childWhenDragging: Opacity(
-          opacity: 0.3,
-          child: _questCardContent(title, desc, level, levelColor),
-        ),
-        child: _questCardContent(title, desc, level, levelColor),
-      ),
-    );
-  }
-  
-  Widget _questCardContent(String title, String desc, String level, Color levelColor) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(color: levelColor.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                child: Text(level, style: TextStyle(color: levelColor, fontSize: 12, fontWeight: FontWeight.bold)),
-              )
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(desc, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDragTargetMilestone(String title, List<Widget> existingChildren) {
-    return Expanded(
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade300),
-        ),
+      body: Padding(
+        padding: const EdgeInsets.all(24),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              decoration: BoxDecoration(
-                color: Colors.teal.shade700,
-                borderRadius: const BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
+            const Text('Kho bài tập CBT', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primary)),
+            const SizedBox(height: 8),
+            const Text('Chọn bài tập phù hợp để gán trực tiếp cho bệnh nhân. Bệnh nhân sẽ thấy bài tập trong Roadmap.', style: TextStyle(color: AppColors.textSecondary)),
+            const SizedBox(height: 16),
+            TextField(
+              onChanged: (value) => setState(() => _query = value),
+              decoration: InputDecoration(
+                hintText: 'Tìm theo tiêu đề / mô tả / category / difficulty...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: Text(title, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
             ),
+            if (_error != null && _error!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Text(_error!, style: const TextStyle(color: AppColors.alert)),
+            ],
+            const SizedBox(height: 16),
             Expanded(
-              child: DragTarget<String>(
-                builder: (context, candidateData, rejectedData) {
-                  return Container(
-                    padding: const EdgeInsets.all(16),
-                    color: candidateData.isNotEmpty ? Colors.teal.shade50 : Colors.transparent,
-                    child: Column(
-                      children: [
-                        ...existingChildren,
-                        if (candidateData.isNotEmpty)
-                          Container(
-                            height: 60,
-                            margin: const EdgeInsets.only(top: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade200,
-                              border: Border.all(color: Colors.teal, style: BorderStyle.solid),
-                              borderRadius: BorderRadius.circular(8)
-                            ),
-                            child: const Center(child: Text('Thả nhiệm vụ vào đây', style: TextStyle(color: Colors.teal))),
-                          )
-                      ],
-                    ),
-                  );
-                },
-                onAccept: (data) {
-                  // TODO: Xử lý thêm nhiệm vụ vào List của Cột này
-                },
-              ),
-            )
+              child: _loading && _templates.isEmpty
+                  ? const Center(child: CircularProgressIndicator())
+                  : filtered.isEmpty
+                      ? const Center(child: Text('Không có bài tập phù hợp.'))
+                      : ListView.separated(
+                          itemCount: filtered.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final quest = filtered[index];
+                            return _QuestTemplateCard(
+                              quest: quest,
+                              loading: _loading,
+                              onAssign: () => _assign(quest),
+                            );
+                          },
+                        ),
+            ),
           ],
         ),
       ),
     );
   }
-  
-  Widget _buildAssignedQuestBlock(String title) {
+}
+
+class _QuestTemplateCard extends StatelessWidget {
+  final QuestTemplateModel quest;
+  final bool loading;
+  final VoidCallback onAssign;
+
+  const _QuestTemplateCard({
+    required this.quest,
+    required this.loading,
+    required this.onAssign,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: Colors.grey.shade300),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: AppColors.primary.withOpacity(0.12),
+              child: const Icon(Icons.assignment_outlined, color: AppColors.primary),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(quest.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const SizedBox(height: 4),
+                  Text(quest.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.textSecondary)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      _pill(quest.category),
+                      _pill(quest.difficulty),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            ElevatedButton.icon(
+              onPressed: loading ? null : onAssign,
+              icon: const Icon(Icons.send, size: 18),
+              label: const Text('Gán bài'),
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _pill(String text) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.blue.shade200),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.drag_indicator, color: Colors.blueGrey),
-              const SizedBox(width: 8),
-              Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-            ],
-          ),
-          IconButton(icon: const Icon(Icons.close, size: 20, color: Colors.red), onPressed: () {}),
-        ],
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(999)),
+      child: Text(text, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
     );
   }
 }

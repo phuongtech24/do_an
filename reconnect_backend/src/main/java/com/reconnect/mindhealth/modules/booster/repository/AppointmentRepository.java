@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -23,10 +24,23 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
 
     List<Appointment> findByPatientProfile_IdOrderByStartAtDesc(UUID patientId);
 
+    List<Appointment> findByTherapistProfile_IdOrderByStartAtDesc(UUID therapistId);
+
+
     Appointment findTopByPatientProfile_IdAndPurposeOrderByStartAtDesc(UUID patientId, AppointmentPurpose purpose);
 
     @Query("SELECT a FROM Appointment a WHERE a.therapistProfile.id = :therapistId AND a.startAt BETWEEN :from AND :to ORDER BY a.startAt ASC")
     List<Appointment> findTherapistAppointmentsInRange(@Param("therapistId") UUID therapistId,
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to);
+
+    @Modifying
+    @Query("""
+            UPDATE Appointment a
+            SET a.meetingLink = :meetingLink
+            WHERE a.therapistProfile.id = :therapistId
+              AND a.status = com.reconnect.mindhealth.modules.booster.enums.AppointmentStatus.BOOKED
+              AND (a.meetingLink IS NULL OR a.meetingLink = '')
+            """)
+    int backfillMissingMeetingLink(@Param("therapistId") UUID therapistId, @Param("meetingLink") String meetingLink);
 }

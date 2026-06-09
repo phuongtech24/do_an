@@ -1,5 +1,0 @@
-patient_id,journal_type,ai_risk_score,severity_level,situation,automatic_thought,emotion,emotion_score,adaptive_response,re_rated_score,content
-3fa85f64-5717-4562-b3fc-2c963f66afa6,THOUGHT_RECORD,0,NORMAL,Hôm nay tôi bị sếp phê bình trước toàn công ty,Tôi là kẻ bất tài vô dụng và làm gì cũng hỏng,Xấu hổ và Tuyệt vọng,85,Sếp phê bình vì mong muốn công việc chung tốt hơn. Mình vẫn có nhiều dự án chạy thành công trước đây mà.,30,
-3fa85f64-5717-4562-b3fc-2c963f66afa6,CREDIT_LIST,0,NORMAL,,,,,,,Hôm nay tôi đã kiên trì thức dậy sớm lúc 6:00 và hoàn thành bài tập thể dục 30 phút
-3fa85f64-5717-4562-b3fc-2c963f66afa6,THOUGHT_RECORD,0,NORMAL,Nhắn tin cho bạn thân nhưng sau 3 tiếng vẫn chưa thấy phản hồi,Bạn ấy ghét mình và muốn cắt đứt liên lạc với mình rồi,Lo lắng và Buồn tủi,75,Bạn ấy có thể đang bận họp hoặc làm việc quan trọng. Lần trước bạn ấy cũng bận và nhắn lại xin lỗi sau đó.,20,
-3fa85f64-5717-4562-b3fc-2c963f66afa6,CREDIT_LIST,0,NORMAL,,,,,,,Hôm nay tôi đã can đảm chia sẻ thẳng thắn khó khăn của mình với đồng nghiệp và nhận được sự giúp đỡ

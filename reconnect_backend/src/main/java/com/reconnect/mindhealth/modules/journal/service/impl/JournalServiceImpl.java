@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reconnect.mindhealth.common.util.EncryptionUtil;
 import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
+import com.reconnect.mindhealth.modules.clinical.enums.Status;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
 import com.reconnect.mindhealth.modules.journal.dto.JournalDto;
 import com.reconnect.mindhealth.modules.journal.entity.Journal;
@@ -23,6 +24,7 @@ import com.reconnect.mindhealth.modules.journal.repository.JournalRepository;
 import com.reconnect.mindhealth.modules.journal.service.IJournalService;
 import com.reconnect.mindhealth.modules.ai.dto.JournalAiRiskResultDto;
 import com.reconnect.mindhealth.modules.ai.service.IAiAssistantService;
+import com.reconnect.mindhealth.modules.risk.service.IRiskScoringService;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -44,11 +46,20 @@ public class JournalServiceImpl implements IJournalService {
     @Autowired
     private IAiAssistantService aiAssistantService;
 
+    @Autowired
+    private IRiskScoringService riskScoringService;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     public JournalDto saveJournal(JournalDto dto, UUID loggedInPatientId) {
         log.info("Saving journal for patient: {} with type: {}", loggedInPatientId, dto.getJournalType());
+        if (dto.getJournalType() == JournalType.THOUGHT_RECORD) {
+            log.info("Thought record save requested patientId={}, selectedDistortions={}, hasAdaptiveResponse={}",
+                    loggedInPatientId,
+                    dto.getDistortions() != null ? dto.getDistortions().size() : 0,
+                    dto.getAdaptiveResponse() != null && !dto.getAdaptiveResponse().isBlank());
+        }
 
         PatientProfile patientProfile = patientProfileRepository.findById(loggedInPatientId)
                 .orElseThrow(() -> new EntityNotFoundException("Bệnh nhân không tồn tại..."));
@@ -58,12 +69,20 @@ public class JournalServiceImpl implements IJournalService {
             Map<String, Object> contentMap = new HashMap<>();
             if (dto.getJournalType() == JournalType.THOUGHT_RECORD) {
                 contentMap.put("situation", dto.getSituation());
+                contentMap.put("worstPrediction", dto.getWorstPrediction());
                 contentMap.put("automaticThought", dto.getAutomaticThought());
                 contentMap.put("emotion", dto.getEmotion());
                 contentMap.put("emotionScore", dto.getEmotionScore());
+                contentMap.put("bodySymptoms", dto.getBodySymptoms());
+                contentMap.put("selfFocusThought", dto.getSelfFocusThought());
+                contentMap.put("negativeSelfImage", dto.getNegativeSelfImage());
+                contentMap.put("safetyBehaviors", dto.getSafetyBehaviors());
                 contentMap.put("distortions", dto.getDistortions());
                 contentMap.put("adaptiveResponse", dto.getAdaptiveResponse());
+                contentMap.put("safetyBehaviorCommitment", dto.getSafetyBehaviorCommitment());
                 contentMap.put("reRatedScore", dto.getReRatedScore());
+                contentMap.put("reRatedBeliefScore", dto.getReRatedBeliefScore());
+                contentMap.put("behavioralExperimentIdea", dto.getBehavioralExperimentIdea());
             } else if (dto.getJournalType() == JournalType.CREDIT_LIST) {
                 contentMap.put("content", dto.getContent());
             }
@@ -84,15 +103,50 @@ public class JournalServiceImpl implements IJournalService {
             JournalAiRiskResultDto ai = aiAssistantService.scoreJournalRisk(dto.getJournalType(), jsonContent);
             journal.setAiRiskScore(ai.getAiRiskScore() != null ? ai.getAiRiskScore() : 0);
             journal.setSeverityLevel(ai.getSeverityLevel() != null ? ai.getSeverityLevel() : "NORMAL");
+            journal.setAiRiskDistortionsJson(objectMapper.writeValueAsString(
+                    ai.getDistortions() != null ? ai.getDistortions() : List.of()));
+            journal.setAiRiskReason(ai.getReason());
 
             // 5. Save in Database
             Journal savedJournal = journalRepository.save(journal);
+            triggerImmediateRiskUpdateIfNeeded(patientProfile.getId(), ai);
+            PatientProfile riskState = patientProfileRepository.findById(patientProfile.getId()).orElse(patientProfile);
+            int currentRiskScore = riskState.getCurrentRiskScore() != null ? riskState.getCurrentRiskScore() : 0;
+            boolean redFlagActive = Boolean.TRUE.equals(riskState.getIsRedFlagActive());
+            boolean overrideTriggered = redFlagActive || currentRiskScore >= 70;
+            log.info("Journal risk saved patientId={}, journalId={}, aiRiskScore={}, severityLevel={}, currentRiskScore={}, overrideTriggered={}, redFlagActive={}",
+                    patientProfile.getId(), savedJournal.getId(), savedJournal.getAiRiskScore(),
+                    savedJournal.getSeverityLevel(), currentRiskScore, overrideTriggered, redFlagActive);
 
             return convertToDto(savedJournal);
 
         } catch (Exception e) {
             log.error("Error saving journal", e);
             throw new RuntimeException("Lỗi lưu nhật ký: " + e.getMessage(), e);
+        }
+    }
+
+    private void triggerImmediateRiskUpdateIfNeeded(UUID patientId, JournalAiRiskResultDto ai) {
+        int aiRiskScore = ai != null && ai.getAiRiskScore() != null ? ai.getAiRiskScore() : 0;
+        if (aiRiskScore < 70) {
+            return;
+        }
+
+        try {
+            riskScoringService.calculateAndPersist(patientId);
+            log.warn("High-risk journal triggered immediate risk scoring patientId={}, aiRiskScore={}",
+                    patientId, aiRiskScore);
+        } catch (Exception e) {
+            log.error("Immediate risk scoring failed after high-risk journal patientId={}, aiRiskScore={}",
+                    patientId, aiRiskScore, e);
+            patientProfileRepository.findById(patientId).ifPresent(patient -> {
+                int current = patient.getCurrentRiskScore() != null ? patient.getCurrentRiskScore() : 0;
+                int fallbackScore = aiRiskScore >= 100 ? 100 : Math.max(current, 70);
+                patient.setCurrentRiskScore(fallbackScore);
+                patient.setIsRedFlagActive(true);
+                patient.setStatus(Status.WARNING);
+                patientProfileRepository.save(patient);
+            });
         }
     }
 
@@ -129,6 +183,16 @@ public class JournalServiceImpl implements IJournalService {
     @SuppressWarnings("unchecked")
     private JournalDto convertToDto(Journal entity) {
         JournalDto dto = new JournalDto(entity);
+        if (entity.getAiRiskDistortionsJson() != null && !entity.getAiRiskDistortionsJson().isBlank()) {
+            try {
+                List<String> aiDistortions = objectMapper.readValue(
+                        entity.getAiRiskDistortionsJson(),
+                        objectMapper.getTypeFactory().constructCollectionType(List.class, String.class));
+                dto.setAiRiskDistortions(aiDistortions);
+            } catch (Exception e) {
+                log.warn("Error parsing AI risk distortions for journal id: {}", entity.getId(), e);
+            }
+        }
         if (entity.getContentEncrypted() != null) {
             try {
                 // 1. Decrypt AES-128
@@ -139,9 +203,14 @@ public class JournalServiceImpl implements IJournalService {
                 if (contentMap != null) {
                     if (entity.getJournalType() == JournalType.THOUGHT_RECORD) {
                         dto.setSituation((String) contentMap.get("situation"));
+                        dto.setWorstPrediction((String) contentMap.get("worstPrediction"));
                         dto.setAutomaticThought((String) contentMap.get("automaticThought"));
                         dto.setEmotion((String) contentMap.get("emotion"));
                         dto.setEmotionScore((Integer) contentMap.get("emotionScore"));
+                        dto.setBodySymptoms(readStringList(contentMap.get("bodySymptoms")));
+                        dto.setSelfFocusThought((String) contentMap.get("selfFocusThought"));
+                        dto.setNegativeSelfImage((String) contentMap.get("negativeSelfImage"));
+                        dto.setSafetyBehaviors(readStringList(contentMap.get("safetyBehaviors")));
                         Object distortions = contentMap.get("distortions");
                         if (distortions instanceof List<?> list) {
                             List<String> codes = new ArrayList<>();
@@ -156,7 +225,10 @@ public class JournalServiceImpl implements IJournalService {
                             dto.setDistortions(codes);
                         }
                         dto.setAdaptiveResponse((String) contentMap.get("adaptiveResponse"));
+                        dto.setSafetyBehaviorCommitment((String) contentMap.get("safetyBehaviorCommitment"));
                         dto.setReRatedScore((Integer) contentMap.get("reRatedScore"));
+                        dto.setReRatedBeliefScore((Integer) contentMap.get("reRatedBeliefScore"));
+                        dto.setBehavioralExperimentIdea((String) contentMap.get("behavioralExperimentIdea"));
                     } else if (entity.getJournalType() == JournalType.CREDIT_LIST) {
                         dto.setContent((String) contentMap.get("content"));
                     }
@@ -166,5 +238,22 @@ public class JournalServiceImpl implements IJournalService {
             }
         }
         return dto;
+    }
+
+    private List<String> readStringList(Object value) {
+        if (!(value instanceof List<?> list)) {
+            return null;
+        }
+        List<String> result = new ArrayList<>();
+        for (Object item : list) {
+            if (item == null) {
+                continue;
+            }
+            String text = String.valueOf(item).trim();
+            if (!text.isBlank()) {
+                result.add(text);
+            }
+        }
+        return result.isEmpty() ? null : result;
     }
 }

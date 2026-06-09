@@ -126,7 +126,7 @@ class PatientAnalyticsScreen extends StatelessWidget {
                           children: [
                             _buildInfoCard('Giai đoạn hiện tại', 'Lộ trình CBT Cơ bản (Tuần 2)', Icons.route),
                             const SizedBox(height: 16),
-                            _buildInfoCard('Bài Test Gần nhất', 'PHQ-9: 18 điểm (Trầm cảm nặng)', Icons.receipt_long),
+                            _buildInfoCard('Bài Test Gần nhất', 'LSAS: cần re-rating', Icons.receipt_long),
                             const SizedBox(height: 16),
                             _buildInfoCard('Tỷ lệ hoàn thành nhiệm vụ', '45% (Hơi chậm)', Icons.checklist),
                           ],

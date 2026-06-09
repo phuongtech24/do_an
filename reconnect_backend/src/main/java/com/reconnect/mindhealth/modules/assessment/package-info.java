@@ -1,2 +1,2 @@
-// Placeholder for the assessment module (PHQ-9 & Mood logs)
+// Assessment module: LSAS and mood logs.
 package com.reconnect.mindhealth.modules.assessment;

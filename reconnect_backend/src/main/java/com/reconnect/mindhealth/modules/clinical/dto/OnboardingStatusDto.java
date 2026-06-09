@@ -4,9 +4,12 @@ import java.util.UUID;
 
 public class OnboardingStatusDto {
     private UUID patientId;
-    private boolean hasBaselinePhq9;
+    private boolean hasBaselineLsas;
     private boolean hasGoals;
     private boolean hasCompletedPsychoeducation;
+    private boolean hasSelectedTherapist;
+    private boolean requiresTherapistSelection;
+    private String lsasClinicalRoute;
 
     public OnboardingStatusDto() {
     }
@@ -19,12 +22,12 @@ public class OnboardingStatusDto {
         this.patientId = patientId;
     }
 
-    public boolean isHasBaselinePhq9() {
-        return hasBaselinePhq9;
+    public boolean isHasBaselineLsas() {
+        return hasBaselineLsas;
     }
 
-    public void setHasBaselinePhq9(boolean hasBaselinePhq9) {
-        this.hasBaselinePhq9 = hasBaselinePhq9;
+    public void setHasBaselineLsas(boolean hasBaselineLsas) {
+        this.hasBaselineLsas = hasBaselineLsas;
     }
 
     public boolean isHasGoals() {
@@ -42,5 +45,28 @@ public class OnboardingStatusDto {
     public void setHasCompletedPsychoeducation(boolean hasCompletedPsychoeducation) {
         this.hasCompletedPsychoeducation = hasCompletedPsychoeducation;
     }
-}
 
+    public boolean isHasSelectedTherapist() {
+        return hasSelectedTherapist;
+    }
+
+    public void setHasSelectedTherapist(boolean hasSelectedTherapist) {
+        this.hasSelectedTherapist = hasSelectedTherapist;
+    }
+
+    public boolean isRequiresTherapistSelection() {
+        return requiresTherapistSelection;
+    }
+
+    public void setRequiresTherapistSelection(boolean requiresTherapistSelection) {
+        this.requiresTherapistSelection = requiresTherapistSelection;
+    }
+
+    public String getLsasClinicalRoute() {
+        return lsasClinicalRoute;
+    }
+
+    public void setLsasClinicalRoute(String lsasClinicalRoute) {
+        this.lsasClinicalRoute = lsasClinicalRoute;
+    }
+}

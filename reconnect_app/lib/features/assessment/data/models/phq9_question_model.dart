@@ -51,21 +51,36 @@ class Phq9OptionModel {
 }
 
 class Phq9QuestionnaireModel {
+  final String instruction;
   final List<Phq9QuestionModel> questions;
   final List<Phq9OptionModel> options;
+  final String functionalDifficultyQuestion;
+  final List<Phq9OptionModel> functionalDifficultyOptions;
+  final String sourceCitation;
 
   Phq9QuestionnaireModel({
+    required this.instruction,
     required this.questions,
     required this.options,
+    required this.functionalDifficultyQuestion,
+    required this.functionalDifficultyOptions,
+    required this.sourceCitation,
   });
 
   factory Phq9QuestionnaireModel.fromJson(Map<String, dynamic> json) {
     final List<dynamic> questionsJson = json['questions'] ?? [];
     final List<dynamic> optionsJson = json['options'] ?? [];
+    final List<dynamic> functionalOptionsJson = json['functionalDifficultyOptions'] ?? [];
 
     return Phq9QuestionnaireModel(
+      instruction: json['instruction']?.toString() ??
+          'Trong 2 tuần qua, bạn bị làm phiền bởi các vấn đề sau thường xuyên như thế nào?',
       questions: questionsJson.map((q) => Phq9QuestionModel.fromJson(q)).toList(),
       options: optionsJson.map((o) => Phq9OptionModel.fromJson(o)).toList(),
+      functionalDifficultyQuestion: json['functionalDifficultyQuestion']?.toString() ?? '',
+      functionalDifficultyOptions:
+          functionalOptionsJson.map((o) => Phq9OptionModel.fromJson(o)).toList(),
+      sourceCitation: json['sourceCitation']?.toString() ?? '',
     );
   }
 }

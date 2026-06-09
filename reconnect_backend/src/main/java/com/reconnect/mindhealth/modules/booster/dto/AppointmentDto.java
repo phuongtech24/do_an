@@ -15,8 +15,13 @@ public class AppointmentDto extends BaseObjectDto {
     private LocalDateTime endAt;
     private AppointmentStatus status;
     private AppointmentPurpose purpose;
+    private String clinicalPurposeCode;
+    private String carePhaseCode;
     private Boolean isAnonymous;
     private String meetingLink;
+    private String patientDisplayName;
+    private String therapistDisplayName;
+    private String therapistNotes;
 
     public AppointmentDto() {
     }
@@ -29,16 +34,30 @@ public class AppointmentDto extends BaseObjectDto {
 
             if (entity.getPatientProfile() != null) {
                 this.patientId = entity.getPatientProfile().getId();
+                String nickname = entity.getPatientProfile().getNickName();
+                String username = entity.getPatientProfile().getUser() != null ? entity.getPatientProfile().getUser().getUsername() : null;
+                String email = entity.getPatientProfile().getUser() != null ? entity.getPatientProfile().getUser().getEmail() : null;
+                this.patientDisplayName = firstNonBlank(nickname, username, email, "Bệnh nhân");
             }
             if (entity.getTherapistProfile() != null) {
                 this.therapistId = entity.getTherapistProfile().getId();
+                this.meetingLink = firstNonBlank(entity.getMeetingLink(), entity.getTherapistProfile().getMeetingLink());
+                String fullName = entity.getTherapistProfile().getFullName();
+                String username = entity.getTherapistProfile().getUser() != null ? entity.getTherapistProfile().getUser().getUsername() : null;
+                String email = entity.getTherapistProfile().getUser() != null ? entity.getTherapistProfile().getUser().getEmail() : null;
+                this.therapistDisplayName = firstNonBlank(fullName, username, email, "Bác sĩ");
             }
             this.startAt = entity.getStartAt();
             this.endAt = entity.getEndAt();
             this.status = entity.getStatus();
             this.purpose = entity.getPurpose();
+            this.clinicalPurposeCode = entity.getClinicalPurposeCode();
+            this.carePhaseCode = entity.getCarePhaseCode();
             this.isAnonymous = entity.getIsAnonymous();
-            this.meetingLink = entity.getMeetingLink();
+            if (this.meetingLink == null || this.meetingLink.isBlank()) {
+                this.meetingLink = entity.getMeetingLink();
+            }
+            this.therapistNotes = entity.getTherapistNotes();
         }
     }
 
@@ -94,6 +113,22 @@ public class AppointmentDto extends BaseObjectDto {
         return isAnonymous;
     }
 
+    public String getClinicalPurposeCode() {
+        return clinicalPurposeCode;
+    }
+
+    public void setClinicalPurposeCode(String clinicalPurposeCode) {
+        this.clinicalPurposeCode = clinicalPurposeCode;
+    }
+
+    public String getCarePhaseCode() {
+        return carePhaseCode;
+    }
+
+    public void setCarePhaseCode(String carePhaseCode) {
+        this.carePhaseCode = carePhaseCode;
+    }
+
     public void setIsAnonymous(Boolean isAnonymous) {
         this.isAnonymous = isAnonymous;
     }
@@ -104,5 +139,38 @@ public class AppointmentDto extends BaseObjectDto {
 
     public void setMeetingLink(String meetingLink) {
         this.meetingLink = meetingLink;
+    }
+
+    public String getPatientDisplayName() {
+        return patientDisplayName;
+    }
+
+    public void setPatientDisplayName(String patientDisplayName) {
+        this.patientDisplayName = patientDisplayName;
+    }
+
+    public String getTherapistDisplayName() {
+        return therapistDisplayName;
+    }
+
+    public void setTherapistDisplayName(String therapistDisplayName) {
+        this.therapistDisplayName = therapistDisplayName;
+    }
+
+    public String getTherapistNotes() {
+        return therapistNotes;
+    }
+
+    public void setTherapistNotes(String therapistNotes) {
+        this.therapistNotes = therapistNotes;
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return null;
     }
 }

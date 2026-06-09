@@ -5,9 +5,10 @@ import java.util.UUID;
 public class RiskCalculationResultDto {
     private UUID patientId;
     private int riskIndex;
-    private int scorePhq9;
+    private int scoreSafety;
     private int scoreAi;
     private int scoreMood;
+    private int scoreCheckIn;
     private boolean overrideTriggered;
 
     public RiskCalculationResultDto() {
@@ -29,12 +30,12 @@ public class RiskCalculationResultDto {
         this.riskIndex = riskIndex;
     }
 
-    public int getScorePhq9() {
-        return scorePhq9;
+    public int getScoreSafety() {
+        return scoreSafety;
     }
 
-    public void setScorePhq9(int scorePhq9) {
-        this.scorePhq9 = scorePhq9;
+    public void setScoreSafety(int scoreSafety) {
+        this.scoreSafety = scoreSafety;
     }
 
     public int getScoreAi() {
@@ -53,6 +54,14 @@ public class RiskCalculationResultDto {
         this.scoreMood = scoreMood;
     }
 
+    public int getScoreCheckIn() {
+        return scoreCheckIn;
+    }
+
+    public void setScoreCheckIn(int scoreCheckIn) {
+        this.scoreCheckIn = scoreCheckIn;
+    }
+
     public boolean isOverrideTriggered() {
         return overrideTriggered;
     }
@@ -61,4 +70,3 @@ public class RiskCalculationResultDto {
         this.overrideTriggered = overrideTriggered;
     }
 }
-

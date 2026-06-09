@@ -32,7 +32,7 @@ public class User extends BaseObject {
     private String passwordHash;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "role")
+    @Column(name = "role", length = 32, nullable = false)
     private Role role;
 
     @Column(name = "is_anonymous")

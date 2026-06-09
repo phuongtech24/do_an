@@ -1,461 +1,871 @@
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../../../../shared/widgets/mindhealth_scaffold.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../onboarding/presentation/providers/onboarding_provider.dart';
+import '../../data/models/lsas_situation_model.dart';
+import '../../data/models/lsas_submission_model.dart';
 import '../providers/assessment_provider.dart';
-import '../../data/models/phq9_question_model.dart';
 
-class Phq9Screen extends StatefulWidget {
+class Phq9Screen extends StatelessWidget {
   const Phq9Screen({super.key});
 
   @override
-  State<Phq9Screen> createState() => _Phq9ScreenState();
+  Widget build(BuildContext context) => const LsasAssessmentScreen();
 }
 
-class _Phq9ScreenState extends State<Phq9Screen> {
-  // Lưu đáp án dưới dạng: Map<QuestionID, Score>
-  final Map<String, int> _answers = {};
+class LsasAssessmentScreen extends StatefulWidget {
+  const LsasAssessmentScreen({super.key});
 
   @override
-  void initState() {
-    super.initState();
-    // Tải bộ câu hỏi động từ Backend & Kiểm tra trạng thái cooldown của người bệnh
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final patientId = authProvider.loginResponse?.user.id ?? '';
-      final token = authProvider.loginResponse?.token;
+  State<LsasAssessmentScreen> createState() => _LsasAssessmentScreenState();
+}
 
-      if (patientId.isNotEmpty) {
-        final assessmentProvider = Provider.of<AssessmentProvider>(context, listen: false);
-        assessmentProvider.loadQuestionnaire(token: token);
-        assessmentProvider.checkCooldown(patientId, token: token);
+class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
+  final Map<String, int> _fearScores = {};
+  final Map<String, int> _avoidanceScores = {};
+  bool _bootstrapped = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_bootstrapped) return;
+    _bootstrapped = true;
+    final auth = context.read<AuthProvider>();
+    final userId = auth.loginResponse?.user.id ?? '';
+    final token = auth.token;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = context.read<AssessmentProvider>();
+      provider.loadSituations(token: token);
+      if (userId.isNotEmpty && !auth.isGuest) {
+        provider.checkCooldown(userId, token: token);
+        provider.loadLsasHistory(userId, token: token);
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    final patientId = authProvider.loginResponse?.user.id ?? '';
+    final auth = context.watch<AuthProvider>();
+    final provider = context.watch<AssessmentProvider>();
+    final userId = auth.loginResponse?.user.id ?? '';
+    final token = auth.token;
 
-    if (patientId.isEmpty) {
-      return MindHealthScaffold(
-        title: 'Đánh giá Lâm sàng (PHQ-9)',
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.login_rounded, size: 64, color: Color(0xFF6C63FF)),
-                const SizedBox(height: 12),
-                const Text(
-                  'Bạn chưa đăng nhập.',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
+    return MindHealthScaffold(
+      title: 'Đánh giá lo âu xã hội (LSAS)',
+      body: userId.isEmpty
+          ? const _LsasEmptyState(
+              icon: Icons.lock_outline_rounded,
+              title: 'Vui lòng đăng nhập',
+              message: 'Bạn cần đăng nhập để làm LSAS và nhận lộ trình phù hợp với mình.',
+            )
+          : provider.status == AssessmentStatus.loading && provider.situations.isEmpty
+              ? const Center(child: CircularProgressIndicator())
+              : provider.status == AssessmentStatus.error && provider.situations.isEmpty
+                  ? _LsasErrorState(
+                      message: provider.errorMessage,
+                      onRetry: () => provider.loadSituations(token: token),
+                    )
+                  : (!auth.isGuest && provider.isCooldown)
+                      ? _LsasCooldownView(
+                          history: provider.lsasHistory,
+                          loading: provider.historyLoading,
+                          onRefresh: () => provider.loadLsasHistory(userId, token: token),
+                          onBackHome: () => context.go('/home'),
+                        )
+                      : _LsasForm(
+                          situations: provider.situations,
+                          fearScores: _fearScores,
+                          avoidanceScores: _avoidanceScores,
+                          loading: provider.status == AssessmentStatus.loading,
+                          onChanged: () => setState(() {}),
+                          onSubmit: () => _submit(context, userId, token),
+                        ),
+    );
+  }
+
+  Future<void> _submit(BuildContext context, String userId, String? token) async {
+    final provider = context.read<AssessmentProvider>();
+    final auth = context.read<AuthProvider>();
+    final situations = provider.situations;
+    final missing = situations.where((item) {
+      return !_fearScores.containsKey(item.id) || !_avoidanceScores.containsKey(item.id);
+    }).toList();
+
+    if (missing.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Bạn còn ${missing.length} tình huống chưa chấm đủ Fear/Avoidance.')),
+      );
+      return;
+    }
+
+    final answers = situations.map((item) {
+      return LsasAnswerInput(
+        situationId: item.id,
+        fearScore: _fearScores[item.id]!,
+        avoidanceScore: _avoidanceScores[item.id]!,
+      );
+    }).toList();
+
+    final hasHistory = provider.lsasHistory.isNotEmpty;
+    final ok = await provider.submitLsas(
+      userId,
+      answers,
+      token: token,
+      submissionType: auth.isGuest ? 'BASELINE' : (hasHistory ? 'PERIODIC' : 'BASELINE'),
+    );
+
+    if (!context.mounted) return;
+    if (ok) {
+      final submission = provider.lastSubmission;
+      if (auth.isGuest) {
+        final linked = await _showGuestConversionDialog(context);
+        if (!context.mounted || !linked) return;
+      } else {
+        final profileBeforeGate = auth.patientProfile;
+        final needsSafetyGate = profileBeforeGate?.safetyGateCompleted != true;
+        if (needsSafetyGate) {
+          final gateCompleted = await _showMedicalSafetyGateDialog(context);
+          if (!context.mounted || !gateCompleted) {
+            return;
+          }
+        }
+      }
+
+      final score = submission?.totalScore ?? 0;
+      final severityLabel = submission?.severityLabel.isNotEmpty == true
+          ? submission!.severityLabel
+          : _lsasSeverityLabel(score);
+      final clinicalRouteLabel = _clinicalRouteLabel(submission?.clinicalRoute ?? '');
+      final summaryMessage = submission?.summaryMessage.isNotEmpty == true
+          ? submission!.summaryMessage
+          : 'Tổng điểm LSAS của bạn là $score/144.';
+      final recommendedNextStep = submission?.recommendedNextStep.isNotEmpty == true
+          ? submission!.recommendedNextStep
+          : 'Hệ thống sẽ dùng kết quả này để tiếp tục lộ trình phù hợp cho bạn.';
+      final isReassuranceFlow = (submission?.clinicalRoute ?? '') == 'REASSURANCE';
+      final displaySummaryMessage = isReassuranceFlow
+          ? '$score/144: Bạn đang ở mức rất ít khả năng mắc lo âu xã hội. Ở mức này, bạn chưa cần đi vào lộ trình trị liệu chuyên sâu.'
+          : summaryMessage;
+      final displayNextStep = isReassuranceFlow
+          ? 'App sẽ giới thiệu một số mẹo giúp bạn tự chăm sóc tinh thần, thư giãn và theo dõi thêm khi cần.'
+          : recommendedNextStep;
+      await showDialog<void>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Đã lưu LSAS'),
+          content: Text(
+            '$displaySummaryMessage\n\n'
+            'Mức độ: $severityLabel\n'
+            'Nhánh hiện tại: $clinicalRouteLabel\n\n'
+            '$displayNextStep',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Tiếp tục'),
+            ),
+          ],
+        ),
+      );
+      final refreshedAuth = context.read<AuthProvider>();
+      final patientId = refreshedAuth.loginResponse?.user.id ?? '';
+      if (patientId.isEmpty) return;
+      await context.read<OnboardingProvider>().loadOnboardingStatus(
+        patientId,
+        token: refreshedAuth.token,
+      );
+      if (context.mounted) {
+        final refreshedProfile = context.read<AuthProvider>().patientProfile;
+        final onboardingRoute = context.read<OnboardingProvider>().nextOnboardingRoute;
+        final nextAfterMedical = isReassuranceFlow ? '/lsas-light-tips' : onboardingRoute;
+        if (refreshedProfile?.medicalProfileCompleted != true) {
+          context.go('/profile-setup?mode=medical-profile&after=${Uri.encodeComponent(nextAfterMedical)}');
+          return;
+        }
+        if (isReassuranceFlow) {
+          context.go('/lsas-light-tips');
+        } else {
+          context.go(onboardingRoute);
+        }
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(provider.errorMessage)),
+      );
+    }
+  }
+
+  Future<bool> _showGuestConversionDialog(BuildContext context) async {
+    final auth = context.read<AuthProvider>();
+    final emailController = TextEditingController();
+    final passwordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+    final realNameController = TextEditingController();
+    final phoneController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        bool submitting = false;
+        return StatefulBuilder(
+          builder: (context, setStateDialog) => AlertDialog(
+            scrollable: true,
+            title: const Text('Mở khóa kết quả và lộ trình CBT'),
+            content: SizedBox(
+              width: 430,
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Bạn đã hoàn thành bài LSAS. Để MindHealth phân tích kết quả chuyên sâu, thiết lập lộ trình phù hợp và kích hoạt an toàn y tế khi cần, vui lòng liên kết email, đặt mật khẩu và cung cấp tối thiểu họ tên thật cùng số điện thoại cá nhân.',
+                      style: TextStyle(height: 1.5),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'App vẫn tiếp tục hiển thị biệt danh ${auth.guestProfile?.nickname.isNotEmpty == true ? auth.guestProfile!.nickname : 'của bạn'} và avatar hệ thống như đã hứa.',
+                      style: const TextStyle(height: 1.45),
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        labelText: 'Email đăng nhập',
+                        prefixIcon: Icon(Icons.email_outlined),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Vui lòng nhập email.';
+                        }
+                        if (!value.contains('@')) {
+                          return 'Email chưa hợp lệ.';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: passwordController,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Mật khẩu mới',
+                        prefixIcon: Icon(Icons.lock_outline),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().length < 6) {
+                          return 'Mật khẩu cần ít nhất 6 ký tự.';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: confirmPasswordController,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Nhập lại mật khẩu',
+                        prefixIcon: Icon(Icons.lock_reset_outlined),
+                      ),
+                      validator: (value) {
+                        if (value != passwordController.text) {
+                          return 'Mật khẩu nhập lại chưa khớp.';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: realNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Họ và tên thật',
+                        prefixIcon: Icon(Icons.person_outline),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Vui lòng nhập họ và tên thật.';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(
+                        labelText: 'Số điện thoại cá nhân',
+                        prefixIcon: Icon(Icons.phone_outlined),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Vui lòng nhập số điện thoại cá nhân.';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: submitting ? null : () => Navigator.pop(dialogContext, false),
+                child: const Text('Để sau'),
+              ),
+              ElevatedButton(
+                onPressed: submitting
+                    ? null
+                    : () async {
+                        if (!formKey.currentState!.validate()) return;
+                        setStateDialog(() => submitting = true);
+                        final ok = await auth.linkGuestAccount(
+                          email: emailController.text.trim(),
+                          password: passwordController.text,
+                          realFullName: realNameController.text.trim(),
+                          phoneNumber: phoneController.text.trim(),
+                        );
+                        if (!dialogContext.mounted) return;
+                        if (ok) {
+                          Navigator.pop(dialogContext, true);
+                        } else {
+                          setStateDialog(() => submitting = false);
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                            SnackBar(content: Text(auth.errorMessage)),
+                          );
+                        }
+                      },
+                child: submitting
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text('Liên kết và xem kết quả'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    emailController.dispose();
+    passwordController.dispose();
+    confirmPasswordController.dispose();
+    realNameController.dispose();
+    phoneController.dispose();
+    return result == true;
+  }
+
+  Future<bool> _showMedicalSafetyGateDialog(BuildContext context) async {
+    final auth = context.read<AuthProvider>();
+    final realNameController = TextEditingController(text: auth.patientProfile?.realFullName ?? '');
+    final phoneController = TextEditingController(text: auth.patientProfile?.phoneNumber ?? '');
+    final formKey = GlobalKey<FormState>();
+
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        bool submitting = false;
+        return StatefulBuilder(
+          builder: (context, setStateDialog) => AlertDialog(
+            title: const Text('Cam kết An toàn Y tế'),
+            content: SizedBox(
+              width: 420,
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Để mở khóa phân tích kết quả LSAS và lộ trình CBT phù hợp, bạn cần cung cấp tối thiểu họ tên thật và số điện thoại cá nhân. Thông tin này chỉ dành cho bác sĩ/admin để phục vụ an toàn y tế khi có tình huống khẩn cấp.',
+                      style: TextStyle(height: 1.5),
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: realNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Họ và tên thật',
+                        prefixIcon: Icon(Icons.person_outline),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Vui lòng nhập họ và tên thật.';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(
+                        labelText: 'Số điện thoại cá nhân',
+                        prefixIcon: Icon(Icons.phone_outlined),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Vui lòng nhập số điện thoại cá nhân.';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: submitting ? null : () => Navigator.pop(dialogContext, false),
+                child: const Text('Để sau'),
+              ),
+              ElevatedButton(
+                onPressed: submitting
+                    ? null
+                    : () async {
+                        if (!formKey.currentState!.validate()) return;
+                        setStateDialog(() => submitting = true);
+                        final ok = await auth.completePatientSafetyGate(
+                          realFullName: realNameController.text.trim(),
+                          phoneNumber: phoneController.text.trim(),
+                        );
+                        if (!dialogContext.mounted) return;
+                        if (ok) {
+                          Navigator.pop(dialogContext, true);
+                        } else {
+                          setStateDialog(() => submitting = false);
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                            SnackBar(content: Text(auth.errorMessage)),
+                          );
+                        }
+                      },
+                child: submitting
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text('Cam kết và xem kết quả'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    realNameController.dispose();
+    phoneController.dispose();
+    return result == true;
+  }
+}
+
+class _LsasForm extends StatefulWidget {
+  const _LsasForm({
+    required this.situations,
+    required this.fearScores,
+    required this.avoidanceScores,
+    required this.loading,
+    required this.onChanged,
+    required this.onSubmit,
+  });
+
+  final List<LsasSituationModel> situations;
+  final Map<String, int> fearScores;
+  final Map<String, int> avoidanceScores;
+  final bool loading;
+  final VoidCallback onChanged;
+  final VoidCallback onSubmit;
+
+  @override
+  State<_LsasForm> createState() => _LsasFormState();
+}
+
+class _LsasFormState extends State<_LsasForm> {
+  late final ScrollController _scrollController;
+  late List<GlobalKey> _itemKeys;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    _itemKeys = List.generate(widget.situations.length, (_) => GlobalKey());
+  }
+
+  @override
+  void didUpdateWidget(covariant _LsasForm oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.situations.length != widget.situations.length) {
+      _itemKeys = List.generate(widget.situations.length, (_) => GlobalKey());
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final completed = widget.situations.where((item) {
+      return widget.fearScores.containsKey(item.id) && widget.avoidanceScores.containsKey(item.id);
+    }).length;
+    final progress = widget.situations.isEmpty ? 0.0 : completed / widget.situations.length;
+
+    return Column(
+      children: [
+        const _GuideCard(
+          icon: Icons.psychology_alt_rounded,
+          title: 'LSAS là gì?',
+          message:
+              'Bạn sẽ chấm 24 tình huống xã hội theo 2 trục: mức sợ/hồi hộp và mức né tránh. Bài đầu tiên và các lần đánh giá lại sau này đều dùng cùng 24 tình huống để theo dõi thay đổi.',
+        ),
+        const SizedBox(height: 12),
+        LinearProgressIndicator(value: progress, minHeight: 8, borderRadius: BorderRadius.circular(999)),
+        const SizedBox(height: 8),
+        Text(
+          '$completed/${widget.situations.length} tình huống đã hoàn tất',
+          style: const TextStyle(color: Colors.black54),
+        ),
+        const SizedBox(height: 12),
+        _LsasQuestionOverviewButton(
+          situations: widget.situations,
+          fearScores: widget.fearScores,
+          avoidanceScores: widget.avoidanceScores,
+          onTapItem: (index) async {
+            Navigator.pop(context);
+            await _scrollToItem(index);
+          },
+        ),
+        const SizedBox(height: 12),
+        Expanded(
+          child: ListView.separated(
+            controller: _scrollController,
+            itemCount: widget.situations.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final item = widget.situations[index];
+              return Container(
+                key: _itemKeys[index],
+                child: _SituationCard(
+                  situation: item,
+                  fearScore: widget.fearScores[item.id],
+                  avoidanceScore: widget.avoidanceScores[item.id],
+                  onFearChanged: (value) {
+                    widget.fearScores[item.id] = value;
+                    widget.onChanged();
+                  },
+                  onAvoidanceChanged: (value) {
+                    widget.avoidanceScores[item.id] = value;
+                    widget.onChanged();
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: widget.loading ? null : widget.onSubmit,
+            icon: widget.loading
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.check_circle_outline_rounded),
+            label: const Text('Lưu kết quả LSAS'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0F8B7F),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _scrollToItem(int index) async {
+    if (index < 0 || index >= _itemKeys.length) return;
+    final context = _itemKeys[index].currentContext;
+    if (context == null) return;
+    await Scrollable.ensureVisible(
+      context,
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeInOut,
+      alignment: 0.08,
+    );
+  }
+}
+
+class _LsasQuestionOverviewButton extends StatelessWidget {
+  const _LsasQuestionOverviewButton({
+    required this.situations,
+    required this.fearScores,
+    required this.avoidanceScores,
+    required this.onTapItem,
+  });
+
+  final List<LsasSituationModel> situations;
+  final Map<String, int> fearScores;
+  final Map<String, int> avoidanceScores;
+  final ValueChanged<int> onTapItem;
+
+  @override
+  Widget build(BuildContext context) {
+    final completedCount = situations.where((item) {
+      return fearScores.containsKey(item.id) && avoidanceScores.containsKey(item.id);
+    }).length;
+    final missingCount = situations.length - completedCount;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: () => _showOverviewDialog(context),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFF0F8B7F).withOpacity(0.08)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE6F7F4),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(Icons.grid_view_rounded, color: Color(0xFF0F8B7F)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Tổng quan 24 câu hỏi',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Đã xong $completedCount/24 • Còn thiếu $missingCount câu',
+                    style: const TextStyle(color: Colors.black54, height: 1.35),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F8B7F),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: const Text(
+                'Xem',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showOverviewDialog(BuildContext context) async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720, maxHeight: 680),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Tổng quan 24 câu hỏi LSAS',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
                 const Text(
-                  'Vui lòng đăng nhập để tải bộ câu hỏi PHQ-9 từ hệ thống.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.black54),
+                  'Chạm vào số câu để nhảy tới đúng câu đó. Màu xanh là đã chấm đủ Fear và Né tránh.',
+                  style: TextStyle(color: Colors.black54, height: 1.4),
                 ),
                 const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: () => context.go('/auth'),
-                  child: const Text('Đi tới Đăng nhập'),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: _LsasQuestionOverviewGrid(
+                      situations: situations,
+                      fearScores: fearScores,
+                      avoidanceScores: avoidanceScores,
+                      onTapItem: onTapItem,
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
         ),
-      );
-    }
+      ),
+    );
+  }
+}
 
-    return MindHealthScaffold(
-      title: 'Đánh giá Lâm sàng (PHQ-9)',
-      body: Consumer<AssessmentProvider>(
-        builder: (context, provider, child) {
-          // 1. Trạng thái Đang tải dữ liệu (Loading)
-          if (provider.status == AssessmentStatus.loading && provider.questionnaire == null) {
-            return const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Đang tải bộ câu hỏi từ máy chủ lâm sàng...'),
-                ],
-              ),
-            );
-          }
+class _LsasQuestionOverviewGrid extends StatelessWidget {
+  const _LsasQuestionOverviewGrid({
+    required this.situations,
+    required this.fearScores,
+    required this.avoidanceScores,
+    required this.onTapItem,
+  });
 
-          // 2. Trạng thái lỗi (Error)
-          if (provider.status == AssessmentStatus.error && provider.questionnaire == null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, size: 60, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Không thể tải dữ liệu: ${provider.errorMessage}',
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (patientId.isNotEmpty) {
-                        final token = authProvider.loginResponse?.token;
-                        provider.loadQuestionnaire(token: token);
-                        provider.checkCooldown(patientId, token: token);
-                      }
-                    },
-                    child: const Text('Thử lại'),
-                  ),
-                ],
-              ),
-            );
-          }
+  final List<LsasSituationModel> situations;
+  final Map<String, int> fearScores;
+  final Map<String, int> avoidanceScores;
+  final ValueChanged<int> onTapItem;
 
-          final questionnaire = provider.questionnaire;
-          if (questionnaire == null) {
-            return const Center(child: Text('Không tìm thấy dữ liệu câu hỏi.'));
-          }
+  @override
+  Widget build(BuildContext context) {
+    final completedCount = situations.where((item) {
+      return fearScores.containsKey(item.id) && avoidanceScores.containsKey(item.id);
+    }).length;
+    final missingCount = situations.length - completedCount;
 
-          final questions = questionnaire.questions;
-          final options = questionnaire.options;
-
-          // 3. Trạng thái Cooldown hoạt động (Locked - Đang trong thời gian khóa 14 ngày)
-          if (provider.isCooldown) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.shade50,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.lock_clock_outlined, size: 80, color: Colors.amber),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Thời gian giãn cách (Cooldown)',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Hệ thống ghi nhận bạn đã làm bài đánh giá PHQ-9 trong vòng 14 ngày qua.\n\nTheo tiêu chuẩn lâm sàng CBT, bạn chỉ nên làm bài test định kỳ sau mỗi 2 tuần để đảm bảo tính chính xác trong chẩn đoán và theo dõi.',
-                      style: TextStyle(fontSize: 15, height: 1.5, color: Colors.black87),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 32),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: () => context.go('/home'),
-                        icon: const Icon(Icons.arrow_back),
-                        label: const Text('Quay lại trang chủ'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-
-          final totalScore = _calculateTotalScore(questions);
-          final severityLabel = _getSeverityLabel(totalScore);
-          final isCompleted = _answers.length == questions.length;
-          final hasSuicidalRisk = _hasSuicidalRisk(questions);
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FBFB),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
+              const Icon(Icons.grid_view_rounded, color: Color(0xFF0F8B7F)),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Tiến độ hiện tại',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                ),
+              ),
               Text(
-                'Bộ câu hỏi PHQ-9',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Trong 2 tuần qua, bạn thường xuyên bị làm phiền bởi vấn đề nào sau đây? Chọn phương án phù hợp nhất với trạng thái của bạn.',
-                style: TextStyle(color: Colors.black54, height: 1.4),
-              ),
-              const SizedBox(height: 16),
-              LinearProgressIndicator(
-                value: _answers.length / questions.length,
-                borderRadius: BorderRadius.circular(20),
-                minHeight: 8,
-              ),
-              const SizedBox(height: 12),
-              Expanded(
-                child: ListView.separated(
-                  itemCount: questions.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final q = questions[index];
-                    return _QuestionCard(
-                      question: q,
-                      selectedValue: _answers[q.id],
-                      options: options,
-                      onChanged: (score) {
-                        setState(() {
-                          _answers[q.id] = score;
-                        });
-                      },
-                    );
-                  },
+                'Còn thiếu $missingCount câu',
+                style: const TextStyle(
+                  color: Color(0xFF0F8B7F),
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 12),
-              Card(
-                elevation: 0,
-                color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: Theme.of(context).colorScheme.primary.withOpacity(0.1)),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.insights_rounded, color: Colors.indigo),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Tổng điểm: $totalScore/27',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                            ),
-                            Text(
-                              'Mức độ: $severityLabel',
-                              style: const TextStyle(color: Colors.black87, fontSize: 14),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (hasSuicidalRisk)
-                Card(
-                  color: Colors.red.shade50,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: Colors.red.shade100),
-                  ),
-                  child: const ListTile(
-                    leading: Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
-                    title: Text(
-                      'Chú ý an toàn (Cảnh báo Lâm sàng)',
-                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
-                    ),
-                    subtitle: Text(
-                      'Bạn đã đánh dấu có ý nghĩ tự hại ở Câu số 9. Hệ thống khuyến nghị bạn nên liên hệ bác sĩ phụ trách hoặc người thân tin cậy ngay lập tức.',
-                      style: TextStyle(color: Colors.black87),
+            ],
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Chạm vào số câu để nhảy tới đúng câu đó. Màu xanh là đã chấm đủ Fear và Né tránh.',
+            style: TextStyle(color: Colors.black54, height: 1.4),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: List.generate(situations.length, (index) {
+              final item = situations[index];
+              final hasFear = fearScores.containsKey(item.id);
+              final hasAvoidance = avoidanceScores.containsKey(item.id);
+              final completed = hasFear && hasAvoidance;
+              final partial = hasFear || hasAvoidance;
+
+              return InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () => onTapItem(index),
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: completed
+                        ? const Color(0xFFD7F5EF)
+                        : partial
+                            ? const Color(0xFFFFF1CF)
+                            : const Color(0xFFF2F4F5),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: completed
+                          ? const Color(0xFF0F8B7F)
+                          : partial
+                              ? const Color(0xFFE7A95B)
+                              : Colors.grey.shade300,
                     ),
                   ),
-                ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: FilledButton(
-                  onPressed: isCompleted && provider.status != AssessmentStatus.loading
-                      ? () => _handleSubmit(provider, patientId, questions)
-                      : null,
-                  child: provider.status == AssessmentStatus.loading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                        )
-                      : const Text('Hoàn tất bài đánh giá'),
-                ),
-              ),
-              if (!isCompleted)
-                const Padding(
-                  padding: EdgeInsets.only(top: 8, bottom: 4),
                   child: Center(
                     child: Text(
-                      'Vui lòng trả lời đầy đủ tất cả các câu để nộp bài.',
-                      style: TextStyle(fontSize: 13, color: Colors.black54),
+                      '${item.situationNumber}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        color: completed
+                            ? const Color(0xFF0F8B7F)
+                            : partial
+                                ? const Color(0xFF9B6A19)
+                                : Colors.black54,
+                      ),
                     ),
                   ),
                 ),
+              );
+            }),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 8,
+            children: [
+              _LegendChip(
+                color: const Color(0xFFD7F5EF),
+                borderColor: const Color(0xFF0F8B7F),
+                label: 'Đã chấm đủ',
+              ),
+              _LegendChip(
+                color: const Color(0xFFFFF1CF),
+                borderColor: const Color(0xFFE7A95B),
+                label: 'Đã chấm một phần',
+              ),
+              _LegendChip(
+                color: const Color(0xFFF2F4F5),
+                borderColor: Colors.grey.shade300,
+                label: 'Chưa chấm',
+              ),
             ],
-          );
-        },
-      ),
-    );
-  }
-
-  // Tính tổng điểm dựa trên các câu đã trả lời
-  int _calculateTotalScore(List<Phq9QuestionModel> questions) {
-    int sum = 0;
-    for (var q in questions) {
-      sum += _answers[q.id] ?? 0;
-    }
-    return sum;
-  }
-
-  // Nhận diện mức độ triệu chứng theo lâm sàng
-  String _getSeverityLabel(int score) {
-    if (score <= 4) return 'Tối thiểu';
-    if (score <= 9) return 'Nhẹ (Mild)';
-    if (score <= 14) return 'Trung bình (Moderate)';
-    if (score <= 19) return 'Trung bình nặng (Moderately Severe)';
-    return 'Nặng (Severe)';
-  }
-
-  // Kiểm tra xem câu số 9 có câu trả lời có điểm > 0 hay không
-  bool _hasSuicidalRisk(List<Phq9QuestionModel> questions) {
-    final q9 = questions.firstWhere(
-      (q) => q.questionNumber == 9,
-      orElse: () => questions.last,
-    );
-    return (_answers[q9.id] ?? 0) > 0;
-  }
-
-  // Đóng gói và nộp bài test lên Backend
-  Future<void> _handleSubmit(
-    AssessmentProvider provider,
-    String patientId,
-    List<Phq9QuestionModel> questions,
-  ) async {
-    // 1. Sắp xếp danh sách câu hỏi theo đúng thứ tự 1 -> 9 trước khi lấy điểm
-    final sortedQuestions = List<Phq9QuestionModel>.from(questions);
-    sortedQuestions.sort((a, b) => a.questionNumber.compareTo(b.questionNumber));
-
-    // 2. Trích xuất mảng điểm theo đúng thứ tự câu 1 đến câu 9
-    final List<int> answersList = sortedQuestions.map((q) => _answers[q.id] ?? 0).toList();
-
-    // 3. Gọi hàm nộp bài lên API
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final token = authProvider.loginResponse?.token;
-    // Backend sẽ tự ép kiểu BASELINE nếu bệnh nhân chưa từng có baseline.
-    final success = await provider.submitPhq9(patientId, answersList, token: token);
-
-    if (success && mounted) {
-      final score = provider.lastSubmission?.totalScore ?? _calculateTotalScore(questions);
-      final severity = provider.lastSubmission?.severityLevel ?? _getSeverityLabel(score);
-      final submissionType = provider.lastSubmission?.submissionType ?? 'PERIODIC';
-      final nextRoute = submissionType == 'BASELINE' ? '/goal-setting' : '/home';
-      final nextLabel = submissionType == 'BASELINE' ? 'Thiết lập mục tiêu' : 'Về Trang chủ';
-
-      final graduatedNow = provider.lastSubmission?.graduatedNow == true;
-      if (graduatedNow) {
-        _showGraduationDialog(nextRoute, nextLabel);
-        return;
-      }
-
-      if (score < 5) {
-        _showRecoveryCongratsDialog(score, severity, nextRoute, nextLabel);
-      } else {
-        _showResultDialog(score, severity, nextRoute, nextLabel);
-      }
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi: ${provider.errorMessage}')),
-      );
-    }
-  }
-
-  void _showResultDialog(int score, String severity, String nextRoute, String nextLabel) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Kết quả đánh giá'),
-        content: Text(
-          'Tổng điểm của bạn là $score điểm (Mức độ: $severity).\n\nLộ trình bài tập nhận thức - hành vi (CBT Quests) của bạn đã được cập nhật tương ứng với mức độ này.',
-          style: const TextStyle(height: 1.5),
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.go(nextRoute);
-            },
-            child: Text(nextLabel),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showRecoveryCongratsDialog(int score, String severity, String nextRoute, String nextLabel) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.emoji_events_rounded, color: Colors.amber, size: 28),
-            SizedBox(width: 8),
-            Text('Chúc mừng bạn!'),
-          ],
-        ),
-        content: Text(
-          'Chỉ số PHQ-9 của bạn đã giảm xuống mức an toàn ($score điểm - $severity).\n\nBạn có nhận thấy rằng tâm trạng cải thiện là nhờ sự nỗ lực thay đổi suy nghĩ và hành vi thời gian qua không? Hãy tiếp tục phát huy nhé!',
-          style: const TextStyle(height: 1.5),
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.go(nextRoute);
-            },
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF6C63FF)),
-            child: Text(nextLabel),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showGraduationDialog(String nextRoute, String nextLabel) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.celebration, color: Colors.deepPurple, size: 26),
-            SizedBox(width: 8),
-            Text('Bạn đã Tốt nghiệp!'),
-          ],
-        ),
-        content: const Text(
-          'Chúc mừng bạn đã đạt điều kiện Tốt nghiệp (2 chu kỳ PHQ-9 liên tiếp < 5).\n\nHệ thống sẽ chuyển sang giai đoạn duy trì (Tapering) để phòng ngừa tái phát.',
-          style: TextStyle(height: 1.5),
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.go(nextRoute);
-            },
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF6C63FF)),
-            child: Text(nextLabel),
           ),
         ],
       ),
@@ -463,71 +873,385 @@ class _Phq9ScreenState extends State<Phq9Screen> {
   }
 }
 
-class _QuestionCard extends StatelessWidget {
-  const _QuestionCard({
-    required this.question,
-    required this.selectedValue,
-    required this.options,
+class _LegendChip extends StatelessWidget {
+  const _LegendChip({
+    required this.color,
+    required this.borderColor,
+    required this.label,
+  });
+
+  final Color color;
+  final Color borderColor;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: borderColor),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+}
+
+class _SituationCard extends StatelessWidget {
+  const _SituationCard({
+    required this.situation,
+    required this.fearScore,
+    required this.avoidanceScore,
+    required this.onFearChanged,
+    required this.onAvoidanceChanged,
+  });
+
+  final LsasSituationModel situation;
+  final int? fearScore;
+  final int? avoidanceScore;
+  final ValueChanged<int> onFearChanged;
+  final ValueChanged<int> onAvoidanceChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final isPerformance = situation.group == 'PERFORMANCE';
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 18, offset: const Offset(0, 8)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: const Color(0xFFE0F2F1),
+                child: Text('${situation.situationNumber}', style: const TextStyle(color: Color(0xFF0F8B7F))),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(situation.title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 4),
+                    Text(
+                      isPerformance ? 'Hiệu suất/biểu diễn' : 'Tương tác xã hội',
+                      style: TextStyle(color: isPerformance ? Colors.deepPurple : const Color(0xFF0F8B7F)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _ScoreSelector(
+            title: 'Mức độ sợ hãi / lo âu (Fear)',
+            value: fearScore,
+            labels: const ['Không có', 'Nhẹ', 'Vừa phải / Trung bình', 'Nghiêm trọng'],
+            onChanged: onFearChanged,
+          ),
+          const SizedBox(height: 14),
+          _ScoreSelector(
+            title: 'Mức độ né tránh (Avoidance)',
+            value: avoidanceScore,
+            labels: const ['Không bao giờ', 'Thỉnh thoảng', 'Thường xuyên', 'Hầu như luôn luôn'],
+            onChanged: onAvoidanceChanged,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ScoreSelector extends StatelessWidget {
+  const _ScoreSelector({
+    required this.title,
+    required this.value,
+    required this.labels,
     required this.onChanged,
   });
 
-  final Phq9QuestionModel question;
-  final int? selectedValue;
-  final List<Phq9OptionModel> options;
+  final String title;
+  final int? value;
+  final List<String> labels;
   final ValueChanged<int> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.shade200),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${question.questionNumber}. ${question.text}',
-              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, height: 1.4),
-            ),
-            const SizedBox(height: 12),
-            Column(
-              children: List.generate(options.length, (index) {
-                final opt = options[index];
-                final isSelected = selectedValue == opt.score;
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 6),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    color: isSelected ? Theme.of(context).colorScheme.primary.withOpacity(0.08) : Colors.transparent,
-                  ),
-                  child: RadioListTile<int>(
-                    title: Text(
-                      opt.text,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                        color: isSelected ? Theme.of(context).colorScheme.primary : Colors.black87,
-                      ),
-                    ),
-                    value: opt.score,
-                    groupValue: selectedValue,
-                    onChanged: (val) {
-                      if (val != null) onChanged(val);
-                    },
-                    controlAffinity: ListTileControlAffinity.leading,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-                    activeColor: Theme.of(context).colorScheme.primary,
-                  ),
-                );
-              }),
-            ),
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: List.generate(4, (index) {
+            final selected = value == index;
+            return ChoiceChip(
+              label: Text('$index - ${labels[index]}'),
+              selected: selected,
+              onSelected: (_) => onChanged(index),
+              selectedColor: const Color(0xFFD7F5EF),
+              labelStyle: TextStyle(
+                color: selected ? const Color(0xFF0F8B7F) : Colors.black87,
+                fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+              ),
+            );
+          }),
         ),
+      ],
+    );
+  }
+}
+
+class _LsasCooldownView extends StatelessWidget {
+  const _LsasCooldownView({
+    required this.history,
+    required this.loading,
+    required this.onRefresh,
+    required this.onBackHome,
+  });
+
+  final List<LsasSubmissionModel> history;
+  final bool loading;
+  final Future<void> Function() onRefresh;
+  final VoidCallback onBackHome;
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          const SizedBox(height: 28),
+          const Icon(Icons.lock_clock_rounded, size: 96, color: Color(0xFFFFB300)),
+          const SizedBox(height: 20),
+          const Text(
+            'Đang trong chu kỳ 14 ngày',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Bạn đã làm LSAS gần đây. Sau 14 ngày, hệ thống sẽ mở lần đánh giá tiếp theo để cập nhật tiến triển. Bài này vẫn dùng đủ 24 tình huống như lần đầu.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 16, color: Colors.black54, height: 1.5),
+          ),
+          const SizedBox(height: 24),
+          _LsasHistorySection(history: history, loading: loading),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: onBackHome,
+            icon: const Icon(Icons.arrow_back_rounded),
+            label: const Text('Quay lại trang chủ'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0F8B7F),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            ),
+          ),
+        ],
       ),
     );
+  }
+}
+
+class _LsasHistorySection extends StatelessWidget {
+  const _LsasHistorySection({required this.history, required this.loading});
+
+  final List<LsasSubmissionModel> history;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.history_rounded, color: Color(0xFF0F8B7F)),
+              SizedBox(width: 10),
+              Text('Lịch sử LSAS', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (loading)
+            const Center(child: CircularProgressIndicator())
+          else if (history.isEmpty)
+            const Text('Chưa có lần đánh giá LSAS nào.', style: TextStyle(color: Colors.black54))
+          else
+            ...history.map((item) {
+              final score = item.totalScore;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFA),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                      backgroundColor: _lsasColor(score).withOpacity(0.14),
+                      child: Text('$score', style: TextStyle(color: _lsasColor(score), fontWeight: FontWeight.w900)),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        '${item.createDate ?? ''} • ${item.submissionType}\n'
+                        '${item.severityLabel.isNotEmpty ? item.severityLabel : _lsasSeverityLabel(score)}'
+                        '${item.clinicalRoute.isNotEmpty ? ' • ${_clinicalRouteLabel(item.clinicalRoute)}' : ''}\n'
+                        'Fear ${item.fearTotal}/72 • Avoidance ${item.avoidanceTotal}/72',
+                        style: const TextStyle(height: 1.35),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+        ],
+      ),
+    );
+  }
+}
+
+class _GuideCard extends StatelessWidget {
+  const _GuideCard({required this.icon, required this.title, required this.message});
+
+  final IconData icon;
+  final String title;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE3F7F4),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: const Color(0xFF0F8B7F)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
+                const SizedBox(height: 4),
+                Text(message, style: const TextStyle(color: Colors.black87, height: 1.4)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LsasErrorState extends StatelessWidget {
+  const _LsasErrorState({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return _LsasEmptyState(
+      icon: Icons.error_outline_rounded,
+      title: 'Không tải được LSAS',
+      message: message,
+      actionLabel: 'Tải lại',
+      onAction: onRetry,
+    );
+  }
+}
+
+class _LsasEmptyState extends StatelessWidget {
+  const _LsasEmptyState({
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 72, color: const Color(0xFF0F8B7F)),
+          const SizedBox(height: 16),
+          Text(title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 8),
+          Text(message, textAlign: TextAlign.center, style: const TextStyle(color: Colors.black54, height: 1.4)),
+          if (actionLabel != null && onAction != null) ...[
+            const SizedBox(height: 16),
+            ElevatedButton(onPressed: onAction, child: Text(actionLabel!)),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+Color _lsasColor(int score) {
+  if (score >= 90) return Colors.red;
+  if (score >= 60) return Colors.deepOrange;
+  if (score >= 30) return Colors.orange;
+  return const Color(0xFF0F8B7F);
+}
+
+String _lsasSeverityLabel(int score) {
+  if (score >= 90) return 'Rất nặng và suy giảm chức năng';
+  if (score >= 60) return 'Lo âu xã hội rõ rệt';
+  if (score >= 30) return 'Lo âu nhẹ đến vừa';
+  return 'Rất ít khả năng mắc';
+}
+
+String _clinicalRouteLabel(String route) {
+  switch (route) {
+    case 'SELF_HELP':
+      return 'Tự trị liệu trên app (Self-help)';
+    case 'THERAPIST_TRACK_14_WEEKS':
+      return 'Lộ trình 14 tuần chuyên sâu cùng bác sĩ';
+    case 'URGENT_RED_FLAG':
+      return 'Cờ đỏ khẩn cấp';
+    case 'REASSURANCE':
+      return 'Thông điệp an tâm và theo dõi cơ bản';
+    default:
+      return 'Luồng điều trị phù hợp';
   }
 }

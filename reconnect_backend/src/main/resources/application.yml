@@ -1,6 +1,12 @@
 spring:
   application:
     name: reconnect_backend
+  cache:
+    type: ${SPRING_CACHE_TYPE:none}
+  servlet:
+    multipart:
+      max-file-size: 6MB
+      max-request-size: 6MB
   datasource:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:mindhealth_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Bangkok&characterEncoding=UTF-8
     username: ${DB_USER:root}
@@ -15,6 +21,10 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
 
 server:
   port: ${SERVER_PORT:8081}
@@ -40,3 +50,12 @@ app:
     distortions:
       call-ai-only-when-suspicious: ${AI_DISTORTIONS_CALL_AI_ONLY_WHEN_SUSPICIOUS:true}
       max-suggestions: ${AI_DISTORTIONS_MAX_SUGGESTIONS:3}
+  cache:
+    enabled: ${APP_CACHE_ENABLED:false}
+    therapist-directory-ttl-minutes: ${THERAPIST_DIRECTORY_CACHE_TTL_MINUTES:10}
+
+# Encryption configuration
+# Keys are loaded from environment variables (ENCRYPTION_KEY, ENCRYPTION_IV)
+encryption:
+  key: ${ENCRYPTION_KEY:ReconnectMindH78}
+  iv: ${ENCRYPTION_IV:MindHealthIv1234}
