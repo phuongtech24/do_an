@@ -4,15 +4,14 @@ services:
     container_name: mindhealth-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: mindhealth_db
-      MYSQL_USER: mindhealth_user
-      MYSQL_PASSWORD: mindhealth_password
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
-      - "3306:3306"
+      - "${MYSQL_PORT:-3306}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./mysql/init:/docker-entrypoint-initdb.d
     command: --default-authentication-plugin=mysql_native_password
 
   redis:
@@ -20,11 +19,10 @@ services:
     container_name: mindhealth-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
 
   backend:
-    build:
-      context: ../reconnect_backend
+    image: ${BACKEND_IMAGE}
     container_name: mindhealth-backend
     restart: unless-stopped
     depends_on:
@@ -33,31 +31,30 @@ services:
     environment:
       DB_HOST: mysql
       DB_PORT: 3306
-      DB_NAME: mindhealth_db
-      DB_USER: mindhealth_user
-      DB_PASSWORD: mindhealth_password
+      DB_NAME: ${MYSQL_DATABASE}
+      DB_USER: ${MYSQL_USER}
+      DB_PASSWORD: ${MYSQL_PASSWORD}
       SERVER_PORT: 8080
-      JWT_SECRET: mindhealth-docker-secret-change-this-32chars-min
-      AI_ENABLED: "false"
+      JWT_SECRET: ${JWT_SECRET}
+      AI_ENABLED: ${AI_ENABLED:-false}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      APP_CACHE_ENABLED: "true"
+      APP_CACHE_ENABLED: ${APP_CACHE_ENABLED:-true}
       SPRING_CACHE_TYPE: redis
     ports:
-      - "8081:8080"
+      - "${BACKEND_PORT:-8081}:8080"
     volumes:
       - backend_uploads:/app/uploads
       - backend_proofs:/app/proofs
 
   web:
-    build:
-      context: ../reconnect_web
+    image: ${WEB_IMAGE}
     container_name: mindhealth-web
     restart: unless-stopped
     depends_on:
       - backend
     ports:
-      - "3000:80"
+      - "${WEB_PORT:-3000}:80"
 
 volumes:
   mysql_data:
