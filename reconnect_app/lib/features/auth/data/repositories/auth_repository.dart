@@ -86,7 +86,7 @@ class AuthRepository {
 
   Future<LoginResponse> loginAnonymous(String deviceId) async {
     final response = await http.post(
-      Uri.parse('${ApiConstants.baseUrl}/api/auth/register-anonymous?deviceId=$deviceId'),
+      Uri.parse('${ApiConstants.registerAnonymous}?deviceId=$deviceId'),
       headers: {'Content-Type': 'application/json'},
     );
 
@@ -95,5 +95,35 @@ class AuthRepository {
       return LoginResponse.fromJson(json['data']);
     }
     throw Exception(json['message'] ?? 'Đăng nhập ẩn danh thất bại.');
+  }
+
+  Future<LoginResponse> linkGuestAccount({
+    required String guestId,
+    required String email,
+    required String password,
+    required String realFullName,
+    required String phoneNumber,
+    String? token,
+  }) async {
+    final response = await http.post(
+      Uri.parse(ApiConstants.guestLinkAccount),
+      headers: {
+        'Content-Type': 'application/json',
+        if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'guestId': guestId,
+        'email': email,
+        'password': password,
+        'realFullName': realFullName,
+        'phoneNumber': phoneNumber,
+      }),
+    );
+
+    final json = _decodeApiResponse(response, 'liên kết tài khoản guest');
+    if (json['status'] == 200 && json['data'] != null) {
+      return LoginResponse.fromJson(json['data']);
+    }
+    throw Exception(json['message'] ?? 'Không thể liên kết tài khoản guest.');
   }
 }

@@ -34,14 +34,14 @@ class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
     if (_bootstrapped) return;
     _bootstrapped = true;
     final auth = context.read<AuthProvider>();
-    final patientId = auth.loginResponse?.user.id ?? '';
+    final userId = auth.loginResponse?.user.id ?? '';
     final token = auth.token;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<AssessmentProvider>();
       provider.loadSituations(token: token);
-      if (patientId.isNotEmpty) {
-        provider.checkCooldown(patientId, token: token);
-        provider.loadLsasHistory(patientId, token: token);
+      if (userId.isNotEmpty && !auth.isGuest) {
+        provider.checkCooldown(userId, token: token);
+        provider.loadLsasHistory(userId, token: token);
       }
     });
   }
@@ -50,12 +50,12 @@ class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final provider = context.watch<AssessmentProvider>();
-    final patientId = auth.loginResponse?.user.id ?? '';
+    final userId = auth.loginResponse?.user.id ?? '';
     final token = auth.token;
 
     return MindHealthScaffold(
       title: 'Đánh giá lo âu xã hội (LSAS)',
-      body: patientId.isEmpty
+      body: userId.isEmpty
           ? const _LsasEmptyState(
               icon: Icons.lock_outline_rounded,
               title: 'Vui lòng đăng nhập',
@@ -68,11 +68,11 @@ class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
                       message: provider.errorMessage,
                       onRetry: () => provider.loadSituations(token: token),
                     )
-                  : provider.isCooldown
+                  : (!auth.isGuest && provider.isCooldown)
                       ? _LsasCooldownView(
                           history: provider.lsasHistory,
                           loading: provider.historyLoading,
-                          onRefresh: () => provider.loadLsasHistory(patientId, token: token),
+                          onRefresh: () => provider.loadLsasHistory(userId, token: token),
                           onBackHome: () => context.go('/home'),
                         )
                       : _LsasForm(
@@ -81,12 +81,12 @@ class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
                           avoidanceScores: _avoidanceScores,
                           loading: provider.status == AssessmentStatus.loading,
                           onChanged: () => setState(() {}),
-                          onSubmit: () => _submit(context, patientId, token),
+                          onSubmit: () => _submit(context, userId, token),
                         ),
     );
   }
 
-  Future<void> _submit(BuildContext context, String patientId, String? token) async {
+  Future<void> _submit(BuildContext context, String userId, String? token) async {
     final provider = context.read<AssessmentProvider>();
     final auth = context.read<AuthProvider>();
     final situations = provider.situations;
@@ -111,21 +111,26 @@ class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
 
     final hasHistory = provider.lsasHistory.isNotEmpty;
     final ok = await provider.submitLsas(
-      patientId,
+      userId,
       answers,
       token: token,
-      submissionType: hasHistory ? 'PERIODIC' : 'BASELINE',
+      submissionType: auth.isGuest ? 'BASELINE' : (hasHistory ? 'PERIODIC' : 'BASELINE'),
     );
 
     if (!context.mounted) return;
     if (ok) {
       final submission = provider.lastSubmission;
-      final profileBeforeGate = auth.patientProfile;
-      final needsSafetyGate = profileBeforeGate?.safetyGateCompleted != true;
-      if (needsSafetyGate) {
-        final gateCompleted = await _showMedicalSafetyGateDialog(context);
-        if (!context.mounted || !gateCompleted) {
-          return;
+      if (auth.isGuest) {
+        final linked = await _showGuestConversionDialog(context);
+        if (!context.mounted || !linked) return;
+      } else {
+        final profileBeforeGate = auth.patientProfile;
+        final needsSafetyGate = profileBeforeGate?.safetyGateCompleted != true;
+        if (needsSafetyGate) {
+          final gateCompleted = await _showMedicalSafetyGateDialog(context);
+          if (!context.mounted || !gateCompleted) {
+            return;
+          }
         }
       }
 
@@ -165,7 +170,13 @@ class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
           ],
         ),
       );
-      await context.read<OnboardingProvider>().loadOnboardingStatus(patientId, token: token);
+      final refreshedAuth = context.read<AuthProvider>();
+      final patientId = refreshedAuth.loginResponse?.user.id ?? '';
+      if (patientId.isEmpty) return;
+      await context.read<OnboardingProvider>().loadOnboardingStatus(
+        patientId,
+        token: refreshedAuth.token,
+      );
       if (context.mounted) {
         final refreshedProfile = context.read<AuthProvider>().patientProfile;
         final onboardingRoute = context.read<OnboardingProvider>().nextOnboardingRoute;
@@ -185,6 +196,170 @@ class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
         SnackBar(content: Text(provider.errorMessage)),
       );
     }
+  }
+
+  Future<bool> _showGuestConversionDialog(BuildContext context) async {
+    final auth = context.read<AuthProvider>();
+    final emailController = TextEditingController();
+    final passwordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+    final realNameController = TextEditingController();
+    final phoneController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        bool submitting = false;
+        return StatefulBuilder(
+          builder: (context, setStateDialog) => AlertDialog(
+            title: const Text('Mở khóa kết quả và lộ trình CBT'),
+            content: SizedBox(
+              width: 430,
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Bạn đã hoàn thành bài LSAS. Để MindHealth phân tích kết quả chuyên sâu, thiết lập lộ trình phù hợp và kích hoạt an toàn y tế khi cần, vui lòng liên kết email, đặt mật khẩu và cung cấp tối thiểu họ tên thật cùng số điện thoại cá nhân.',
+                      style: TextStyle(height: 1.5),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'App vẫn tiếp tục hiển thị biệt danh ${auth.guestProfile?.nickname.isNotEmpty == true ? auth.guestProfile!.nickname : 'của bạn'} và avatar hệ thống như đã hứa.',
+                      style: const TextStyle(height: 1.45),
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        labelText: 'Email đăng nhập',
+                        prefixIcon: Icon(Icons.email_outlined),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Vui lòng nhập email.';
+                        }
+                        if (!value.contains('@')) {
+                          return 'Email chưa hợp lệ.';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: passwordController,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Mật khẩu mới',
+                        prefixIcon: Icon(Icons.lock_outline),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().length < 6) {
+                          return 'Mật khẩu cần ít nhất 6 ký tự.';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: confirmPasswordController,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Nhập lại mật khẩu',
+                        prefixIcon: Icon(Icons.lock_reset_outlined),
+                      ),
+                      validator: (value) {
+                        if (value != passwordController.text) {
+                          return 'Mật khẩu nhập lại chưa khớp.';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: realNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Họ và tên thật',
+                        prefixIcon: Icon(Icons.person_outline),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Vui lòng nhập họ và tên thật.';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(
+                        labelText: 'Số điện thoại cá nhân',
+                        prefixIcon: Icon(Icons.phone_outlined),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Vui lòng nhập số điện thoại cá nhân.';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: submitting ? null : () => Navigator.pop(dialogContext, false),
+                child: const Text('Để sau'),
+              ),
+              ElevatedButton(
+                onPressed: submitting
+                    ? null
+                    : () async {
+                        if (!formKey.currentState!.validate()) return;
+                        setStateDialog(() => submitting = true);
+                        final ok = await auth.linkGuestAccount(
+                          email: emailController.text.trim(),
+                          password: passwordController.text,
+                          realFullName: realNameController.text.trim(),
+                          phoneNumber: phoneController.text.trim(),
+                        );
+                        if (!dialogContext.mounted) return;
+                        if (ok) {
+                          Navigator.pop(dialogContext, true);
+                        } else {
+                          setStateDialog(() => submitting = false);
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                            SnackBar(content: Text(auth.errorMessage)),
+                          );
+                        }
+                      },
+                child: submitting
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text('Liên kết và xem kết quả'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    emailController.dispose();
+    passwordController.dispose();
+    confirmPasswordController.dispose();
+    realNameController.dispose();
+    phoneController.dispose();
+    return result == true;
   }
 
   Future<bool> _showMedicalSafetyGateDialog(BuildContext context) async {

@@ -75,29 +75,37 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     if (_initialized) return;
 
     final auth = context.read<AuthProvider>();
-    final profile = auth.patientProfile;
-    final user = auth.loginResponse?.user;
 
-    _nicknameController.text = profile?.nickname ?? user?.username ?? '';
-    _realFullNameController.text = profile?.realFullName ?? '';
-    _phoneNumberController.text = profile?.phoneNumber ?? '';
-    _emergencyContactController.text = profile?.emergencyContactPhone ?? '';
-    _educationController.text = profile?.educationLevel ?? '';
-    _occupationController.text = profile?.occupation ?? '';
-    _relationshipController.text = profile?.relationshipStatus ?? '';
-    _medicalHistoryController.text = profile?.medicalHistory ?? '';
-    _anonymousMode = profile?.anonymousModeEnabled ?? true;
-    _gender = profile?.gender?.isNotEmpty == true ? profile!.gender! : 'Nữ';
-    if (profile?.dateOfBirth != null && profile!.dateOfBirth!.isNotEmpty) {
-      _dateOfBirth = DateTime.tryParse(profile.dateOfBirth!);
-    }
-
-    final avatarCode = profile?.avatarIcon ?? 'avatar_cat';
-    final foundIndex = _avatarOptions.indexWhere((item) => item.code == avatarCode);
-    _avatarIndex = foundIndex >= 0 ? foundIndex : 0;
-    if (widget.mode == ProfileSetupMode.medicalProfile) {
+    if (auth.isGuest) {
+      final guestProfile = auth.guestProfile;
+      final user = auth.loginResponse?.user;
+      _nicknameController.text = guestProfile?.nickname ?? user?.username ?? '';
+      final avatarCode = guestProfile?.avatarIcon ?? 'avatar_cat';
+      final foundIndex = _avatarOptions.indexWhere((item) => item.code == avatarCode);
+      _avatarIndex = foundIndex >= 0 ? foundIndex : 0;
+      _anonymousMode = true;
+    } else {
+      final profile = auth.patientProfile;
+      final user = auth.loginResponse?.user;
+      _nicknameController.text = profile?.nickname ?? user?.username ?? '';
+      _realFullNameController.text = profile?.realFullName ?? '';
+      _phoneNumberController.text = profile?.phoneNumber ?? '';
+      _emergencyContactController.text = profile?.emergencyContactPhone ?? '';
+      _educationController.text = profile?.educationLevel ?? '';
+      _occupationController.text = profile?.occupation ?? '';
+      _relationshipController.text = profile?.relationshipStatus ?? '';
+      _medicalHistoryController.text = profile?.medicalHistory ?? '';
       _anonymousMode = profile?.anonymousModeEnabled ?? true;
+      _gender = profile?.gender?.isNotEmpty == true ? profile!.gender! : 'Nữ';
+      if (profile?.dateOfBirth != null && profile!.dateOfBirth!.isNotEmpty) {
+        _dateOfBirth = DateTime.tryParse(profile.dateOfBirth!);
+      }
+
+      final avatarCode = profile?.avatarIcon ?? 'avatar_cat';
+      final foundIndex = _avatarOptions.indexWhere((item) => item.code == avatarCode);
+      _avatarIndex = foundIndex >= 0 ? foundIndex : 0;
     }
+
     _initialized = true;
   }
 
@@ -108,7 +116,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
     return MindHealthScaffold(
       title: isAnonymousDemo
-          ? 'Thiết lập hồ sơ ẩn danh'
+          ? 'Thiết lập hồ sơ khách'
           : isMedicalOnly
               ? 'Hoàn thiện hồ sơ y tế'
               : 'Thiết lập hồ sơ ban đầu',
@@ -121,9 +129,12 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
             const SizedBox(height: 18),
             if (_showAnonymousSection) ...[
               _SectionCard(
-                title: 'Hồ sơ ẩn danh',
-                subtitle:
-                    'Phần này hiển thị ra ngoài app. Bạn sẽ dùng biệt danh và avatar hệ thống để thấy an toàn hơn khi bắt đầu.',
+                title: widget.mode == ProfileSetupMode.anonymousDemo
+                    ? 'Hồ sơ khách vãng lai'
+                    : 'Hồ sơ hiển thị trong app',
+                subtitle: widget.mode == ProfileSetupMode.anonymousDemo
+                    ? 'Ở bước này bạn chỉ cần chọn biệt danh và avatar hệ thống để bắt đầu làm LSAS một cách nhẹ nhàng, chưa cần khai thông tin y tế thật.'
+                    : 'Phần này là lớp hiển thị bên ngoài app. Bạn có thể dùng biệt danh và avatar hệ thống để cảm thấy an toàn hơn khi bắt đầu.',
                 child: Column(
                   children: [
                     TextFormField(
@@ -141,19 +152,18 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                       },
                     ),
                     const SizedBox(height: 12),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      value: _anonymousMode,
-                      activeColor: AppColors.primary,
-                      title: const Text('Bật chế độ ẩn danh'),
-                      subtitle: const Text(
-                        'Mặc định toàn bộ app sẽ hiển thị biệt danh và avatar hệ thống. Bác sĩ vẫn xem được hồ sơ y tế thật ở cổng quản trị.',
+                    if (!isAnonymousDemo)
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: _anonymousMode,
+                        activeColor: AppColors.primary,
+                        title: const Text('Bật chế độ ẩn danh'),
+                        subtitle: const Text(
+                          'Khi bật, app ưu tiên hiển thị biệt danh và avatar hệ thống. Bác sĩ vẫn xem được hồ sơ y tế thật trong cổng quản trị.',
+                        ),
+                        onChanged: (value) => setState(() => _anonymousMode = value),
                       ),
-                      onChanged: widget.mode == ProfileSetupMode.medicalProfile
-                          ? (value) => setState(() => _anonymousMode = value)
-                          : null,
-                    ),
-                    const SizedBox(height: 12),
+                    if (!isAnonymousDemo) const SizedBox(height: 12),
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
@@ -222,7 +232,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               _SectionCard(
                 title: 'Hồ sơ y tế chính thức',
                 subtitle:
-                    'Phần này chỉ dành cho bác sĩ và admin để phục vụ an toàn y tế, hỗ trợ khẩn cấp và xây dựng lộ trình điều trị đúng.',
+                    'Phần này chỉ dành cho bác sĩ và admin để phục vụ an toàn y tế, hỗ trợ khẩn cấp và xây dựng lộ trình điều trị đúng cho bạn.',
                 child: Column(
                   children: [
                     TextFormField(
@@ -280,12 +290,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                         labelText: 'Số điện thoại người liên hệ khẩn cấp',
                         prefixIcon: Icon(Icons.contact_phone_outlined),
                       ),
-                      validator: (value) {
-                        if (_showMedicalSection && (value == null || value.trim().isEmpty)) {
-                          return 'Vui lòng nhập số điện thoại liên hệ khẩn cấp.';
-                        }
-                        return null;
-                      },
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -294,12 +298,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                         labelText: 'Trình độ học vấn',
                         prefixIcon: Icon(Icons.school_outlined),
                       ),
-                      validator: (value) {
-                        if (_showMedicalSection && (value == null || value.trim().isEmpty)) {
-                          return 'Vui lòng nhập trình độ học vấn.';
-                        }
-                        return null;
-                      },
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -308,12 +306,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                         labelText: 'Nghề nghiệp',
                         prefixIcon: Icon(Icons.work_outline),
                       ),
-                      validator: (value) {
-                        if (_showMedicalSection && (value == null || value.trim().isEmpty)) {
-                          return 'Vui lòng nhập nghề nghiệp.';
-                        }
-                        return null;
-                      },
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -322,45 +314,27 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                         labelText: 'Tình trạng hôn nhân / mối quan hệ',
                         prefixIcon: Icon(Icons.favorite_border),
                       ),
-                      validator: (value) {
-                        if (_showMedicalSection && (value == null || value.trim().isEmpty)) {
-                          return 'Vui lòng nhập tình trạng hôn nhân hoặc mối quan hệ.';
-                        }
-                        return null;
-                      },
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _medicalHistoryController,
-                      minLines: 3,
                       maxLines: 4,
                       decoration: const InputDecoration(
                         labelText: 'Tiền sử bệnh lý / thuốc đang dùng',
                         alignLabelWithHint: true,
-                        prefixIcon: Icon(Icons.medication_outlined),
+                        prefixIcon: Icon(Icons.medical_information_outlined),
                       ),
-                      validator: (value) {
-                        if (_showMedicalSection && (value == null || value.trim().isEmpty)) {
-                          return 'Vui lòng mô tả ngắn gọn tiền sử bệnh lý hoặc thuốc đang dùng.';
-                        }
-                        return null;
-                      },
                     ),
                   ],
                 ),
               ),
             ],
-            const SizedBox(height: 18),
+            const SizedBox(height: 20),
             SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
+              height: 54,
+              child: ElevatedButton(
                 onPressed: _onContinue,
-                icon: const Icon(Icons.arrow_forward_rounded),
-                label: Text(_buttonLabel()),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 17),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                ),
+                child: Text(_buttonLabel()),
               ),
             ),
           ],
@@ -372,7 +346,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   String _buttonLabel() {
     switch (widget.mode) {
       case ProfileSetupMode.anonymousDemo:
-        return 'Lưu hồ sơ ẩn danh và làm LSAS';
+        return 'Lưu hồ sơ khách và làm LSAS';
       case ProfileSetupMode.medicalProfile:
         return 'Hoàn tất hồ sơ y tế';
       case ProfileSetupMode.standard:
@@ -404,11 +378,31 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     }
 
     final auth = context.read<AuthProvider>();
-    final body = <String, dynamic>{
-      'nickname': _nicknameController.text.trim(),
-      'avatarIcon': _avatarOptions[_avatarIndex].code,
-      'anonymousModeEnabled': _anonymousMode,
-    };
+
+    if (auth.isGuest && widget.mode == ProfileSetupMode.anonymousDemo) {
+      final ok = await auth.updateGuestProfile({
+        'nickname': _nicknameController.text.trim(),
+        'avatarIcon': _avatarOptions[_avatarIndex].code,
+      });
+      if (!mounted) return;
+      if (!ok) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(auth.errorMessage)),
+        );
+        return;
+      }
+      context.go('/lsas');
+      return;
+    }
+
+    final body = <String, dynamic>{};
+    if (_showAnonymousSection) {
+      body.addAll({
+        'nickname': _nicknameController.text.trim(),
+        'avatarIcon': _avatarOptions[_avatarIndex].code,
+        'anonymousModeEnabled': _anonymousMode,
+      });
+    }
 
     if (_showMedicalSection) {
       body.addAll({
@@ -431,11 +425,6 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(auth.errorMessage)),
       );
-      return;
-    }
-
-    if (widget.mode == ProfileSetupMode.anonymousDemo) {
-      context.go('/lsas');
       return;
     }
 
@@ -502,9 +491,9 @@ class _ProfileSetupHero extends StatelessWidget {
               children: [
                 Text(
                   isAnonymousDemo
-                      ? 'Bắt đầu ẩn danh, an toàn'
+                      ? 'Trải nghiệm trước bằng Guest Mode'
                       : isMedicalOnly
-                          ? 'Hoàn thiện hồ sơ y tế'
+                          ? 'Bổ sung hồ sơ y tế'
                           : 'Chuẩn bị hồ sơ ban đầu',
                   style: const TextStyle(
                     color: Colors.white,
@@ -515,10 +504,10 @@ class _ProfileSetupHero extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   isAnonymousDemo
-                      ? 'Bạn có thể dùng biệt danh và avatar hệ thống để làm LSAS trước. Khi cần mở khóa kết quả và lộ trình CBT, app sẽ mời bạn khai thêm hồ sơ thật.'
+                      ? 'Bạn sẽ chọn biệt danh và avatar hệ thống trước, sau đó làm LSAS. Kết quả chi tiết chỉ mở sau khi bạn liên kết tài khoản và vượt qua cổng an toàn y tế.'
                       : isMedicalOnly
-                          ? 'Hồ sơ thật giúp bác sĩ và admin hỗ trợ đúng, đặc biệt khi có nguy cơ khẩn cấp hoặc cần liên hệ an toàn.'
-                          : 'Bạn sẽ có cả hai lớp danh tính: một hồ sơ ẩn danh để thấy an toàn khi dùng app, và một hồ sơ thật phục vụ y tế.',
+                          ? 'Hồ sơ thật giúp bác sĩ hỗ trợ đúng và can thiệp an toàn khi cần. Bề mặt app vẫn có thể tiếp tục hiển thị biệt danh nếu bạn bật chế độ ẩn danh.'
+                          : 'MindHealth tách riêng lớp hiển thị trong app và lớp hồ sơ y tế thật để vừa an toàn tâm lý, vừa bảo đảm an toàn điều trị.',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.92),
                     height: 1.45,

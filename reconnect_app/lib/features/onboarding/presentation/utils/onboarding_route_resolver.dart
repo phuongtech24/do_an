@@ -32,6 +32,22 @@ class OnboardingRouteResolver {
       );
     }
 
+    if (auth.isGuest) {
+      final guestProfile = auth.guestProfile;
+      if (guestProfile == null ||
+          guestProfile.nickname.trim().isEmpty ||
+          guestProfile.avatarIcon.trim().isEmpty) {
+        return const OnboardingRouteDecision(
+          route: '/profile-setup?mode=anonymous-demo',
+          isOnboardingComplete: false,
+        );
+      }
+      return const OnboardingRouteDecision(
+        route: '/lsas',
+        isOnboardingComplete: false,
+      );
+    }
+
     final onboarding = Provider.of<OnboardingProvider>(context, listen: false);
     final ok = await onboarding.loadOnboardingStatus(patientId, token: auth.token);
     if (!ok) {

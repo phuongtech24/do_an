@@ -13,6 +13,8 @@ class ApiConstants {
   static const String login = '$baseUrl/auth/login';
   static const String register = '$baseUrl/auth/register';
   static const String registerAnonymous = '$baseUrl/auth/register-anonymous';
+  static const String guestLinkAccount = '$baseUrl/auth/guest/link-account';
+  static const String guestProfile = '$baseUrl/guest/profile';
 
   // User Endpoints
   static const String users = '$baseUrl/users';

@@ -1,12 +1,21 @@
 package com.reconnect.mindhealth.modules.auth.service.impl;
 
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reconnect.mindhealth.common.util.JwtUtil;
+import com.reconnect.mindhealth.modules.assessment.dto.LsasAnswerRequestDto;
+import com.reconnect.mindhealth.modules.assessment.dto.LsasSubmissionDto;
+import com.reconnect.mindhealth.modules.assessment.enums.LsasSubmissionType;
+import com.reconnect.mindhealth.modules.assessment.service.IAssessmentService;
+import com.reconnect.mindhealth.modules.auth.dto.GuestLinkAccountRequestDto;
 import com.reconnect.mindhealth.modules.auth.dto.LoginRequest;
 import com.reconnect.mindhealth.modules.auth.dto.LoginResponse;
 import com.reconnect.mindhealth.modules.auth.dto.RegisterRequest;
@@ -22,8 +31,11 @@ import com.reconnect.mindhealth.modules.clinical.enums.Status;
 import com.reconnect.mindhealth.modules.clinical.enums.TaperingStage;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
 import com.reconnect.mindhealth.modules.clinical.repository.TherapistProfileRepository;
+import com.reconnect.mindhealth.modules.guest.entity.GuestProfile;
+import com.reconnect.mindhealth.modules.guest.repository.GuestProfileRepository;
 
 import jakarta.annotation.Resource;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 
 @Transactional
@@ -43,8 +55,17 @@ public class AuthServiceImpl implements IAuthService {
     @Resource
     private TherapistProfileRepository therapistProfileRepository;
 
+    @Resource
+    private GuestProfileRepository guestProfileRepository;
+
     @Autowired
     private JwtUtil jwtUtil;
+
+    @Autowired
+    private IAssessmentService assessmentService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Override
     public UserDto register(RegisterRequest request) {
@@ -169,37 +190,147 @@ public class AuthServiceImpl implements IAuthService {
                     newGuest.setEmail(guestEmail);
                     newGuest.setUsername("Guest_" + guestPrefix);
                     newGuest.setPasswordHash(passwordEncoder.encode(normalizedDeviceId));
-                    newGuest.setRole(Role.PATIENT);
-                    newGuest.setIsAnonymous(true);
+                    newGuest.setRole(Role.GUEST);
+                    newGuest.setIsAnonymous(false);
                     createdUser[0] = true;
                     return userRepository.save(newGuest);
                 });
 
-        boolean patientProfileCreated = false;
-        if (!patientProfileRepository.existsById(entity.getId())) {
-            PatientProfile profile = new PatientProfile();
-            profile.setUser(entity);
-            profile.setNickName(entity.getUsername());
-            profile.setAvatarIcon("avatar_boy_1");
-            profile.setAnonymousModeEnabled(true);
-            profile.setStatus(Status.STABLE);
-            profile.setTaperingStage(TaperingStage.NONE);
-            profile.setCurrentRiskScore(0);
-            profile.setLsasDemoCompleted(false);
-            profile.setSafetyGateCompleted(false);
-            profile.setMedicalProfileCompleted(false);
-            patientProfileRepository.save(profile);
-            patientProfileCreated = true;
+        boolean guestProfileCreated = false;
+        if (!guestProfileRepository.existsById(entity.getId())) {
+            GuestProfile guestProfile = new GuestProfile();
+            guestProfile.setUser(entity);
+            guestProfile.setNickname(entity.getUsername());
+            guestProfile.setAvatarIcon("avatar_cat");
+            guestProfile.setLsasDemoCompleted(false);
+            guestProfileRepository.save(guestProfile);
+            guestProfileCreated = true;
         }
 
         String token = this.jwtUtil.generateToken(entity.getEmail());
         log.info(
-                "Anonymous auth success deviceId={}, userId={}, createdUser={}, patientProfileCreated={}",
+                "Guest auth success deviceId={}, userId={}, createdUser={}, guestProfileCreated={}",
                 normalizedDeviceId,
                 entity.getId(),
                 createdUser[0],
-                patientProfileCreated);
+                guestProfileCreated);
         return new LoginResponse(new UserDto(entity), token);
+    }
+
+    @Override
+    public LoginResponse linkGuestAccount(GuestLinkAccountRequestDto request) {
+        if (request.getGuestId() == null) {
+            throw new IllegalArgumentException("Thiếu guestId.");
+        }
+        if (isBlank(request.getEmail())) {
+            throw new IllegalArgumentException("Email là bắt buộc.");
+        }
+        if (isBlank(request.getPassword()) || request.getPassword().trim().length() < 6) {
+            throw new IllegalArgumentException("Mật khẩu phải có ít nhất 6 ký tự.");
+        }
+        if (isBlank(request.getRealFullName())) {
+            throw new IllegalArgumentException("Họ tên thật là bắt buộc.");
+        }
+        if (isBlank(request.getPhoneNumber())) {
+            throw new IllegalArgumentException("Số điện thoại cá nhân là bắt buộc.");
+        }
+
+        User guestUser = userRepository.findById(request.getGuestId())
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy guest: " + request.getGuestId()));
+        if (guestUser.getRole() != Role.GUEST) {
+            throw new IllegalStateException("Tài khoản này không còn ở trạng thái guest.");
+        }
+
+        String normalizedEmail = request.getEmail().trim().toLowerCase();
+        userRepository.findByEmail(normalizedEmail)
+                .filter(existing -> !existing.getId().equals(guestUser.getId()))
+                .ifPresent(existing -> {
+                    throw new IllegalArgumentException("Email đã được sử dụng.");
+                });
+
+        GuestProfile guestProfile = guestProfileRepository.findById(guestUser.getId())
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy hồ sơ guest: " + guestUser.getId()));
+
+        String desiredNickname = firstNonBlank(guestProfile.getNickname(), guestUser.getUsername(), normalizedEmail);
+        String resolvedNickname = resolveAvailableNickname(desiredNickname, guestUser.getId());
+
+        guestUser.setEmail(normalizedEmail);
+        guestUser.setPasswordHash(passwordEncoder.encode(request.getPassword().trim()));
+        guestUser.setRole(Role.PATIENT);
+        guestUser.setIsAnonymous(false);
+        guestUser.setUsername(resolvedNickname);
+        userRepository.save(guestUser);
+
+        PatientProfile patientProfile = patientProfileRepository.findById(guestUser.getId())
+                .orElseGet(() -> {
+                    PatientProfile profile = new PatientProfile();
+                    profile.setUser(guestUser);
+                    return profile;
+                });
+        patientProfile.setNickName(resolvedNickname);
+        patientProfile.setAvatarIcon(firstNonBlank(guestProfile.getAvatarIcon(), "avatar_cat"));
+        patientProfile.setAnonymousModeEnabled(true);
+        patientProfile.setRealFullName(request.getRealFullName().trim());
+        patientProfile.setPhoneNumber(request.getPhoneNumber().trim());
+        patientProfile.setStatus(Status.STABLE);
+        patientProfile.setTaperingStage(TaperingStage.NONE);
+        patientProfile.setCurrentRiskScore(patientProfile.getCurrentRiskScore() != null ? patientProfile.getCurrentRiskScore() : 0);
+        patientProfile.setSafetyGateCompleted(true);
+        patientProfile.setMedicalProfileCompleted(false);
+        patientProfile.setLsasDemoCompleted(Boolean.TRUE.equals(guestProfile.getLsasDemoCompleted()));
+        patientProfileRepository.save(patientProfile);
+
+        migratePendingLsasIfPresent(patientProfile, guestProfile);
+        guestProfileRepository.delete(guestProfile);
+
+        String token = this.jwtUtil.generateToken(guestUser.getEmail());
+        log.info("Guest converted to patient guestId={}, patientId={}, email={}",
+                request.getGuestId(),
+                patientProfile.getId(),
+                normalizedEmail);
+        return new LoginResponse(new UserDto(guestUser), token);
+    }
+
+    private void migratePendingLsasIfPresent(PatientProfile patientProfile, GuestProfile guestProfile) {
+        if (guestProfile.getPendingLsasAnswersJson() == null || guestProfile.getPendingLsasAnswersJson().isBlank()) {
+            return;
+        }
+        try {
+            List<LsasAnswerRequestDto> answers = objectMapper.readValue(
+                    guestProfile.getPendingLsasAnswersJson(),
+                    new TypeReference<List<LsasAnswerRequestDto>>() {
+                    });
+            LsasSubmissionDto submissionDto = new LsasSubmissionDto();
+            submissionDto.setPatientId(patientProfile.getId());
+            submissionDto.setSubmissionType(LsasSubmissionType.BASELINE);
+            submissionDto.setAnswers(answers);
+            assessmentService.submitLsas(submissionDto);
+        } catch (Exception exception) {
+            throw new IllegalStateException("Không thể chuyển LSAS tạm của guest sang patient.", exception);
+        }
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (!isBlank(value)) {
+                return value.trim();
+            }
+        }
+        return null;
+    }
+
+    private String resolveAvailableNickname(String preferredNickname, java.util.UUID currentUserId) {
+        String baseNickname = firstNonBlank(preferredNickname, "khach_moi");
+        String candidate = baseNickname;
+        int suffix = 1;
+        while (true) {
+            PatientProfile existing = patientProfileRepository.findByNickName(candidate);
+            if (existing == null || existing.getId().equals(currentUserId)) {
+                return candidate;
+            }
+            suffix++;
+            candidate = baseNickname + "_" + suffix;
+        }
     }
 
     private String trimToNull(String value) {
@@ -208,5 +339,9 @@ public class AuthServiceImpl implements IAuthService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 }

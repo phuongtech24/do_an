@@ -12,6 +12,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reconnect.mindhealth.modules.assessment.dto.LsasAnswerRequestDto;
 import com.reconnect.mindhealth.modules.assessment.dto.LsasSituationDto;
 import com.reconnect.mindhealth.modules.assessment.dto.LsasSubmissionDto;
@@ -25,8 +27,13 @@ import com.reconnect.mindhealth.modules.assessment.repository.LsasSituationRepos
 import com.reconnect.mindhealth.modules.assessment.repository.LsasSubmissionRepository;
 import com.reconnect.mindhealth.modules.assessment.repository.UserMoodRepository;
 import com.reconnect.mindhealth.modules.assessment.service.IAssessmentService;
+import com.reconnect.mindhealth.modules.auth.entity.User;
+import com.reconnect.mindhealth.modules.auth.enums.Role;
+import com.reconnect.mindhealth.modules.auth.repository.UserRepository;
 import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
+import com.reconnect.mindhealth.modules.guest.entity.GuestProfile;
+import com.reconnect.mindhealth.modules.guest.repository.GuestProfileRepository;
 import com.reconnect.mindhealth.modules.roadmap.service.FearLadderService;
 import com.reconnect.mindhealth.modules.risk.service.IRiskScoringService;
 
@@ -41,22 +48,31 @@ public class AssessmentServiceImpl implements IAssessmentService {
     private final LsasSubmissionRepository lsasSubmissionRepository;
     private final UserMoodRepository userMoodRepository;
     private final PatientProfileRepository patientProfileRepository;
+    private final UserRepository userRepository;
+    private final GuestProfileRepository guestProfileRepository;
     private final FearLadderService fearLadderService;
     private final IRiskScoringService riskScoringService;
+    private final ObjectMapper objectMapper;
 
     public AssessmentServiceImpl(
             LsasSituationRepository lsasSituationRepository,
             LsasSubmissionRepository lsasSubmissionRepository,
             UserMoodRepository userMoodRepository,
             PatientProfileRepository patientProfileRepository,
+            UserRepository userRepository,
+            GuestProfileRepository guestProfileRepository,
             FearLadderService fearLadderService,
-            IRiskScoringService riskScoringService) {
+            IRiskScoringService riskScoringService,
+            ObjectMapper objectMapper) {
         this.lsasSituationRepository = lsasSituationRepository;
         this.lsasSubmissionRepository = lsasSubmissionRepository;
         this.userMoodRepository = userMoodRepository;
         this.patientProfileRepository = patientProfileRepository;
+        this.userRepository = userRepository;
+        this.guestProfileRepository = guestProfileRepository;
         this.fearLadderService = fearLadderService;
         this.riskScoringService = riskScoringService;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -71,13 +87,20 @@ public class AssessmentServiceImpl implements IAssessmentService {
     @Override
     @Transactional
     public LsasSubmissionDto submitLsas(LsasSubmissionDto dto) {
-        PatientProfile patient = patientProfileRepository.findById(dto.getPatientId())
-                .orElseThrow(() -> new EntityNotFoundException("Kh?ng t?m th?y b?nh nh?n: " + dto.getPatientId()));
-
         if (dto.getAnswers() == null || dto.getAnswers().size() != 24) {
             throw new IllegalArgumentException("LSAS c?n ?? 24 c?u tr? l?i.");
         }
         validateUniqueSituations(dto.getAnswers());
+
+        PatientProfile patient = patientProfileRepository.findById(dto.getPatientId()).orElse(null);
+        if (patient == null) {
+            User guestUser = userRepository.findById(dto.getPatientId())
+                    .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy user: " + dto.getPatientId()));
+            if (guestUser.getRole() != Role.GUEST) {
+                throw new EntityNotFoundException("Không tìm thấy bệnh nhân: " + dto.getPatientId());
+            }
+            return saveGuestLsas(guestUser, dto);
+        }
 
         boolean hasBaseline = lsasSubmissionRepository.existsByPatientProfile_IdAndSubmissionType(
                 patient.getId(), LsasSubmissionType.BASELINE);
@@ -162,8 +185,15 @@ public class AssessmentServiceImpl implements IAssessmentService {
     @Override
     @Transactional(readOnly = true)
     public boolean isLsasOnCoolDown(UUID patientId) {
-        PatientProfile patient = patientProfileRepository.findById(patientId)
-                .orElseThrow(() -> new EntityNotFoundException("Kh?ng t?m th?y b?nh nh?n: " + patientId));
+        PatientProfile patient = patientProfileRepository.findById(patientId).orElse(null);
+        if (patient == null) {
+            User user = userRepository.findById(patientId)
+                    .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy user: " + patientId));
+            if (user.getRole() == Role.GUEST) {
+                return false;
+            }
+            throw new EntityNotFoundException("Kh?ng t?m th?y b?nh nh?n: " + patientId);
+        }
         if (patient.getLastLsasDate() == null) {
             return false;
         }
@@ -173,12 +203,72 @@ public class AssessmentServiceImpl implements IAssessmentService {
     @Override
     @Transactional(readOnly = true)
     public List<LsasSubmissionDto> getLsasHistory(UUID patientId) {
-        patientProfileRepository.findById(patientId)
-                .orElseThrow(() -> new EntityNotFoundException("Kh?ng t?m th?y b?nh nh?n: " + patientId));
+        PatientProfile patient = patientProfileRepository.findById(patientId).orElse(null);
+        if (patient == null) {
+            User user = userRepository.findById(patientId)
+                    .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy user: " + patientId));
+            if (user.getRole() == Role.GUEST) {
+                return List.of();
+            }
+            throw new EntityNotFoundException("Kh?ng t?m th?y b?nh nh?n: " + patientId);
+        }
         return lsasSubmissionRepository.findByPatientProfile_IdOrderByCreateDateDesc(patientId)
                 .stream()
                 .map(this::toSubmissionDto)
                 .toList();
+    }
+
+    private LsasSubmissionDto saveGuestLsas(User guestUser, LsasSubmissionDto dto) {
+        GuestProfile guestProfile = guestProfileRepository.findById(guestUser.getId())
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy hồ sơ guest: " + guestUser.getId()));
+
+        int fearTotal = 0;
+        int avoidanceTotal = 0;
+        for (LsasAnswerRequestDto answerDto : dto.getAnswers()) {
+            normalizeLsasScore(answerDto.getFearScore());
+            normalizeLsasScore(answerDto.getAvoidanceScore());
+            fearTotal += answerDto.getFearScore();
+            avoidanceTotal += answerDto.getAvoidanceScore();
+        }
+        int totalScore = fearTotal + avoidanceTotal;
+
+        guestProfile.setLsasDemoCompleted(true);
+        guestProfile.setPendingLsasTotalScore(totalScore);
+        guestProfile.setPendingLsasSubmissionType(LsasSubmissionType.BASELINE.name());
+        guestProfile.setPendingLsasCompletedAt(LocalDateTime.now());
+        guestProfile.setPendingLsasAnswersJson(writeGuestLsasAnswers(dto.getAnswers()));
+        guestProfileRepository.save(guestProfile);
+
+        LsasSubmissionDto result = new LsasSubmissionDto();
+        result.setPatientId(guestUser.getId());
+        result.setSubmissionType(LsasSubmissionType.BASELINE);
+        result.setFearTotal(fearTotal);
+        result.setAvoidanceTotal(avoidanceTotal);
+        result.setTotalScore(totalScore);
+        result.setAnswers(dto.getAnswers());
+        result.setSeverityBand(resolveSeverityBand(totalScore));
+        result.setSeverityLabel(resolveSeverityLabel(totalScore));
+        result.setClinicalRoute(resolveClinicalRoute(totalScore));
+        result.setSummaryMessage(buildSummaryMessage(totalScore));
+        result.setRecommendedNextStep(buildRecommendedNextStep(totalScore));
+        result.setClinicalAttention(isClinicalAttention(totalScore));
+        result.setRedFlagTriggered(false);
+        result.setNextEligibleAt(null);
+
+        log.info("Guest LSAS submitted guestId={}, totalScore={}, severityBand={}, clinicalRoute={}",
+                guestUser.getId(),
+                totalScore,
+                result.getSeverityBand(),
+                result.getClinicalRoute());
+        return result;
+    }
+
+    private String writeGuestLsasAnswers(List<LsasAnswerRequestDto> answers) {
+        try {
+            return objectMapper.writeValueAsString(answers);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalStateException("Không thể lưu tạm câu trả lời LSAS của guest.", exception);
+        }
     }
 
     @Override
