@@ -1,115 +1,83 @@
-name: CI
+ReConnect MindHealth
+ReConnect MindHealth is a mental-health therapy management SaaS platform designed to support CBT-based self-help journeys, therapist matching, AI-assisted guidance, and telehealth appointment workflows.
+The system is built as a graduation thesis project with a strong focus on secure patient data handling, clinical flow alignment, and scalable backend architecture.
 
-on:
-  push:
-  pull_request:
+Key Features
+LSAS-based social anxiety assessment flow
+Goal setting and therapist matching
+Fear Ladder and Behavioral Experiment workflows
+Daily mood check-in and CBT thought record support
+Telehealth appointment booking and therapist management
+Role-based access for patient, therapist, and admin
+Secure authentication with JWT
+Redis caching for therapist directory APIs
+Dockerized development and deployment workflow
+CI/CD pipelines with GitHub Actions
+Tech Stack
+Backend
+Java 17
+Spring Boot
+Spring Security
+Spring Data JPA / Hibernate
+MySQL
+Redis
+REST APIs
+Frontend
+Flutter (reconnect_app)
+Flutter Web (reconnect_web)
+DevOps / Infra
+Docker
+Docker Compose
+GitHub Actions
+GHCR (GitHub Container Registry)
+Architecture Overview
+The project is organized into three main parts:
 
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+reconnect_backend: Spring Boot backend APIs and business logic
+reconnect_app: Flutter patient application
+reconnect_web: Flutter web portal for management surfaces
+infra: Docker Compose and deployment-related configuration
+Highlights
+Eliminated N+1 query issues using JPA EntityGraph and aggregated repository queries
+Integrated Redis caching with @Cacheable / @CacheEvict
+Applied @Transactional and pessimistic locking for sensitive scheduling flows
+Designed structured business flows based on LSAS-first CBT treatment logic
+Built CI/CD pipelines for automated build, test, Docker validation, and image publishing
+Getting Started
+Prerequisites
+Java 17
+Maven
+Flutter SDK
+Docker Desktop
+MySQL / Redis (or Docker Compose)
+Run with Docker Compose
+cd infra
+docker compose up --build -d
+Backend
+cd reconnect_backend
+mvn spring-boot:run
+Web
+cd reconnect_web
+flutter pub get
+flutter run -d chrome
+Patient App
+cd reconnect_app
+flutter pub get
+flutter run
+CI/CD
+This repository includes:
 
-jobs:
-  backend:
-    name: Backend - Maven Verify
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: reconnect_backend
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+CI pipeline for backend verification, Flutter analyze/test/build, and Docker validation
+CD pipeline for publishing backend and web Docker images to GHCR
+Project Purpose
+This project was developed as a graduation thesis and practical software engineering portfolio project, focusing on:
 
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-          cache: maven
-
-      - name: Verify backend
-        run: mvn -B -ntp verify
-
-  reconnect-web:
-    name: Web - Flutter Analyze/Test/Build
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: reconnect_web
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Analyze web app
-        run: flutter analyze
-
-      - name: Run web tests
-        run: flutter test
-
-      - name: Build web app
-        run: flutter build web --release --dart-define=API_BASE_URL=/api
-
-  reconnect-app:
-    name: Patient App - Flutter Analyze/Test
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: reconnect_app
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Analyze patient app
-        run: flutter analyze
-
-      - name: Run patient app tests
-        run: flutter test
-
-  docker:
-    name: Docker Build Validation
-    runs-on: ubuntu-latest
-    needs:
-      - backend
-      - reconnect-web
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Validate docker compose
-        run: docker compose -f infra/docker-compose.yml config
-
-      - name: Build backend image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./reconnect_backend
-          file: ./reconnect_backend/Dockerfile
-          push: false
-          tags: reconnect-backend:ci
-
-      - name: Build web image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./reconnect_web
-          file: ./reconnect_web/Dockerfile
-          push: false
-          tags: reconnect-web:ci
+backend system design
+business workflow implementation
+performance optimization
+secure API development
+modern DevOps practices
+Author
+Nguyen Khac Nam Phuong
+Intern Software Engineer
+GitHub: phuongtech24
