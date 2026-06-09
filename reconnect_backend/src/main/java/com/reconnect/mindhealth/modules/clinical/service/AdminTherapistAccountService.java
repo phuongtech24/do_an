@@ -24,16 +24,19 @@ public class AdminTherapistAccountService {
     private final TherapistProfileRepository therapistProfileRepository;
     private final TherapistCredentialRepository therapistCredentialRepository;
     private final PasswordEncoder passwordEncoder;
+    private final TherapistDirectoryCacheService therapistDirectoryCacheService;
 
     public AdminTherapistAccountService(
             UserRepository userRepository,
             TherapistProfileRepository therapistProfileRepository,
             TherapistCredentialRepository therapistCredentialRepository,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            TherapistDirectoryCacheService therapistDirectoryCacheService) {
         this.userRepository = userRepository;
         this.therapistProfileRepository = therapistProfileRepository;
         this.therapistCredentialRepository = therapistCredentialRepository;
         this.passwordEncoder = passwordEncoder;
+        this.therapistDirectoryCacheService = therapistDirectoryCacheService;
     }
 
     @Transactional
@@ -60,7 +63,9 @@ public class AdminTherapistAccountService {
         profile.setFullName(request.getFullName().trim());
         profile.setSpecialization(request.getSpecialization());
         profile.setApprovalStatus(ApprovalStatus.PENDING);
-        return therapistProfileRepository.save(profile);
+        TherapistProfile savedProfile = therapistProfileRepository.save(profile);
+        therapistDirectoryCacheService.evictAll();
+        return savedProfile;
     }
 
     @Transactional
@@ -75,7 +80,8 @@ public class AdminTherapistAccountService {
         }
 
         profile.setApprovalStatus(status);
-        return therapistProfileRepository.save(profile);
+        TherapistProfile savedProfile = therapistProfileRepository.save(profile);
+        therapistDirectoryCacheService.evictAll();
+        return savedProfile;
     }
 }
-

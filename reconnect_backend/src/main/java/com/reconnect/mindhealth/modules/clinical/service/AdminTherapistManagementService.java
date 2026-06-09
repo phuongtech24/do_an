@@ -25,14 +25,17 @@ public class AdminTherapistManagementService {
     private final UserRepository userRepository;
     private final TherapistProfileRepository therapistProfileRepository;
     private final PasswordEncoder passwordEncoder;
+    private final TherapistDirectoryCacheService therapistDirectoryCacheService;
 
     public AdminTherapistManagementService(
             UserRepository userRepository,
             TherapistProfileRepository therapistProfileRepository,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            TherapistDirectoryCacheService therapistDirectoryCacheService) {
         this.userRepository = userRepository;
         this.therapistProfileRepository = therapistProfileRepository;
         this.passwordEncoder = passwordEncoder;
+        this.therapistDirectoryCacheService = therapistDirectoryCacheService;
     }
 
     @Transactional
@@ -73,7 +76,9 @@ public class AdminTherapistManagementService {
             }
         }
 
-        return therapistProfileRepository.save(profile);
+        TherapistProfile saved = therapistProfileRepository.save(profile);
+        therapistDirectoryCacheService.evictAll();
+        return saved;
     }
 
     @Transactional

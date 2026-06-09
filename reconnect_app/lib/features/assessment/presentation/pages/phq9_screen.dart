@@ -214,6 +214,7 @@ class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
         bool submitting = false;
         return StatefulBuilder(
           builder: (context, setStateDialog) => AlertDialog(
+            scrollable: true,
             title: const Text('Mở khóa kết quả và lộ trình CBT'),
             content: SizedBox(
               width: 430,

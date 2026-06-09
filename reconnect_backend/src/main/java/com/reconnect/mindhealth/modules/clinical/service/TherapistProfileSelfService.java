@@ -33,16 +33,19 @@ public class TherapistProfileSelfService {
     private final StorageProperties storageProperties;
     private final TherapistProfileRepository therapistProfileRepository;
     private final AppointmentRepository appointmentRepository;
+    private final TherapistDirectoryCacheService therapistDirectoryCacheService;
 
     public TherapistProfileSelfService(
             AuthContextService authContextService,
             StorageProperties storageProperties,
             TherapistProfileRepository therapistProfileRepository,
-            AppointmentRepository appointmentRepository) {
+            AppointmentRepository appointmentRepository,
+            TherapistDirectoryCacheService therapistDirectoryCacheService) {
         this.authContextService = authContextService;
         this.storageProperties = storageProperties;
         this.therapistProfileRepository = therapistProfileRepository;
         this.appointmentRepository = appointmentRepository;
+        this.therapistDirectoryCacheService = therapistDirectoryCacheService;
     }
 
     @Transactional(readOnly = true)
@@ -94,6 +97,7 @@ public class TherapistProfileSelfService {
         if (saved.getMeetingLink() != null && !saved.getMeetingLink().isBlank()) {
             appointmentRepository.backfillMissingMeetingLink(saved.getId(), saved.getMeetingLink());
         }
+        therapistDirectoryCacheService.evictAll();
         return saved;
     }
 
@@ -128,6 +132,7 @@ public class TherapistProfileSelfService {
         profile.setAvatarUrl("/uploads/" + relPath);
         TherapistProfile saved = therapistProfileRepository.save(profile);
         deleteOldAvatarIfPossible(oldAvatarUrl, saved.getAvatarUrl());
+        therapistDirectoryCacheService.evictAll();
         return saved;
     }
 

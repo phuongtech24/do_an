@@ -16,7 +16,6 @@ import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
 import com.reconnect.mindhealth.modules.clinical.entity.TherapistProfile;
 import com.reconnect.mindhealth.modules.clinical.enums.ApprovalStatus;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
-import com.reconnect.mindhealth.modules.clinical.repository.TherapistCredentialRepository;
 import com.reconnect.mindhealth.modules.clinical.repository.TherapistProfileRepository;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -31,20 +30,23 @@ public class TherapistAssignmentService {
     private final AuthContextService authContextService;
     private final PatientProfileRepository patientProfileRepository;
     private final TherapistProfileRepository therapistProfileRepository;
-    private final TherapistCredentialRepository therapistCredentialRepository;
     private final TherapistAccessGuardService therapistAccessGuardService;
+    private final TherapistDirectoryQueryService therapistDirectoryQueryService;
+    private final TherapistDirectoryCacheService therapistDirectoryCacheService;
 
     public TherapistAssignmentService(
             AuthContextService authContextService,
             PatientProfileRepository patientProfileRepository,
             TherapistProfileRepository therapistProfileRepository,
-            TherapistCredentialRepository therapistCredentialRepository,
-            TherapistAccessGuardService therapistAccessGuardService) {
+            TherapistAccessGuardService therapistAccessGuardService,
+            TherapistDirectoryQueryService therapistDirectoryQueryService,
+            TherapistDirectoryCacheService therapistDirectoryCacheService) {
         this.authContextService = authContextService;
         this.patientProfileRepository = patientProfileRepository;
         this.therapistProfileRepository = therapistProfileRepository;
-        this.therapistCredentialRepository = therapistCredentialRepository;
         this.therapistAccessGuardService = therapistAccessGuardService;
+        this.therapistDirectoryQueryService = therapistDirectoryQueryService;
+        this.therapistDirectoryCacheService = therapistDirectoryCacheService;
     }
 
     public PatientProfile assignTherapist(UUID patientId, UUID therapistId) {
@@ -76,33 +78,19 @@ public class TherapistAssignmentService {
         }
 
         patient.setTherapist(therapist);
-        return patientProfileRepository.save(patient);
+        PatientProfile saved = patientProfileRepository.save(patient);
+        therapistDirectoryCacheService.evictAll();
+        return saved;
     }
 
     @Transactional(readOnly = true)
     public List<TherapistDirectoryItemDto> listSelectableTherapists() {
-        return therapistProfileRepository.findByApprovalStatusOrderByFullNameAsc(ApprovalStatus.ACTIVE)
-                .stream()
-                .filter(profile -> profile.getUser() != null && Boolean.TRUE.equals(profile.getUser().getIsActive()))
-                .map(profile -> new TherapistDirectoryItemDto(
-                        profile,
-                        therapistCredentialRepository.countByTherapistProfile_Id(profile.getId()),
-                        patientProfileRepository.countByTherapist_IdAndIsActiveTrueAndGraduatedAtIsNull(profile.getId())))
-                .toList();
+        return therapistDirectoryQueryService.listSelectableTherapists();
     }
 
     @Transactional(readOnly = true)
     public TherapistDirectoryItemDto getSelectableTherapist(UUID therapistId) {
-        TherapistProfile profile = therapistProfileRepository.findById(therapistId)
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy chuyên gia."));
-        if (profile.getApprovalStatus() != ApprovalStatus.ACTIVE
-                || profile.getUser() == null
-                || !Boolean.TRUE.equals(profile.getUser().getIsActive())) {
-            throw new IllegalStateException("Chuyên gia này hiện chưa sẵn sàng nhận bệnh nhân.");
-        }
-        long credentialCount = therapistCredentialRepository.countByTherapistProfile_Id(profile.getId());
-        long caseload = patientProfileRepository.countByTherapist_IdAndIsActiveTrueAndGraduatedAtIsNull(profile.getId());
-        return new TherapistDirectoryItemDto(profile, credentialCount, caseload);
+        return therapistDirectoryQueryService.getSelectableTherapist(therapistId);
     }
 
     public PatientProfile selectTherapist(UUID patientId, UUID therapistId) {
@@ -129,7 +117,9 @@ public class TherapistAssignmentService {
         }
 
         patient.setTherapist(therapist);
-        return patientProfileRepository.save(patient);
+        PatientProfile saved = patientProfileRepository.save(patient);
+        therapistDirectoryCacheService.evictAll();
+        return saved;
     }
 
     @Transactional(readOnly = true)
@@ -141,18 +131,15 @@ public class TherapistAssignmentService {
 
         UUID therapistUserId = current.getId();
         if (current.getRole() == Role.ADMIN) {
-            if (redFlagOnly) {
-                return patientProfileRepository.findByIsRedFlagActiveTrueOrderByCurrentRiskScoreDesc();
-            }
-            return patientProfileRepository.findByIsActiveTrue();
+            return redFlagOnly
+                    ? patientProfileRepository.findRedFlagWithRelations()
+                    : patientProfileRepository.findActiveWithRelations();
         }
 
         therapistAccessGuardService.requireActiveTherapist();
 
-        if (redFlagOnly) {
-            return patientProfileRepository.findByTherapist_User_IdAndIsRedFlagActiveTrueOrderByCurrentRiskScoreDesc(
-                    therapistUserId);
-        }
-        return patientProfileRepository.findByTherapist_User_IdOrderByCurrentRiskScoreDesc(therapistUserId);
+        return redFlagOnly
+                ? patientProfileRepository.findRedFlagByTherapistUserIdWithRelations(therapistUserId)
+                : patientProfileRepository.findByTherapistUserIdWithRelations(therapistUserId);
     }
 }

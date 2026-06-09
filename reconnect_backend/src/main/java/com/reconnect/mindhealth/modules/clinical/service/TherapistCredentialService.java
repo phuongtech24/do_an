@@ -45,16 +45,19 @@ public class TherapistCredentialService {
     private final StorageProperties storageProperties;
     private final TherapistProfileRepository therapistProfileRepository;
     private final TherapistCredentialRepository therapistCredentialRepository;
+    private final TherapistDirectoryCacheService therapistDirectoryCacheService;
 
     public TherapistCredentialService(
             AuthContextService authContextService,
             StorageProperties storageProperties,
             TherapistProfileRepository therapistProfileRepository,
-            TherapistCredentialRepository therapistCredentialRepository) {
+            TherapistCredentialRepository therapistCredentialRepository,
+            TherapistDirectoryCacheService therapistDirectoryCacheService) {
         this.authContextService = authContextService;
         this.storageProperties = storageProperties;
         this.therapistProfileRepository = therapistProfileRepository;
         this.therapistCredentialRepository = therapistCredentialRepository;
+        this.therapistDirectoryCacheService = therapistDirectoryCacheService;
     }
 
     @Transactional(readOnly = true)
@@ -107,6 +110,7 @@ public class TherapistCredentialService {
 
         log.info("TherapistCredential upload success: therapistId={}, credentialId={}, relPath={}",
                 therapist.getId(), saved.getId(), relPath);
+        therapistDirectoryCacheService.evictAll();
 
         return saved;
     }
@@ -142,6 +146,7 @@ public class TherapistCredentialService {
                     therapist.getId(), credentialId, storagePath, e.toString());
         }
         log.info("TherapistCredential deleted: therapistId={}, credentialId={}", therapist.getId(), credentialId);
+        therapistDirectoryCacheService.evictAll();
     }
 
     @Transactional(readOnly = true)
