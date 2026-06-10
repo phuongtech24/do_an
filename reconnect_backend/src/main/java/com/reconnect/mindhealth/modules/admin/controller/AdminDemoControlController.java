@@ -99,12 +99,86 @@ public class AdminDemoControlController {
         }
     }
 
+    @PostMapping("/patients/{patientId}/set-lsas-band")
+    public ResponseEntity<ApiResponse<AdminDemoControlResultDto>> setLsasBand(
+            @PathVariable UUID patientId,
+            @RequestParam String band) {
+        try {
+            User admin = requireAdmin();
+            return ResponseEntity.ok(ApiResponse.success("OK",
+                    adminDemoControlService.setLsasBand(patientId, band, admin.getId())));
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/patients/{patientId}/seed-daily-checkin")
+    public ResponseEntity<ApiResponse<AdminDemoControlResultDto>> seedDailyCheckin(
+            @PathVariable UUID patientId,
+            @RequestParam(defaultValue = "STABLE") String mode) {
+        try {
+            User admin = requireAdmin();
+            return ResponseEntity.ok(ApiResponse.success("OK",
+                    adminDemoControlService.seedDailyCheckin(patientId, mode, admin.getId())));
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/patients/{patientId}/seed-thought-record")
+    public ResponseEntity<ApiResponse<AdminDemoControlResultDto>> seedThoughtRecord(@PathVariable UUID patientId) {
+        try {
+            User admin = requireAdmin();
+            return ResponseEntity.ok(ApiResponse.success("OK",
+                    adminDemoControlService.seedThoughtRecord(patientId, admin.getId())));
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/patients/{patientId}/set-tapering-stage")
+    public ResponseEntity<ApiResponse<AdminDemoControlResultDto>> setTaperingStage(
+            @PathVariable UUID patientId,
+            @RequestParam String stage) {
+        try {
+            User admin = requireAdmin();
+            return ResponseEntity.ok(ApiResponse.success("OK",
+                    adminDemoControlService.setTaperingStage(patientId, stage, admin.getId())));
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/patients/{patientId}/mark-graduated")
+    public ResponseEntity<ApiResponse<AdminDemoControlResultDto>> markGraduated(@PathVariable UUID patientId) {
+        try {
+            User admin = requireAdmin();
+            return ResponseEntity.ok(ApiResponse.success("OK",
+                    adminDemoControlService.markGraduated(patientId, admin.getId())));
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+        }
+    }
+
     @PostMapping("/patients/{patientId}/reset-graduation")
     public ResponseEntity<ApiResponse<AdminDemoControlResultDto>> resetGraduation(@PathVariable UUID patientId) {
         try {
             User admin = requireAdmin();
             return ResponseEntity.ok(ApiResponse.success("OK",
                     adminDemoControlService.resetGraduation(patientId, admin.getId())));
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/patients/{patientId}/trigger-booster")
+    public ResponseEntity<ApiResponse<AdminDemoControlResultDto>> triggerBooster(
+            @PathVariable UUID patientId,
+            @RequestParam(defaultValue = "BOOSTER_3M") String purpose) {
+        try {
+            User admin = requireAdmin();
+            return ResponseEntity.ok(ApiResponse.success("OK",
+                    adminDemoControlService.triggerBooster(patientId, purpose, admin.getId())));
         } catch (Exception e) {
             return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
         }

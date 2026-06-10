@@ -4,9 +4,11 @@ class AdminPatientProfileModel {
   final String? nickname;
   final String? status;
   final int? currentRiskScore;
+  final int? currentLsasScore;
   final bool? redFlagActive;
   final String? graduatedAt;
   final bool? active;
+  final String? taperingStage;
   final String? therapistId;
   final String? therapistName;
   final String? avatarIcon;
@@ -27,9 +29,11 @@ class AdminPatientProfileModel {
     this.nickname,
     this.status,
     this.currentRiskScore,
+    this.currentLsasScore,
     this.redFlagActive,
     this.graduatedAt,
     this.active,
+    this.taperingStage,
     this.therapistId,
     this.therapistName,
     this.avatarIcon,
@@ -52,9 +56,11 @@ class AdminPatientProfileModel {
       nickname: json['nickname']?.toString(),
       status: json['status']?.toString(),
       currentRiskScore: json['currentRiskScore'] is num ? (json['currentRiskScore'] as num).toInt() : null,
+      currentLsasScore: json['currentLsasScore'] is num ? (json['currentLsasScore'] as num).toInt() : null,
       redFlagActive: json['redFlagActive'] is bool ? json['redFlagActive'] as bool : null,
       graduatedAt: json['graduatedAt']?.toString(),
       active: json['active'] is bool ? json['active'] as bool : null,
+      taperingStage: json['taperingStage']?.toString(),
       therapistId: json['therapistId']?.toString(),
       therapistName: json['therapistName']?.toString(),
       avatarIcon: json['avatarIcon']?.toString(),
@@ -93,9 +99,11 @@ class AdminPatientProfileModel {
       nickname: nickname,
       status: status,
       currentRiskScore: currentRiskScore,
+      currentLsasScore: currentLsasScore,
       redFlagActive: redFlagActive,
       graduatedAt: graduatedAt,
       active: active ?? this.active,
+      taperingStage: taperingStage ?? this.taperingStage,
       therapistId: therapistId ?? this.therapistId,
       therapistName: therapistName ?? this.therapistName,
       avatarIcon: avatarIcon ?? this.avatarIcon,

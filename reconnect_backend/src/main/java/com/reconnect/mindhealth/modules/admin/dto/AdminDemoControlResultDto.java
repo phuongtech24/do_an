@@ -7,8 +7,14 @@ public class AdminDemoControlResultDto {
     private String action;
     private String message;
     private Integer currentRiskScore;
+    private Integer currentLsasScore;
     private Boolean redFlagActive;
     private Integer createdQuests;
+    private String clinicalRoute;
+    private Boolean clinicalAttention;
+    private String taperingStage;
+    private String graduatedAt;
+    private String guestState;
 
     public AdminDemoControlResultDto() {
     }
@@ -51,6 +57,14 @@ public class AdminDemoControlResultDto {
         this.currentRiskScore = currentRiskScore;
     }
 
+    public Integer getCurrentLsasScore() {
+        return currentLsasScore;
+    }
+
+    public void setCurrentLsasScore(Integer currentLsasScore) {
+        this.currentLsasScore = currentLsasScore;
+    }
+
     public Boolean getRedFlagActive() {
         return redFlagActive;
     }
@@ -65,5 +79,45 @@ public class AdminDemoControlResultDto {
 
     public void setCreatedQuests(Integer createdQuests) {
         this.createdQuests = createdQuests;
+    }
+
+    public String getClinicalRoute() {
+        return clinicalRoute;
+    }
+
+    public void setClinicalRoute(String clinicalRoute) {
+        this.clinicalRoute = clinicalRoute;
+    }
+
+    public Boolean getClinicalAttention() {
+        return clinicalAttention;
+    }
+
+    public void setClinicalAttention(Boolean clinicalAttention) {
+        this.clinicalAttention = clinicalAttention;
+    }
+
+    public String getTaperingStage() {
+        return taperingStage;
+    }
+
+    public void setTaperingStage(String taperingStage) {
+        this.taperingStage = taperingStage;
+    }
+
+    public String getGraduatedAt() {
+        return graduatedAt;
+    }
+
+    public void setGraduatedAt(String graduatedAt) {
+        this.graduatedAt = graduatedAt;
+    }
+
+    public String getGuestState() {
+        return guestState;
+    }
+
+    public void setGuestState(String guestState) {
+        this.guestState = guestState;
     }
 }

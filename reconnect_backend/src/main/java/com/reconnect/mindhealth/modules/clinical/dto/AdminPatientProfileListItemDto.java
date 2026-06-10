@@ -14,9 +14,11 @@ public class AdminPatientProfileListItemDto {
     private String nickname;
     private Status status;
     private Integer currentRiskScore;
+    private Integer currentLsasScore;
     private Boolean redFlagActive;
     private LocalDateTime graduatedAt;
     private Boolean active;
+    private String taperingStage;
 
     private String therapistId;
     private String therapistName;
@@ -42,9 +44,11 @@ public class AdminPatientProfileListItemDto {
         this.nickname = p.getNickName();
         this.status = p.getStatus();
         this.currentRiskScore = p.getCurrentRiskScore();
+        this.currentLsasScore = p.getCurrentLsasScore();
         this.redFlagActive = p.getIsRedFlagActive();
         this.graduatedAt = p.getGraduatedAt();
         this.active = p.getUser() != null ? p.getUser().getIsActive() : null;
+        this.taperingStage = p.getTaperingStage() != null ? p.getTaperingStage().name() : null;
         this.avatarIcon = p.getAvatarIcon();
         this.anonymousModeEnabled = p.getAnonymousModeEnabled();
         this.realFullName = p.getRealFullName();
@@ -103,6 +107,14 @@ public class AdminPatientProfileListItemDto {
         this.currentRiskScore = currentRiskScore;
     }
 
+    public Integer getCurrentLsasScore() {
+        return currentLsasScore;
+    }
+
+    public void setCurrentLsasScore(Integer currentLsasScore) {
+        this.currentLsasScore = currentLsasScore;
+    }
+
     public Boolean getRedFlagActive() {
         return redFlagActive;
     }
@@ -125,6 +137,14 @@ public class AdminPatientProfileListItemDto {
 
     public void setActive(Boolean active) {
         this.active = active;
+    }
+
+    public String getTaperingStage() {
+        return taperingStage;
+    }
+
+    public void setTaperingStage(String taperingStage) {
+        this.taperingStage = taperingStage;
     }
 
     public String getTherapistId() {

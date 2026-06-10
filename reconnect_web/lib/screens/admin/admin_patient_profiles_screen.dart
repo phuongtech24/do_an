@@ -233,6 +233,96 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
               ),
               const SizedBox(height: 16),
               _DemoActionTile(
+                icon: Icons.rule_folder_outlined,
+                title: 'LSAS rất thấp (<30)',
+                subtitle: 'Nhánh an tâm và mẹo chăm sóc tinh thần cơ bản.',
+                onTap: () => Navigator.pop(context, 'set-lsas-band:REASSURANCE'),
+              ),
+              _DemoActionTile(
+                icon: Icons.self_improvement_outlined,
+                title: 'LSAS nhẹ/vừa (30-59)',
+                subtitle: 'Đưa bệnh nhân vào nhánh tự trị liệu Self-help.',
+                onTap: () => Navigator.pop(context, 'set-lsas-band:SELF_HELP'),
+              ),
+              _DemoActionTile(
+                icon: Icons.psychology_alt_outlined,
+                title: 'LSAS rõ rệt (60-89)',
+                subtitle: 'Đưa bệnh nhân vào therapist track 14 tuần.',
+                onTap: () => Navigator.pop(context, 'set-lsas-band:THERAPIST_TRACK'),
+              ),
+              _DemoActionTile(
+                icon: Icons.crisis_alert_outlined,
+                title: 'LSAS khẩn cấp (>=90)',
+                subtitle: 'Bật nhánh urgent red flag từ assessment.',
+                onTap: () => Navigator.pop(context, 'set-lsas-band:URGENT_RED_FLAG'),
+              ),
+              _DemoActionTile(
+                icon: Icons.monitor_heart_outlined,
+                title: 'Seed Daily Check-in ổn định',
+                subtitle: 'Tạo check-in mẫu nhánh 0-3 để demo coping mode.',
+                onTap: () => Navigator.pop(context, 'seed-daily-checkin:STABLE'),
+              ),
+              _DemoActionTile(
+                icon: Icons.balance_outlined,
+                title: 'Seed Daily Check-in mức 4-5',
+                subtitle: 'Tạo check-in mẫu nhánh cho lựa chọn Thought Record hoặc Thẻ đối phó.',
+                onTap: () => Navigator.pop(context, 'seed-daily-checkin:CHOICE_4_5'),
+              ),
+              _DemoActionTile(
+                icon: Icons.auto_graph_outlined,
+                title: 'Seed Daily Check-in mức 6-8',
+                subtitle: 'Tạo check-in mẫu nhánh AI đẩy sang Thought Record.',
+                onTap: () => Navigator.pop(context, 'seed-daily-checkin:THOUGHT_RECORD_6_8'),
+              ),
+              _DemoActionTile(
+                icon: Icons.emergency_share_outlined,
+                title: 'Seed Daily Check-in không an toàn',
+                subtitle: 'Bật safety gate UNSAFE để demo cờ đỏ và UI khẩn cấp.',
+                onTap: () => Navigator.pop(context, 'seed-daily-checkin:UNSAFE'),
+              ),
+              _DemoActionTile(
+                icon: Icons.edit_note_outlined,
+                title: 'Seed Thought Record mẫu',
+                subtitle: 'Tạo nhanh một thought record cho lịch sử patient/therapist review.',
+                onTap: () => Navigator.pop(context, 'seed-thought-record'),
+              ),
+              _DemoActionTile(
+                icon: Icons.timelapse_outlined,
+                title: 'Tapering 2 tuần/lần',
+                subtitle: 'Chuyển patient sang giai đoạn giãn cách 2 tuần/lần.',
+                onTap: () => Navigator.pop(context, 'set-tapering-stage:MONTHLY'),
+              ),
+              _DemoActionTile(
+                icon: Icons.event_repeat_outlined,
+                title: 'Tapering 3-4 tuần/lần',
+                subtitle: 'Chuyển patient sang giai đoạn giãn cách 3-4 tuần/lần.',
+                onTap: () => Navigator.pop(context, 'set-tapering-stage:QUARTERLY'),
+              ),
+              _DemoActionTile(
+                icon: Icons.school_outlined,
+                title: 'Đánh dấu tốt nghiệp',
+                subtitle: 'Chuyển patient sang maintenance / booster mode.',
+                onTap: () => Navigator.pop(context, 'mark-graduated'),
+              ),
+              _DemoActionTile(
+                icon: Icons.today_outlined,
+                title: 'Tạo Booster 3 tháng',
+                subtitle: 'Tạo lịch booster demo gần nhất cho patient.',
+                onTap: () => Navigator.pop(context, 'trigger-booster:BOOSTER_3M'),
+              ),
+              _DemoActionTile(
+                icon: Icons.date_range_outlined,
+                title: 'Tạo Booster 6 tháng',
+                subtitle: 'Tạo lịch booster 6 tháng để demo hậu điều trị.',
+                onTap: () => Navigator.pop(context, 'trigger-booster:BOOSTER_6M'),
+              ),
+              _DemoActionTile(
+                icon: Icons.calendar_month_outlined,
+                title: 'Tạo Booster 12 tháng',
+                subtitle: 'Tạo lịch booster 12 tháng để demo duy trì dài hạn.',
+                onTap: () => Navigator.pop(context, 'trigger-booster:BOOSTER_12M'),
+              ),
+              _DemoActionTile(
                 icon: Icons.lock_open,
                 title: 'Mở khóa LSAS',
                 subtitle: 'Bệnh nhân vào app làm lại LSAS/re-rating ngay.',
@@ -272,6 +362,20 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
     );
 
     if (action == null || action.isEmpty) return;
+    if (action.contains(':')) {
+      final pieces = action.split(':');
+      final baseAction = pieces.first;
+      final value = pieces.sublist(1).join(':');
+      final query = switch (baseAction) {
+        'set-lsas-band' => {'band': value},
+        'seed-daily-checkin' => {'mode': value},
+        'set-tapering-stage' => {'stage': value},
+        'trigger-booster' => {'purpose': value},
+        _ => <String, String>{},
+      };
+      await _runDemoAction(item, baseAction, query: query);
+      return;
+    }
     if (action == 'set-risk') {
       await _runDemoAction(item, action, query: {'score': '80', 'redFlag': 'true'});
       return;
@@ -375,7 +479,12 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      'Ẩn danh: ${it.anonymousModeEnabled ? 'Đang bật' : 'Đang tắt'} • risk: $risk • redFlag: $red',
+                                      'LSAS: ${it.currentLsasScore ?? 0} • Tapering: ${it.taperingStage ?? 'NONE'} • Ẩn danh: ${it.anonymousModeEnabled ? 'Đang bật' : 'Đang tắt'}',
+                                      style: const TextStyle(color: Colors.black54),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Risk: $risk • Red flag: $red • Tốt nghiệp: ${it.graduatedAt != null ? 'Đã bật' : 'Chưa'}',
                                       style: const TextStyle(color: Colors.black54),
                                     ),
                                     if ((it.emergencyContactPhone ?? '').isNotEmpty) ...[
