@@ -21,6 +21,7 @@ import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
 import com.reconnect.mindhealth.modules.clinical.enums.Status;
 import com.reconnect.mindhealth.modules.clinical.enums.TaperingStage;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
+import com.reconnect.mindhealth.modules.clinical.service.ClinicalTriageService;
 import com.reconnect.mindhealth.modules.journal.dto.JournalDto;
 import com.reconnect.mindhealth.modules.journal.enums.JournalType;
 import com.reconnect.mindhealth.modules.journal.service.IJournalService;
@@ -42,6 +43,7 @@ public class AdminDemoControlService {
     private final UserMoodRepository userMoodRepository;
     private final IJournalService journalService;
     private final AppointmentRepository appointmentRepository;
+    private final ClinicalTriageService clinicalTriageService;
 
     public AdminDemoControlService(
             PatientProfileRepository patientProfileRepository,
@@ -49,13 +51,15 @@ public class AdminDemoControlService {
             RoadmapDailyAssignmentService roadmapDailyAssignmentService,
             UserMoodRepository userMoodRepository,
             IJournalService journalService,
-            AppointmentRepository appointmentRepository) {
+            AppointmentRepository appointmentRepository,
+            ClinicalTriageService clinicalTriageService) {
         this.patientProfileRepository = patientProfileRepository;
         this.dailyRiskLogRepository = dailyRiskLogRepository;
         this.roadmapDailyAssignmentService = roadmapDailyAssignmentService;
         this.userMoodRepository = userMoodRepository;
         this.journalService = journalService;
         this.appointmentRepository = appointmentRepository;
+        this.clinicalTriageService = clinicalTriageService;
     }
 
     @Transactional
@@ -106,6 +110,11 @@ public class AdminDemoControlService {
         patient.setCurrentRiskScore(normalizedScore);
         patient.setIsRedFlagActive(redFlag);
         patient.setStatus(redFlag ? Status.WARNING : Status.STABLE);
+        if (!redFlag) {
+            patient.setTriageRequired(false);
+            patient.setTriageStatus(null);
+            patient.setTriagePriority(null);
+        }
         patientProfileRepository.save(patient);
         upsertRiskLog(patient);
 
@@ -120,6 +129,9 @@ public class AdminDemoControlService {
         patient.setCurrentRiskScore(0);
         patient.setIsRedFlagActive(false);
         patient.setStatus(Status.STABLE);
+        patient.setTriageRequired(false);
+        patient.setTriageStatus(null);
+        patient.setTriagePriority(null);
         patientProfileRepository.save(patient);
         upsertRiskLog(patient);
 
@@ -150,6 +162,14 @@ public class AdminDemoControlService {
         patient.setIsRedFlagActive(urgent);
         patient.setStatus(urgent ? Status.WARNING : Status.STABLE);
         patientProfileRepository.save(patient);
+        if (urgent) {
+            clinicalTriageService.openUrgentTriage(patient);
+        } else {
+            patient.setTriageRequired(false);
+            patient.setTriageStatus(null);
+            patient.setTriagePriority(null);
+            patientProfileRepository.save(patient);
+        }
         upsertRiskLog(patient);
 
         log.info("Admin demo control set LSAS band adminId={}, patientId={}, band={}, score={}",

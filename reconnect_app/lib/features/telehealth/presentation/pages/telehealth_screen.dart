@@ -42,6 +42,7 @@ class _TelehealthScreenState extends State<TelehealthScreen> {
           final assigned = telehealth.isAssigned;
           final isSelfHelpMode = telehealth.isSelfHelpMode;
           final isReassuranceMode = telehealth.isReassuranceMode;
+          final isTriageMode = telehealth.carePhaseCode == 'RED_FLAG_OVERRIDE' && !assigned;
           final therapistName = telehealth.therapistName.isNotEmpty ? telehealth.therapistName : 'Chưa cập nhật';
           final bannerText = assigned
               ? 'Chuyên gia đồng hành hiện tại: $therapistName'
@@ -100,7 +101,7 @@ class _TelehealthScreenState extends State<TelehealthScreen> {
                   onTap: () => context.go('/home'),
                 ),
               ] else ...[
-                if (!assigned) ...[
+                if (!assigned && !isTriageMode) ...[
                   _ActionCard(
                     icon: Icons.people_alt_outlined,
                     title: 'Chọn chuyên gia phù hợp',
@@ -115,7 +116,9 @@ class _TelehealthScreenState extends State<TelehealthScreen> {
                   title: 'Đặt lịch tư vấn',
                   subtitle: assigned
                       ? 'Chọn khung giờ CBT còn trống theo đúng giai đoạn điều trị hiện tại.'
-                      : 'Bạn cần chọn chuyên gia trước khi xem lịch trống.',
+                      : (isTriageMode
+                          ? 'Ca của bạn đang được admin lâm sàng điều phối. Khi gán xong bác sĩ, lịch phù hợp sẽ được mở.'
+                          : 'Bạn cần chọn chuyên gia trước khi xem lịch trống.'),
                   accent: AppColors.primary,
                   onTap: assigned
                       ? () => context.push('/telehealth/booking')

@@ -17,6 +17,7 @@ import com.reconnect.mindhealth.modules.clinical.entity.TherapistProfile;
 import com.reconnect.mindhealth.modules.clinical.enums.ApprovalStatus;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
 import com.reconnect.mindhealth.modules.clinical.repository.TherapistProfileRepository;
+import com.reconnect.mindhealth.modules.clinical.enums.TriageStatus;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -78,6 +79,9 @@ public class TherapistAssignmentService {
         }
 
         patient.setTherapist(therapist);
+        if (Boolean.TRUE.equals(patient.getTriageRequired())) {
+            patient.setTriageStatus(TriageStatus.ASSIGNED);
+        }
         PatientProfile saved = patientProfileRepository.save(patient);
         therapistDirectoryCacheService.evictAll();
         return saved;

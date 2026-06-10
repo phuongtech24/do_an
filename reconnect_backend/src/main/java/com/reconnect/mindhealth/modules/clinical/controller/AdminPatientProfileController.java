@@ -26,9 +26,10 @@ public class AdminPatientProfileController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<AdminPatientProfileListItemDto>>> listPatients(
             @RequestParam(name = "redFlagOnly", defaultValue = "false") boolean redFlagOnly,
+            @RequestParam(name = "triageOnly", defaultValue = "false") boolean triageOnly,
             @RequestParam(name = "q", required = false) String q) {
         try {
-            List<PatientProfile> list = adminPatientProfileService.listPatients(redFlagOnly, q);
+            List<PatientProfile> list = adminPatientProfileService.listPatients(redFlagOnly, triageOnly, q);
             List<AdminPatientProfileListItemDto> dtos = list.stream()
                     .map(AdminPatientProfileListItemDto::new)
                     .toList();
@@ -38,4 +39,3 @@ public class AdminPatientProfileController {
         }
     }
 }
-

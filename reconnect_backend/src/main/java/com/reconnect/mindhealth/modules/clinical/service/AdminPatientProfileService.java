@@ -26,15 +26,17 @@ public class AdminPatientProfileService {
     }
 
     @Transactional(readOnly = true)
-    public List<PatientProfile> listPatients(boolean redFlagOnly, String q) {
+    public List<PatientProfile> listPatients(boolean redFlagOnly, boolean triageOnly, String q) {
         User current = authContextService.requireCurrentUser();
         if (current.getRole() != Role.ADMIN) {
             throw new SecurityException("Forbidden: ADMIN role required.");
         }
 
-        List<PatientProfile> list = redFlagOnly
-                ? patientProfileRepository.findRedFlagWithRelations()
-                : patientProfileRepository.findActiveWithRelations();
+        List<PatientProfile> list = triageOnly
+                ? patientProfileRepository.findActiveTriageQueueWithRelations()
+                : (redFlagOnly
+                        ? patientProfileRepository.findRedFlagWithRelations()
+                        : patientProfileRepository.findActiveWithRelations());
 
         String query = q == null ? "" : q.trim().toLowerCase();
         if (!query.isEmpty()) {

@@ -30,6 +30,10 @@ public class PatientProfileSchemaMigrationRunner {
             ensureColumn(jdbcTemplate, "medical_profile_completed", "ALTER TABLE patient_profiles ADD COLUMN medical_profile_completed BIT(1) NOT NULL DEFAULT b'0'");
             ensureColumn(jdbcTemplate, "therapy_program_started_at", "ALTER TABLE patient_profiles ADD COLUMN therapy_program_started_at DATETIME NULL");
             ensureColumn(jdbcTemplate, "current_program_week", "ALTER TABLE patient_profiles ADD COLUMN current_program_week INT NULL");
+            ensureColumn(jdbcTemplate, "triage_required", "ALTER TABLE patient_profiles ADD COLUMN triage_required BIT(1) NOT NULL DEFAULT b'0'");
+            ensureColumn(jdbcTemplate, "triage_status", "ALTER TABLE patient_profiles ADD COLUMN triage_status VARCHAR(32) NULL");
+            ensureColumn(jdbcTemplate, "triage_priority", "ALTER TABLE patient_profiles ADD COLUMN triage_priority INT NULL");
+            ensureColumn(jdbcTemplate, "triage_triggered_at", "ALTER TABLE patient_profiles ADD COLUMN triage_triggered_at DATETIME NULL");
         };
     }
 

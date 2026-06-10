@@ -112,6 +112,23 @@ public class ClinicalController {
                 return ResponseEntity.ok(ApiResponse.success("OK", dto));
             }
 
+            if (patient.getTherapist() == null && Boolean.TRUE.equals(patient.getTriageRequired())) {
+                TherapistAssignmentStatusDto dto = new TherapistAssignmentStatusDto(
+                        patientId,
+                        false,
+                        null,
+                        null,
+                        "Ca của bạn đang được admin lâm sàng ưu tiên tiếp nhận để đánh giá an toàn và điều phối bác sĩ phù hợp. Bạn chưa cần tự chọn chuyên gia ở bước này.",
+                        "RED_FLAG_OVERRIDE",
+                        "Điều phối lâm sàng khẩn",
+                        "Ưu tiên xử lý ngay",
+                        "Admin lâm sàng sẽ gọi, đánh giá nguy cơ ban đầu và chủ động điều phối bác sĩ điều trị phù hợp.",
+                        "Khi hoàn tất điều phối, lịch CBT hoặc can thiệp cường độ cao sẽ được mở theo chỉ định lâm sàng.",
+                        "CRISIS",
+                        true);
+                return ResponseEntity.ok(ApiResponse.success("OK", dto));
+            }
+
             if (patient.getTherapist() == null) {
                 TherapistAssignmentStatusDto dto = new TherapistAssignmentStatusDto(
                         patientId,

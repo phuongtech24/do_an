@@ -7,10 +7,12 @@ class AdminPatientProfileRepository {
   Future<List<AdminPatientProfileModel>> listPatients({
     required String token,
     bool redFlagOnly = false,
+    bool triageOnly = false,
     String? q,
   }) async {
     final query = <String, String>{
       'redFlagOnly': redFlagOnly.toString(),
+      'triageOnly': triageOnly.toString(),
     };
     if (q != null && q.trim().isNotEmpty) {
       query['q'] = q.trim();
@@ -49,6 +51,24 @@ class AdminPatientProfileRepository {
     if (res.status != 200) {
       throw Exception(res.message.isNotEmpty ? res.message : 'Cannot assign therapist');
     }
+  }
+
+  Future<String> triageAction({
+    required String token,
+    required String patientId,
+    required String action,
+    Map<String, dynamic>? body,
+  }) async {
+    final res = await _api.post<Map<String, dynamic>>(
+      '/admin/triage/$patientId/$action',
+      headers: {'Authorization': 'Bearer $token'},
+      body: body,
+      parseData: (raw) => raw as Map<String, dynamic>? ?? <String, dynamic>{},
+    );
+    if (res.status != 200) {
+      throw Exception(res.message.isNotEmpty ? res.message : 'Triage action failed');
+    }
+    return res.message;
   }
 
   Future<String> runDemoAction({

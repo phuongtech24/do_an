@@ -9,6 +9,10 @@ class AdminPatientProfileModel {
   final String? graduatedAt;
   final bool? active;
   final String? taperingStage;
+  final bool triageRequired;
+  final String? triageStatus;
+  final int? triagePriority;
+  final String? triageTriggeredAt;
   final String? therapistId;
   final String? therapistName;
   final String? avatarIcon;
@@ -34,6 +38,10 @@ class AdminPatientProfileModel {
     this.graduatedAt,
     this.active,
     this.taperingStage,
+    this.triageRequired = false,
+    this.triageStatus,
+    this.triagePriority,
+    this.triageTriggeredAt,
     this.therapistId,
     this.therapistName,
     this.avatarIcon,
@@ -61,6 +69,10 @@ class AdminPatientProfileModel {
       graduatedAt: json['graduatedAt']?.toString(),
       active: json['active'] is bool ? json['active'] as bool : null,
       taperingStage: json['taperingStage']?.toString(),
+      triageRequired: json['triageRequired'] == true,
+      triageStatus: json['triageStatus']?.toString(),
+      triagePriority: json['triagePriority'] is num ? (json['triagePriority'] as num).toInt() : null,
+      triageTriggeredAt: json['triageTriggeredAt']?.toString(),
       therapistId: json['therapistId']?.toString(),
       therapistName: json['therapistName']?.toString(),
       avatarIcon: json['avatarIcon']?.toString(),
@@ -79,6 +91,10 @@ class AdminPatientProfileModel {
 
   AdminPatientProfileModel copyWith({
     bool? active,
+    bool? triageRequired,
+    String? triageStatus,
+    int? triagePriority,
+    String? triageTriggeredAt,
     String? therapistId,
     String? therapistName,
     String? avatarIcon,
@@ -104,6 +120,10 @@ class AdminPatientProfileModel {
       graduatedAt: graduatedAt,
       active: active ?? this.active,
       taperingStage: taperingStage ?? this.taperingStage,
+      triageRequired: triageRequired ?? this.triageRequired,
+      triageStatus: triageStatus ?? this.triageStatus,
+      triagePriority: triagePriority ?? this.triagePriority,
+      triageTriggeredAt: triageTriggeredAt ?? this.triageTriggeredAt,
       therapistId: therapistId ?? this.therapistId,
       therapistName: therapistName ?? this.therapistName,
       avatarIcon: avatarIcon ?? this.avatarIcon,

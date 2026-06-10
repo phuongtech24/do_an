@@ -95,6 +95,9 @@ public class BoosterServiceImpl implements IBoosterService {
         }
 
         LocalDateTime startAt = request.getStartAt();
+        if (startAt.isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Chỉ được đặt lịch từ thời điểm hiện tại trở đi.");
+        }
         int durationMinutes = request.getDurationMinutes() == null ? 50 : request.getDurationMinutes();
         if (!ALLOWED_DURATIONS.contains(durationMinutes)) {
             throw new IllegalArgumentException("Duration chỉ hỗ trợ 45, 50, 60 hoặc 90 phút.");
@@ -123,7 +126,7 @@ public class BoosterServiceImpl implements IBoosterService {
         appt.setTherapistProfile(therapist);
         appt.setStartAt(startAt);
         appt.setEndAt(startAt.plusMinutes(durationMinutes));
-        appt.setIsAnonymous(request.getIsAnonymous() != null ? request.getIsAnonymous() : true);
+        appt.setIsAnonymous(Boolean.TRUE.equals(patient.getAnonymousModeEnabled()));
         appt.setMeetingLink(therapist.getMeetingLink());
         appt.setPurpose(purpose);
         appt.setClinicalPurposeCode(purpose.name());
@@ -225,6 +228,9 @@ public class BoosterServiceImpl implements IBoosterService {
         }
         if (date == null) {
             date = LocalDate.now();
+        }
+        if (date.isBefore(LocalDate.now())) {
+            throw new IllegalArgumentException("Không thể xem slot của ngày trong quá khứ.");
         }
 
         PatientProfile patient = patientProfileRepository.findById(patientId)

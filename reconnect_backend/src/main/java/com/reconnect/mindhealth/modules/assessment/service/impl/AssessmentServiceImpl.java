@@ -32,6 +32,7 @@ import com.reconnect.mindhealth.modules.auth.enums.Role;
 import com.reconnect.mindhealth.modules.auth.repository.UserRepository;
 import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
+import com.reconnect.mindhealth.modules.clinical.service.ClinicalTriageService;
 import com.reconnect.mindhealth.modules.guest.entity.GuestProfile;
 import com.reconnect.mindhealth.modules.guest.repository.GuestProfileRepository;
 import com.reconnect.mindhealth.modules.roadmap.service.FearLadderService;
@@ -52,6 +53,7 @@ public class AssessmentServiceImpl implements IAssessmentService {
     private final GuestProfileRepository guestProfileRepository;
     private final FearLadderService fearLadderService;
     private final IRiskScoringService riskScoringService;
+    private final ClinicalTriageService clinicalTriageService;
     private final ObjectMapper objectMapper;
 
     public AssessmentServiceImpl(
@@ -63,6 +65,7 @@ public class AssessmentServiceImpl implements IAssessmentService {
             GuestProfileRepository guestProfileRepository,
             FearLadderService fearLadderService,
             IRiskScoringService riskScoringService,
+            ClinicalTriageService clinicalTriageService,
             ObjectMapper objectMapper) {
         this.lsasSituationRepository = lsasSituationRepository;
         this.lsasSubmissionRepository = lsasSubmissionRepository;
@@ -72,6 +75,7 @@ public class AssessmentServiceImpl implements IAssessmentService {
         this.guestProfileRepository = guestProfileRepository;
         this.fearLadderService = fearLadderService;
         this.riskScoringService = riskScoringService;
+        this.clinicalTriageService = clinicalTriageService;
         this.objectMapper = objectMapper;
     }
 
@@ -152,6 +156,7 @@ public class AssessmentServiceImpl implements IAssessmentService {
             patient.setStatus(com.reconnect.mindhealth.modules.clinical.enums.Status.WARNING);
             patient.setIsRedFlagActive(true);
             patient.setCurrentRiskScore(Math.max(patient.getCurrentRiskScore() != null ? patient.getCurrentRiskScore() : 0, 100));
+            clinicalTriageService.openUrgentTriage(patient);
             log.warn("LSAS urgent red flag triggered patientId={}, totalScore={}, route={}, clinicalAttention={}",
                     patient.getId(), saved.getTotalScore(), resolveClinicalRoute(saved.getTotalScore()), clinicalAttention);
         }

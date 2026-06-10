@@ -25,6 +25,7 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
   String _error = '';
   String _query = '';
   bool _redFlagOnly = false;
+  bool _triageOnly = false;
 
   List<AdminPatientProfileModel> _items = [];
 
@@ -46,7 +47,12 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
       _error = '';
     });
     try {
-      final list = await _repo.listPatients(token: token, redFlagOnly: _redFlagOnly, q: _query);
+      final list = await _repo.listPatients(
+        token: token,
+        redFlagOnly: _redFlagOnly,
+        triageOnly: _triageOnly,
+        q: _query,
+      );
       if (!mounted) return;
       setState(() => _items = list);
     } catch (e) {
@@ -164,6 +170,41 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
       await _load();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Đã gán chuyên gia cho bệnh nhân.'), backgroundColor: AppColors.success),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _runTriageAction(
+    AdminPatientProfileModel item,
+    String action, {
+    Map<String, dynamic>? body,
+  }) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = auth.token;
+    if (token == null || token.isEmpty) return;
+
+    setState(() {
+      _loading = true;
+      _error = '';
+    });
+
+    try {
+      final message = await _repo.triageAction(
+        token: token,
+        patientId: item.patientId,
+        action: action,
+        body: body,
+      );
+      if (!mounted) return;
+      await _load();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: AppColors.success),
       );
     } catch (e) {
       if (!mounted) return;
@@ -412,6 +453,17 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
                         },
                 ),
                 const SizedBox(width: 8),
+                FilterChip(
+                  label: const Text('Triage Queue'),
+                  selected: _triageOnly,
+                  onSelected: _loading
+                      ? null
+                      : (v) async {
+                          setState(() => _triageOnly = v);
+                          await _load();
+                        },
+                ),
+                const SizedBox(width: 8),
                 IconButton(onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh)),
               ],
             )
@@ -487,6 +539,13 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
                                       'Risk: $risk • Red flag: $red • Tốt nghiệp: ${it.graduatedAt != null ? 'Đã bật' : 'Chưa'}',
                                       style: const TextStyle(color: Colors.black54),
                                     ),
+                                    if (it.triageRequired) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Triage: ${it.triageStatus ?? 'PENDING'} • Priority: ${it.triagePriority ?? risk}',
+                                        style: const TextStyle(color: AppColors.alert, fontWeight: FontWeight.w600),
+                                      ),
+                                    ],
                                     if ((it.emergencyContactPhone ?? '').isNotEmpty) ...[
                                       const SizedBox(height: 4),
                                       Text(
@@ -514,6 +573,23 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
                                 onPressed: _loading ? null : () => _assignTherapist(it),
                                 child: const Text('Gán BS', style: TextStyle(color: Colors.white)),
                               ),
+                              if (it.triageRequired) ...[
+                                const SizedBox(width: 8),
+                                OutlinedButton(
+                                  onPressed: _loading ? null : () => _runTriageAction(it, 'claim'),
+                                  child: const Text('Nhận xử lý'),
+                                ),
+                                const SizedBox(width: 8),
+                                OutlinedButton(
+                                  onPressed: _loading ? null : () => _runTriageAction(it, 'mark-called'),
+                                  child: const Text('Đã gọi'),
+                                ),
+                                const SizedBox(width: 8),
+                                OutlinedButton(
+                                  onPressed: _loading ? null : () => _runTriageAction(it, 'close'),
+                                  child: const Text('Đóng triage'),
+                                ),
+                              ],
                               const SizedBox(width: 8),
                               OutlinedButton.icon(
                                 onPressed: _loading ? null : () => _showDemoControls(it),

@@ -35,6 +35,19 @@ public interface PatientProfileRepository extends JpaRepository<PatientProfile, 
     @EntityGraph(attributePaths = {"user", "therapist", "therapist.user"})
     @Query("""
             select p from PatientProfile p
+            where p.isActive = true
+              and p.triageRequired = true
+              and (p.triageStatus is null or p.triageStatus <> com.reconnect.mindhealth.modules.clinical.enums.TriageStatus.CLOSED)
+            order by
+              case when p.triagePriority is null then 0 else p.triagePriority end desc,
+              case when p.currentRiskScore is null then 0 else p.currentRiskScore end desc,
+              p.triageTriggeredAt desc
+            """)
+    java.util.List<PatientProfile> findActiveTriageQueueWithRelations();
+
+    @EntityGraph(attributePaths = {"user", "therapist", "therapist.user"})
+    @Query("""
+            select p from PatientProfile p
             where p.isRedFlagActive = true
             order by p.currentRiskScore desc
             """)
