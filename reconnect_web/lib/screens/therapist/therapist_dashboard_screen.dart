@@ -281,7 +281,7 @@ class _TherapistDashboardScreenState extends State<TherapistDashboardScreen> {
     final map = <String, dynamic>{
       'name': patient.nickname.isEmpty ? patient.patientId : patient.nickname,
       'id': patient.patientId,
-      'isAnonymous': true,
+      'isAnonymous': patient.anonymousModeEnabled,
       'status': isWarning ? 'Cảnh báo' : 'Ổn định',
       'lsasBaseline': patient.baselineLsasScore,
       'lsasCurrent': patient.currentLsasScore,
@@ -292,6 +292,21 @@ class _TherapistDashboardScreenState extends State<TherapistDashboardScreen> {
       'riskScore': patient.currentRiskScore,
       'primaryGoal': patient.primaryGoal,
       'therapistName': patient.therapistName,
+      'programWeek': patient.programWeek,
+      'programPhaseLabel': patient.programPhaseLabel,
+      'upcomingAppointmentAt': patient.upcomingAppointmentAt,
+      'latestThoughtRecordAt': patient.latestThoughtRecordAt,
+      'latestCheckinAt': patient.latestCheckinAt,
+      'stalledProgress': patient.stalledProgress,
+      'realFullName': patient.realFullName,
+      'phoneNumber': patient.phoneNumber,
+      'emergencyContactPhone': patient.emergencyContactPhone,
+      'dateOfBirth': patient.dateOfBirth,
+      'gender': patient.gender,
+      'educationLevel': patient.educationLevel,
+      'occupation': patient.occupation,
+      'relationshipStatus': patient.relationshipStatus,
+      'medicalHistory': patient.medicalHistory,
     };
 
     return InkWell(

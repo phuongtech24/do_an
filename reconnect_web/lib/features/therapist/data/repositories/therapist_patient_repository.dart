@@ -1,6 +1,7 @@
 import '../../../../core/network/api_client.dart';
 import '../../../admin/data/models/quest_template_model.dart';
 import '../models/therapist_patient_list_item.dart';
+import '../models/therapist_pre_session_review_model.dart';
 import '../models/therapist_quest_progress_model.dart';
 import '../models/therapist_risk_analytics_model.dart';
 
@@ -25,9 +26,12 @@ class TherapistPatientRepository {
     return res.data!;
   }
 
-  Future<List<QuestTemplateModel>> listQuestTemplates({required String token}) async {
+  Future<List<QuestTemplateModel>> listQuestTemplates({
+    required String token,
+    String? patientId,
+  }) async {
     final res = await _api.get<List<QuestTemplateModel>>(
-      '/therapist/quest-templates',
+      '/therapist/quest-templates${patientId != null ? '?patientId=$patientId' : ''}',
       headers: {'Authorization': 'Bearer $token'},
       parseData: (raw) {
         final list = (raw as List<dynamic>? ?? []);
@@ -82,6 +86,22 @@ class TherapistPatientRepository {
     );
     if (res.status != 200 || res.data == null) {
       throw Exception(res.message.isNotEmpty ? res.message : 'Cannot load risk analytics');
+    }
+    return res.data!;
+  }
+
+  Future<TherapistPreSessionReviewModel> getPreSessionReview({
+    required String token,
+    required String patientId,
+  }) async {
+    final res = await _api.get<TherapistPreSessionReviewModel>(
+      '/therapist/patients/$patientId/pre-session-review',
+      headers: {'Authorization': 'Bearer $token'},
+      parseData: (raw) =>
+          raw is Map<String, dynamic> ? TherapistPreSessionReviewModel.fromJson(raw) : null,
+    );
+    if (res.status != 200 || res.data == null) {
+      throw Exception(res.message.isNotEmpty ? res.message : 'Cannot load pre-session review');
     }
     return res.data!;
   }

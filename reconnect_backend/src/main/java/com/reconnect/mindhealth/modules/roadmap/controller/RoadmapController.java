@@ -17,6 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.reconnect.mindhealth.common.dto.ApiResponse;
 import com.reconnect.mindhealth.modules.roadmap.dto.CompleteQuestRequest;
 import com.reconnect.mindhealth.modules.roadmap.dto.PatientQuestDto;
+import com.reconnect.mindhealth.modules.roadmap.dto.RoadmapProgramStateDto;
 import com.reconnect.mindhealth.modules.roadmap.dto.RoadmapSafetyOverlayDto;
 import com.reconnect.mindhealth.modules.roadmap.dto.VerifyQuestProofResponseDto;
 import com.reconnect.mindhealth.modules.roadmap.service.IRoadmapService;
@@ -45,6 +46,16 @@ public class RoadmapController {
             return ResponseEntity.ok(ApiResponse.success("Lấy lịch sử bài CBT thành công!", list));
         } catch (Exception e) {
             return ResponseEntity.ok(ApiResponse.error("Lỗi khi tải lịch sử bài CBT: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/program-state")
+    public ResponseEntity<ApiResponse<RoadmapProgramStateDto>> getProgramState(@RequestParam UUID patientId) {
+        try {
+            RoadmapProgramStateDto state = roadmapService.getProgramState(patientId);
+            return ResponseEntity.ok(ApiResponse.success("Lấy trạng thái lộ trình 14 tuần thành công!", state));
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.error("Lỗi khi tải trạng thái lộ trình: " + e.getMessage()));
         }
     }
 

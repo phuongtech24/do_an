@@ -3,6 +3,7 @@ package com.reconnect.mindhealth.modules.roadmap.controller;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.Comparator;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.reconnect.mindhealth.common.dto.ApiResponse;
@@ -27,6 +29,7 @@ import com.reconnect.mindhealth.modules.roadmap.enums.QuestSourceType;
 import com.reconnect.mindhealth.modules.roadmap.enums.QuestStatus;
 import com.reconnect.mindhealth.modules.roadmap.repository.PatientQuestRepository;
 import com.reconnect.mindhealth.modules.roadmap.repository.QuestTemplateRepository;
+import com.reconnect.mindhealth.modules.roadmap.service.RoadmapProgramStateService;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -38,23 +41,44 @@ public class TherapistQuestAssignmentController {
     private final PatientProfileRepository patientProfileRepository;
     private final QuestTemplateRepository questTemplateRepository;
     private final PatientQuestRepository patientQuestRepository;
+    private final RoadmapProgramStateService roadmapProgramStateService;
 
     public TherapistQuestAssignmentController(
             AuthContextService authContextService,
             PatientProfileRepository patientProfileRepository,
             QuestTemplateRepository questTemplateRepository,
-            PatientQuestRepository patientQuestRepository) {
+            PatientQuestRepository patientQuestRepository,
+            RoadmapProgramStateService roadmapProgramStateService) {
         this.authContextService = authContextService;
         this.patientProfileRepository = patientProfileRepository;
         this.questTemplateRepository = questTemplateRepository;
         this.patientQuestRepository = patientQuestRepository;
+        this.roadmapProgramStateService = roadmapProgramStateService;
     }
 
     @GetMapping("/quest-templates")
-    public ResponseEntity<ApiResponse<List<QuestTemplateDto>>> listQuestTemplates() {
+    public ResponseEntity<ApiResponse<List<QuestTemplateDto>>> listQuestTemplates(
+            @RequestParam(name = "patientId", required = false) UUID patientId) {
         try {
             requireTherapist();
+            String activePhase = null;
+            if (patientId != null) {
+                PatientProfile patient = patientProfileRepository.findById(patientId)
+                        .orElse(null);
+                if (patient != null) {
+                    int programWeek = roadmapProgramStateService.resolveProgramWeek(patient);
+                    if (programWeek > 0) {
+                        activePhase = roadmapProgramStateService.resolvePhase(programWeek).code();
+                    }
+                }
+            }
+            final String phaseCode = activePhase;
             List<QuestTemplateDto> list = questTemplateRepository.findAll().stream()
+                    .sorted(Comparator
+                            .comparing((QuestTemplate item) -> phaseCode == null
+                                    || !phaseCode.equalsIgnoreCase(item.getProgramPhaseCode()))
+                            .thenComparing(item -> item.getProgramWeek() == null ? 99 : item.getProgramWeek())
+                            .thenComparing(QuestTemplate::getTitle))
                     .map(QuestTemplateDto::new)
                     .toList();
             return ResponseEntity.ok(ApiResponse.success("OK", list));

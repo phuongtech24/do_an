@@ -28,6 +28,27 @@ public class QuestTemplate extends BaseObject {
     @Column(name = "difficulty", nullable = false)
     private QuestDifficulty difficulty = QuestDifficulty.EASY;
 
+    @Column(name = "module_code")
+    private String moduleCode;
+
+    @Column(name = "program_week")
+    private Integer programWeek;
+
+    @Column(name = "program_phase_code")
+    private String programPhaseCode;
+
+    @Column(name = "intervention_type")
+    private String interventionType;
+
+    @Column(name = "prerequisite_codes_json", columnDefinition = "json")
+    private String prerequisiteCodesJson;
+
+    @Column(name = "therapist_only_assignable")
+    private Boolean therapistOnlyAssignable = false;
+
+    @Column(name = "hard_locked")
+    private Boolean hardLocked = false;
+
     public String getTitle() {
         return title;
     }
@@ -59,5 +80,60 @@ public class QuestTemplate extends BaseObject {
     public void setDifficulty(QuestDifficulty difficulty) {
         this.difficulty = difficulty;
     }
-}
 
+    public String getModuleCode() {
+        return moduleCode;
+    }
+
+    public void setModuleCode(String moduleCode) {
+        this.moduleCode = moduleCode;
+    }
+
+    public Integer getProgramWeek() {
+        return programWeek;
+    }
+
+    public void setProgramWeek(Integer programWeek) {
+        this.programWeek = programWeek;
+    }
+
+    public String getProgramPhaseCode() {
+        return programPhaseCode;
+    }
+
+    public void setProgramPhaseCode(String programPhaseCode) {
+        this.programPhaseCode = programPhaseCode;
+    }
+
+    public String getInterventionType() {
+        return interventionType;
+    }
+
+    public void setInterventionType(String interventionType) {
+        this.interventionType = interventionType;
+    }
+
+    public String getPrerequisiteCodesJson() {
+        return prerequisiteCodesJson;
+    }
+
+    public void setPrerequisiteCodesJson(String prerequisiteCodesJson) {
+        this.prerequisiteCodesJson = prerequisiteCodesJson;
+    }
+
+    public Boolean getTherapistOnlyAssignable() {
+        return therapistOnlyAssignable;
+    }
+
+    public void setTherapistOnlyAssignable(Boolean therapistOnlyAssignable) {
+        this.therapistOnlyAssignable = therapistOnlyAssignable;
+    }
+
+    public Boolean getHardLocked() {
+        return hardLocked;
+    }
+
+    public void setHardLocked(Boolean hardLocked) {
+        this.hardLocked = hardLocked;
+    }
+}

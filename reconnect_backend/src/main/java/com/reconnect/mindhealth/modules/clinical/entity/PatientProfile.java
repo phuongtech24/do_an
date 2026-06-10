@@ -109,6 +109,12 @@ public class PatientProfile extends BaseObject {
     @Column(name = "current_cycle_start_date")
     private java.time.LocalDateTime currentCycleStartDate;
 
+    @Column(name = "therapy_program_started_at")
+    private java.time.LocalDateTime therapyProgramStartedAt;
+
+    @Column(name = "current_program_week")
+    private Integer currentProgramWeek;
+
     @Column(name = "graduated_at")
     private java.time.LocalDateTime graduatedAt;
 
@@ -335,6 +341,22 @@ public class PatientProfile extends BaseObject {
 
     public void setCurrentCycleStartDate(java.time.LocalDateTime currentCycleStartDate) {
         this.currentCycleStartDate = currentCycleStartDate;
+    }
+
+    public java.time.LocalDateTime getTherapyProgramStartedAt() {
+        return therapyProgramStartedAt;
+    }
+
+    public void setTherapyProgramStartedAt(java.time.LocalDateTime therapyProgramStartedAt) {
+        this.therapyProgramStartedAt = therapyProgramStartedAt;
+    }
+
+    public Integer getCurrentProgramWeek() {
+        return currentProgramWeek;
+    }
+
+    public void setCurrentProgramWeek(Integer currentProgramWeek) {
+        this.currentProgramWeek = currentProgramWeek;
     }
 
     public java.time.LocalDateTime getGraduatedAt() {

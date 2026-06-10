@@ -16,6 +16,12 @@ public class PatientQuestDto extends BaseObjectDto {
     private String title;
     private String description;
     private QuestCategory category;
+    private String moduleCode;
+    private Integer programWeek;
+    private String programPhaseCode;
+    private String interventionType;
+    private Boolean therapistOnlyAssignable;
+    private Boolean hardLocked;
     private QuestSourceType sourceType;
     private QuestStatus status;
     private Integer masteryScore;
@@ -50,6 +56,12 @@ public class PatientQuestDto extends BaseObjectDto {
                 this.title = entity.getQuestTemplate().getTitle();
                 this.description = entity.getQuestTemplate().getDescription();
                 this.category = entity.getQuestTemplate().getCategory();
+                this.moduleCode = entity.getQuestTemplate().getModuleCode();
+                this.programWeek = entity.getQuestTemplate().getProgramWeek();
+                this.programPhaseCode = entity.getQuestTemplate().getProgramPhaseCode();
+                this.interventionType = entity.getQuestTemplate().getInterventionType();
+                this.therapistOnlyAssignable = entity.getQuestTemplate().getTherapistOnlyAssignable();
+                this.hardLocked = entity.getQuestTemplate().getHardLocked();
             }
 
             this.status = entity.getStatus();
@@ -106,6 +118,54 @@ public class PatientQuestDto extends BaseObjectDto {
 
     public void setCategory(QuestCategory category) {
         this.category = category;
+    }
+
+    public String getModuleCode() {
+        return moduleCode;
+    }
+
+    public void setModuleCode(String moduleCode) {
+        this.moduleCode = moduleCode;
+    }
+
+    public Integer getProgramWeek() {
+        return programWeek;
+    }
+
+    public void setProgramWeek(Integer programWeek) {
+        this.programWeek = programWeek;
+    }
+
+    public String getProgramPhaseCode() {
+        return programPhaseCode;
+    }
+
+    public void setProgramPhaseCode(String programPhaseCode) {
+        this.programPhaseCode = programPhaseCode;
+    }
+
+    public String getInterventionType() {
+        return interventionType;
+    }
+
+    public void setInterventionType(String interventionType) {
+        this.interventionType = interventionType;
+    }
+
+    public Boolean getTherapistOnlyAssignable() {
+        return therapistOnlyAssignable;
+    }
+
+    public void setTherapistOnlyAssignable(Boolean therapistOnlyAssignable) {
+        this.therapistOnlyAssignable = therapistOnlyAssignable;
+    }
+
+    public Boolean getHardLocked() {
+        return hardLocked;
+    }
+
+    public void setHardLocked(Boolean hardLocked) {
+        this.hardLocked = hardLocked;
     }
 
     public QuestSourceType getSourceType() {

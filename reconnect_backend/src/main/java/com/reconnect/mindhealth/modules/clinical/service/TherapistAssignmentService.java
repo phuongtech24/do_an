@@ -142,4 +142,12 @@ public class TherapistAssignmentService {
                 ? patientProfileRepository.findRedFlagByTherapistUserIdWithRelations(therapistUserId)
                 : patientProfileRepository.findByTherapistUserIdWithRelations(therapistUserId);
     }
+
+    @Transactional(readOnly = true)
+    public PatientProfile getPatientForCurrentTherapist(UUID patientId) {
+        return listPatientsForCurrentTherapist(false).stream()
+                .filter(patient -> patient.getId().equals(patientId))
+                .findFirst()
+                .orElseThrow(() -> new SecurityException("Bạn không có quyền xem hồ sơ bệnh nhân này."));
+    }
 }

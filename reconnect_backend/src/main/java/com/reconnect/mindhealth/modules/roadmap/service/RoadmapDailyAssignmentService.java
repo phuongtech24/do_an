@@ -7,6 +7,7 @@ import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -44,14 +45,17 @@ public class RoadmapDailyAssignmentService {
     private final PatientProfileRepository patientProfileRepository;
     private final QuestTemplateRepository questTemplateRepository;
     private final PatientQuestRepository patientQuestRepository;
+    private final RoadmapProgramStateService roadmapProgramStateService;
 
     public RoadmapDailyAssignmentService(
             PatientProfileRepository patientProfileRepository,
             QuestTemplateRepository questTemplateRepository,
-            PatientQuestRepository patientQuestRepository) {
+            PatientQuestRepository patientQuestRepository,
+            RoadmapProgramStateService roadmapProgramStateService) {
         this.patientProfileRepository = patientProfileRepository;
         this.questTemplateRepository = questTemplateRepository;
         this.patientQuestRepository = patientQuestRepository;
+        this.roadmapProgramStateService = roadmapProgramStateService;
     }
 
     public DailyQuestAssignmentSummaryDto assignDailyQuestsForAllActivePatients(LocalDate date) {
@@ -189,6 +193,11 @@ public class RoadmapDailyAssignmentService {
             LocalDate effectiveDate,
             int lsasTotal,
             LocalDate cycleStart) {
+        if (roadmapProgramStateService.isTherapistTrack(patientProfile)) {
+            roadmapProgramStateService.initializeProgramIfNeeded(patientProfile);
+            return assignTherapistTrackQuests(patientProfile, effectiveDate);
+        }
+
         List<QuestTemplate> allTemplates = questTemplateRepository.findAll();
         if (allTemplates.isEmpty()) {
             throw new IllegalStateException("No Quest Templates found. Please seed CBT data.");
@@ -227,6 +236,83 @@ public class RoadmapDailyAssignmentService {
         log.info("Assigned legacy daily system quests patientId={}, date={}, created={}, lsas={}, cycleDay={}",
                 patientProfile.getId(), effectiveDate, created.size(), lsasTotal, cycleDayIndex);
         return created;
+    }
+
+    private List<PatientQuest> assignTherapistTrackQuests(PatientProfile patientProfile, LocalDate effectiveDate) {
+        int programWeek = roadmapProgramStateService.resolveProgramWeek(patientProfile);
+        RoadmapProgramStateService.ProgramPhase phase = roadmapProgramStateService.resolvePhase(programWeek);
+        List<QuestTemplate> allClinicalTemplates = questTemplateRepository.findAll().stream()
+                .filter(template -> template.getModuleCode() != null && !template.getModuleCode().isBlank())
+                .sorted(Comparator
+                        .comparing((QuestTemplate template) -> template.getProgramWeek() != null ? template.getProgramWeek() : 99)
+                        .thenComparing(QuestTemplate::getTitle))
+                .toList();
+        if (allClinicalTemplates.isEmpty()) {
+            return assignLegacyFallbackQuest(patientProfile, effectiveDate);
+        }
+
+        List<QuestTemplate> unlocked = allClinicalTemplates.stream()
+                .filter(template -> template.getProgramWeek() == null || template.getProgramWeek() <= programWeek)
+                .toList();
+        if (unlocked.isEmpty()) {
+            return assignLegacyFallbackQuest(patientProfile, effectiveDate);
+        }
+
+        List<QuestTemplate> preferred = unlocked.stream()
+                .filter(template -> phase.code().equalsIgnoreCase(template.getProgramPhaseCode()))
+                .toList();
+        List<QuestTemplate> pickedTemplates = new ArrayList<>();
+        if (!preferred.isEmpty()) {
+            pickedTemplates.add(preferred.get(0));
+        }
+        for (QuestTemplate template : unlocked) {
+            if (pickedTemplates.size() >= DAILY_MAX_QUESTS) {
+                break;
+            }
+            if (pickedTemplates.stream().noneMatch(item -> item.getId().equals(template.getId()))) {
+                pickedTemplates.add(template);
+            }
+        }
+
+        List<PatientQuest> created = new ArrayList<>();
+        int order = 1;
+        for (QuestTemplate template : pickedTemplates) {
+            PatientQuest quest = new PatientQuest();
+            quest.setPatientProfile(patientProfile);
+            quest.setQuestTemplate(template);
+            quest.setSourceType(QuestSourceType.SYSTEM);
+            quest.setUnlockOrder(order++);
+
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime unlockAt = effectiveDate.atTime(UNLOCK_TIME);
+            quest.setStatus(now.isBefore(unlockAt) ? QuestStatus.LOCKED : QuestStatus.AVAILABLE);
+            quest.setAssignedAt(now);
+            quest.setDueDate(effectiveDate.atTime(23, 59, 59));
+            created.add(patientQuestRepository.save(quest));
+        }
+
+        log.info("Assigned 14-week progression quests patientId={}, date={}, week={}, phase={}, created={}",
+                patientProfile.getId(), effectiveDate, programWeek, phase.code(), created.size());
+        return created;
+    }
+
+    private List<PatientQuest> assignLegacyFallbackQuest(PatientProfile patientProfile, LocalDate effectiveDate) {
+        List<QuestTemplate> allTemplates = questTemplateRepository.findAll();
+        if (allTemplates.isEmpty()) {
+            throw new IllegalStateException("No Quest Templates found. Please seed CBT data.");
+        }
+        QuestTemplate picked = allTemplates.get(Math.abs(patientProfile.getId().hashCode()) % allTemplates.size());
+        PatientQuest quest = new PatientQuest();
+        quest.setPatientProfile(patientProfile);
+        quest.setQuestTemplate(picked);
+        quest.setSourceType(QuestSourceType.SYSTEM);
+        quest.setUnlockOrder(1);
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime unlockAt = effectiveDate.atTime(UNLOCK_TIME);
+        quest.setStatus(now.isBefore(unlockAt) ? QuestStatus.LOCKED : QuestStatus.AVAILABLE);
+        quest.setAssignedAt(now);
+        quest.setDueDate(effectiveDate.atTime(23, 59, 59));
+        return List.of(patientQuestRepository.save(quest));
     }
 
     private int resolveLatestLsasScore(PatientProfile patientProfile) {

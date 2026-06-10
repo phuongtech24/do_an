@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import com.reconnect.mindhealth.modules.roadmap.entity.PatientQuest;
 import com.reconnect.mindhealth.modules.roadmap.enums.QuestSourceType;
+import com.reconnect.mindhealth.modules.roadmap.enums.QuestStatus;
 
 @Repository
 public interface PatientQuestRepository extends JpaRepository<PatientQuest, UUID> {
@@ -25,6 +26,27 @@ public interface PatientQuestRepository extends JpaRepository<PatientQuest, UUID
             @Param("sourceType") QuestSourceType sourceType,
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to);
+
+    @Query("""
+            SELECT pq
+            FROM PatientQuest pq
+            WHERE pq.patientProfile.id = :patientId
+              AND pq.questTemplate.moduleCode = :moduleCode
+              AND pq.status = :status
+            ORDER BY pq.assignedAt DESC
+            """)
+    List<PatientQuest> findByPatientAndModuleCodeAndStatus(
+            @Param("patientId") UUID patientId,
+            @Param("moduleCode") String moduleCode,
+            @Param("status") QuestStatus status);
+
+    @Query("""
+            SELECT pq
+            FROM PatientQuest pq
+            WHERE pq.patientProfile.id = :patientId
+            ORDER BY pq.assignedAt DESC
+            """)
+    List<PatientQuest> findRecentByPatientId(@Param("patientId") UUID patientId);
 
     List<PatientQuest> findByPatientProfile_IdOrderByAssignedAtDesc(UUID patientId);
 }

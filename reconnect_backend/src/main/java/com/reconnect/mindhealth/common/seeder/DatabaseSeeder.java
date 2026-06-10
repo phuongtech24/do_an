@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.List;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -392,6 +393,7 @@ public class DatabaseSeeder implements CommandLineRunner {
     private void seedQuestTemplates() throws Exception {
         if (!questTemplatesCsv.exists()) {
             System.out.println("Quest templates CSV file not found at classpath:seed_data/quest_templates.csv");
+            ensureClinicalQuestTemplates();
             return;
         }
         if (questTemplateRepository.count() == 0) {
@@ -426,5 +428,111 @@ public class DatabaseSeeder implements CommandLineRunner {
         } else {
             System.out.println("Quest templates already exist in database.");
         }
+        ensureClinicalQuestTemplates();
+    }
+
+    private void ensureClinicalQuestTemplates() throws Exception {
+        ensureClinicalQuestTemplate(
+                "VICIOUS_CYCLE",
+                "Bản đồ vòng lặp lo âu",
+                "Điền tình huống, suy nghĩ, triệu chứng cơ thể và hành vi an toàn để nhìn rõ vòng lặp lo âu xã hội.",
+                QuestCategory.COGNITIVE,
+                QuestDifficulty.EASY,
+                1,
+                "MAP_AND_BELIEF_BREAK",
+                "VICIOUS_CYCLE_MAP",
+                List.of(),
+                false,
+                false);
+        ensureClinicalQuestTemplate(
+                "SAFETY_BEHAVIOR_DROP",
+                "Vứt bỏ hành vi an toàn",
+                "Thực hành trò chuyện ngắn và so sánh trải nghiệm khi còn giữ và khi đã giảm hành vi an toàn.",
+                QuestCategory.BEHAVIORAL,
+                QuestDifficulty.EASY,
+                2,
+                "MAP_AND_BELIEF_BREAK",
+                "SAFETY_BEHAVIOR_EXPERIMENT",
+                List.of("VICIOUS_CYCLE"),
+                false,
+                false);
+        ensureClinicalQuestTemplate(
+                "VIDEO_FEEDBACK",
+                "Video Feedback",
+                "Ghi âm hoặc quay lại tương tác thực tế rồi xem lại để kiểm chứng hình ảnh bản thân có đang bị méo mó không.",
+                QuestCategory.BEHAVIORAL,
+                QuestDifficulty.MEDIUM,
+                4,
+                "REAL_WORLD_EXPERIMENTS",
+                "VIDEO_FEEDBACK",
+                List.of("SAFETY_BEHAVIOR_DROP"),
+                true,
+                true);
+        ensureClinicalQuestTemplate(
+                "SURVEYS",
+                "Khảo sát kiểm chứng suy nghĩ",
+                "Gửi khảo sát ngắn để kiểm chứng người khác thực sự nghĩ gì thay vì tự đọc suy nghĩ.",
+                QuestCategory.SOCIAL,
+                QuestDifficulty.MEDIUM,
+                6,
+                "REAL_WORLD_EXPERIMENTS",
+                "SURVEY",
+                List.of("VIDEO_FEEDBACK"),
+                true,
+                true);
+        ensureClinicalQuestTemplate(
+                "THEN_VS_NOW",
+                "Then vs Now",
+                "Phân biệt ký ức tổn thương cũ với tình huống hiện tại để giảm hợp nhất cảm xúc.",
+                QuestCategory.COGNITIVE,
+                QuestDifficulty.HARD,
+                9,
+                "DEEP_COGNITIVE_MEMORY",
+                "THEN_VS_NOW",
+                List.of("SURVEYS"),
+                true,
+                true);
+        ensureClinicalQuestTemplate(
+                "IMAGERY_RESCRIPTING",
+                "Imagery Rescripting",
+                "Viết lại kịch bản cho ký ức xã hội đau buồn theo hướng an toàn và lành mạnh hơn.",
+                QuestCategory.COGNITIVE,
+                QuestDifficulty.HARD,
+                11,
+                "DEEP_COGNITIVE_MEMORY",
+                "IMAGERY_RESCRIPTING",
+                List.of("THEN_VS_NOW"),
+                true,
+                true);
+    }
+
+    private void ensureClinicalQuestTemplate(
+            String moduleCode,
+            String title,
+            String description,
+            QuestCategory category,
+            QuestDifficulty difficulty,
+            int programWeek,
+            String programPhaseCode,
+            String interventionType,
+            List<String> prerequisites,
+            boolean therapistOnlyAssignable,
+            boolean hardLocked) throws Exception {
+        QuestTemplate template = questTemplateRepository.findFirstByModuleCode(moduleCode).orElse(null);
+        if (template == null) {
+            template = new QuestTemplate();
+        }
+        template.setModuleCode(moduleCode);
+        template.setTitle(title);
+        template.setDescription(description);
+        template.setCategory(category);
+        template.setDifficulty(difficulty);
+        template.setProgramWeek(programWeek);
+        template.setProgramPhaseCode(programPhaseCode);
+        template.setInterventionType(interventionType);
+        template.setPrerequisiteCodesJson(objectMapper.writeValueAsString(prerequisites));
+        template.setTherapistOnlyAssignable(therapistOnlyAssignable);
+        template.setHardLocked(hardLocked);
+        questTemplateRepository.save(template);
     }
 }

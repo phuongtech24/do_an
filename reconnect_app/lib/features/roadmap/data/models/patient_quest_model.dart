@@ -5,6 +5,12 @@ class PatientQuestModel {
   final String title;
   final String description;
   final String category; // EMOTIONAL/COGNITIVE/BEHAVIORAL/SOCIAL
+  final String moduleCode;
+  final int? programWeek;
+  final String programPhaseCode;
+  final String interventionType;
+  final bool therapistOnlyAssignable;
+  final bool hardLocked;
   final String sourceType; // SYSTEM/THERAPIST
   final String status; // LOCKED/AVAILABLE/DONE
   final int? masteryScore;
@@ -21,6 +27,12 @@ class PatientQuestModel {
     required this.title,
     required this.description,
     required this.category,
+    required this.moduleCode,
+    required this.programWeek,
+    required this.programPhaseCode,
+    required this.interventionType,
+    required this.therapistOnlyAssignable,
+    required this.hardLocked,
     required this.sourceType,
     required this.status,
     this.masteryScore,
@@ -39,6 +51,12 @@ class PatientQuestModel {
       title: json['title']?.toString() ?? '',
       description: json['description']?.toString() ?? '',
       category: json['category']?.toString() ?? 'COGNITIVE',
+      moduleCode: json['moduleCode']?.toString() ?? '',
+      programWeek: (json['programWeek'] as num?)?.toInt(),
+      programPhaseCode: json['programPhaseCode']?.toString() ?? '',
+      interventionType: json['interventionType']?.toString() ?? '',
+      therapistOnlyAssignable: json['therapistOnlyAssignable'] == true,
+      hardLocked: json['hardLocked'] == true,
       sourceType: json['sourceType']?.toString() ?? 'SYSTEM',
       status: json['status']?.toString() ?? 'LOCKED',
       masteryScore: (json['masteryScore'] as num?)?.toInt(),

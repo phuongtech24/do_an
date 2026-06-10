@@ -21,6 +21,7 @@ import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
 import com.reconnect.mindhealth.modules.roadmap.dto.CompleteQuestRequest;
 import com.reconnect.mindhealth.modules.roadmap.dto.PatientQuestDto;
+import com.reconnect.mindhealth.modules.roadmap.dto.RoadmapProgramStateDto;
 import com.reconnect.mindhealth.modules.roadmap.dto.RoadmapSafetyOverlayDto;
 import com.reconnect.mindhealth.modules.roadmap.dto.VerifyQuestProofResponseDto;
 import com.reconnect.mindhealth.modules.roadmap.entity.PatientQuest;
@@ -29,6 +30,7 @@ import com.reconnect.mindhealth.modules.roadmap.enums.QuestStatus;
 import com.reconnect.mindhealth.modules.roadmap.repository.PatientQuestRepository;
 import com.reconnect.mindhealth.modules.roadmap.service.IRoadmapService;
 import com.reconnect.mindhealth.modules.roadmap.service.RoadmapDailyAssignmentService;
+import com.reconnect.mindhealth.modules.roadmap.service.RoadmapProgramStateService;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -53,9 +55,19 @@ public class RoadmapServiceImpl implements IRoadmapService {
     @Autowired
     private IQuestProofVisionService questProofVisionService;
 
+    @Autowired
+    private RoadmapProgramStateService roadmapProgramStateService;
+
     @Override
     public List<PatientQuestDto> getDailyQuests(UUID patientId) {
         return getOrCreateDailyQuests(patientId);
+    }
+
+    @Override
+    @Transactional
+    public RoadmapProgramStateDto getProgramState(UUID patientId) {
+        List<PatientQuestDto> todays = getOrCreateDailyQuests(patientId);
+        return roadmapProgramStateService.getProgramState(patientId, todays);
     }
 
     @Override

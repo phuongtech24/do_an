@@ -9,6 +9,7 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../data/models/behavioral_experiment_model.dart';
 import '../../data/models/fear_ladder_item_model.dart';
 import '../providers/roadmap_provider.dart';
+import '../../data/models/roadmap_program_module_model.dart';
 
 class RoadmapScreen extends StatefulWidget {
   const RoadmapScreen({super.key});
@@ -82,6 +83,10 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                       totalItems: provider.fearLadder.length,
                       unlockedItems: provider.fearLadder.where((item) => item.unlocked).length,
                     ),
+                    if (provider.programState.programWeek != null) ...[
+                      const SizedBox(height: 18),
+                      _ProgramStateCard(provider: provider),
+                    ],
                     const SizedBox(height: 18),
                     _ExperimentCard(
                       experiment: provider.todayExperiment,
@@ -307,6 +312,186 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
         content: Text(
           success ? 'Đã lưu tổng kết và cập nhật thang sợ.' : provider.errorMessage,
         ),
+      ),
+    );
+  }
+}
+
+class _ProgramStateCard extends StatelessWidget {
+  const _ProgramStateCard({required this.provider});
+
+  final RoadmapProvider provider;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = provider.programState;
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: AppColors.primary.withOpacity(0.08)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Tuần trị liệu ${state.programWeek}',
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      state.programPhaseLabel,
+                      style: const TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              _phasePill('${state.unlockedModules.length} module đã mở'),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            state.nextRecommendedIntervention,
+            style: const TextStyle(color: AppColors.textSecondary, height: 1.45),
+          ),
+          const SizedBox(height: 14),
+          if (state.todayAssignments.isNotEmpty) ...[
+            const Text(
+              'Bài đang hiển thị hôm nay',
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 10),
+            ...state.todayAssignments.take(2).map(
+                  (item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _assignmentRow(
+                      title: item.title,
+                      subtitle: item.sourceType == 'THERAPIST'
+                          ? 'Bác sĩ giao • ${item.programPhaseCode}'
+                          : 'Hệ thống gợi ý • ${item.programPhaseCode}',
+                    ),
+                  ),
+                ),
+          ],
+          const SizedBox(height: 10),
+          const Text(
+            'Module theo phase',
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              ...state.unlockedModules.take(4).map((item) => _moduleChip(item)),
+              ...state.lockedModules.take(2).map((item) => _moduleChip(item, locked: true)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _phasePill(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+
+  Widget _assignmentRow({required String title, required String subtitle}) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: const TextStyle(color: AppColors.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _moduleChip(RoadmapProgramModuleModel module, {bool locked = false}) {
+    final color = locked ? AppColors.textSecondary : AppColors.primary;
+    return Container(
+      constraints: const BoxConstraints(minWidth: 150, maxWidth: 220),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.18)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            module.title,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            locked
+                ? (module.lockReason.isNotEmpty ? module.lockReason : 'Đang khóa')
+                : 'Mở từ tuần ${module.weekFrom ?? '-'}',
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12.5,
+              height: 1.35,
+            ),
+          ),
+        ],
       ),
     );
   }

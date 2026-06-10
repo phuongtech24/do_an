@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../features/cbt_intervention/assign_quest_screen.dart';
 import '../../features/therapist/data/models/therapist_quest_progress_model.dart';
+import '../../features/therapist/data/models/therapist_pre_session_review_model.dart';
 import '../../features/therapist/data/models/therapist_risk_analytics_model.dart';
 import '../../features/therapist/data/repositories/therapist_patient_repository.dart';
 import '../../theme/app_colors.dart';
@@ -24,10 +25,13 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
 
   TherapistQuestProgressModel? _questProgress;
   TherapistRiskAnalyticsModel? _riskAnalytics;
+  TherapistPreSessionReviewModel? _preSessionReview;
   bool _questProgressLoading = false;
   bool _riskAnalyticsLoading = false;
+  bool _preSessionLoading = false;
   String? _questProgressError;
   String? _riskAnalyticsError;
+  String? _preSessionError;
 
   String get _patientId => widget.patient['id']?.toString() ?? '';
   String get _patientName => widget.patient['name']?.toString() ?? 'Bệnh nhân';
@@ -50,6 +54,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadRiskAnalytics();
       _loadQuestProgress();
+      _loadPreSessionReview();
     });
   }
 
@@ -100,6 +105,29 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     }
   }
 
+  Future<void> _loadPreSessionReview() async {
+    final token = Provider.of<AuthProvider>(context, listen: false).token;
+    if (token == null || token.isEmpty || _patientId.isEmpty) return;
+    setState(() {
+      _preSessionLoading = true;
+      _preSessionError = null;
+    });
+    try {
+      final review = await _repository.getPreSessionReview(
+        token: token,
+        patientId: _patientId,
+      );
+      if (!mounted) return;
+      setState(() => _preSessionReview = review);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _preSessionError = e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (!mounted) return;
+      setState(() => _preSessionLoading = false);
+    }
+  }
+
   Future<void> _assignQuest() async {
     await Navigator.push(
       context,
@@ -118,6 +146,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
     await Future.wait([
       _loadRiskAnalytics(),
       _loadQuestProgress(),
+      _loadPreSessionReview(),
     ]);
   }
 
@@ -150,6 +179,8 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                   _buildPatientHeader(statusColor),
                   const SizedBox(height: 24),
                   _buildIdentityPanel(),
+                  const SizedBox(height: 24),
+                  _buildPreSessionReviewPanel(),
                   const SizedBox(height: 24),
                   _buildRiskAnalyticsPanel(),
                   const SizedBox(height: 24),
@@ -314,6 +345,107 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
           ],
         ],
       ),
+    );
+  }
+
+  Widget _buildPreSessionReviewPanel() {
+    final review = _preSessionReview;
+    return _Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Pre-session review',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primary),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Tải lại review',
+                onPressed: _preSessionLoading ? null : _loadPreSessionReview,
+                icon: const Icon(Icons.refresh),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Tóm tắt nhanh trước phiên: LSAS, tuần trị liệu, bài tập gần đây, check-in và cảnh báo an toàn.',
+            style: TextStyle(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 16),
+          if (_preSessionLoading && review == null)
+            const SizedBox(height: 180, child: Center(child: CircularProgressIndicator()))
+          else if (_preSessionError != null)
+            _ErrorBox(message: _preSessionError!)
+          else if (review == null)
+            const _EmptyBox(
+              icon: Icons.fact_check_outlined,
+              title: 'Chưa có packet pre-session review',
+              message: 'Khi có đủ dữ liệu LSAS, check-in, thought record và bài tập, hệ thống sẽ tổng hợp tại đây.',
+            )
+          else
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    _Badge(label: 'LSAS baseline: ${review.baselineLsasScore ?? '-'}', color: AppColors.secondary),
+                    _Badge(label: 'LSAS hiện tại: ${review.currentLsasScore ?? '-'}', color: AppColors.primary),
+                    if (review.programWeek != null)
+                      _Badge(label: 'Tuần ${review.programWeek}', color: AppColors.primary),
+                    if (review.programPhaseLabel.isNotEmpty)
+                      _Badge(label: review.programPhaseLabel, color: AppColors.secondary),
+                    _Badge(label: 'Homework xong: ${review.recentHomeworkCompleted}', color: AppColors.success),
+                    _Badge(label: 'Check-in tuần qua: ${review.dailyCheckinsLastWeek}', color: AppColors.primary),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (review.goalSummary.isNotEmpty)
+                  Text(
+                    'Mục tiêu hiện tại: ${review.goalSummary}',
+                    style: const TextStyle(color: AppColors.textPrimary, height: 1.45),
+                  ),
+                const SizedBox(height: 14),
+                _buildSummaryList('Behavioral experiments gần đây', review.recentBehavioralExperimentSummaries),
+                const SizedBox(height: 10),
+                _buildSummaryList('Thought records gần đây', review.recentThoughtRecordSummaries),
+                const SizedBox(height: 10),
+                _buildSummaryList('Daily check-in gần đây', review.recentDailyCheckinSummaries),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryList(String title, List<String> items) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        if (items.isEmpty)
+          const Text('Chưa có dữ liệu gần đây.', style: TextStyle(color: AppColors.textSecondary))
+        else
+          ...items.take(3).map(
+                (item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('• ', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                      Expanded(
+                        child: Text(item, style: const TextStyle(color: AppColors.textSecondary, height: 1.4)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+      ],
     );
   }
 

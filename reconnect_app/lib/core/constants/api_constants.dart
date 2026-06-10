@@ -42,6 +42,7 @@ class ApiConstants {
   // Roadmap Endpoints
   static const String getDailyQuests = '$baseUrl/roadmap/daily';
   static const String roadmapHistory = '$baseUrl/roadmap/history';
+  static const String roadmapProgramState = '$baseUrl/roadmap/program-state';
   static const String roadmapSafetyOverlay = '$baseUrl/roadmap/safety-overlay';
   static String completeQuest(String id) => '$baseUrl/roadmap/quests/$id/complete';
   static String verifyQuestProof(String id) => '$baseUrl/roadmap/quests/$id/proof/verify';

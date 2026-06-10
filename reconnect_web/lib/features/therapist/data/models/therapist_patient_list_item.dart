@@ -18,6 +18,12 @@ class TherapistPatientListItem {
   final String? occupation;
   final String? relationshipStatus;
   final String? medicalHistory;
+  final int? programWeek;
+  final String? programPhaseLabel;
+  final bool stalledProgress;
+  final String? upcomingAppointmentAt;
+  final String? latestThoughtRecordAt;
+  final String? latestCheckinAt;
 
   TherapistPatientListItem({
     required this.patientId,
@@ -39,6 +45,12 @@ class TherapistPatientListItem {
     this.occupation,
     this.relationshipStatus,
     this.medicalHistory,
+    this.programWeek,
+    this.programPhaseLabel,
+    this.stalledProgress = false,
+    this.upcomingAppointmentAt,
+    this.latestThoughtRecordAt,
+    this.latestCheckinAt,
   });
 
   factory TherapistPatientListItem.fromJson(Map<String, dynamic> json) {
@@ -62,6 +74,12 @@ class TherapistPatientListItem {
       occupation: json['occupation']?.toString(),
       relationshipStatus: json['relationshipStatus']?.toString(),
       medicalHistory: json['medicalHistory']?.toString(),
+      programWeek: (json['programWeek'] as num?)?.toInt(),
+      programPhaseLabel: json['programPhaseLabel']?.toString(),
+      stalledProgress: json['stalledProgress'] == true,
+      upcomingAppointmentAt: json['upcomingAppointmentAt']?.toString(),
+      latestThoughtRecordAt: json['latestThoughtRecordAt']?.toString(),
+      latestCheckinAt: json['latestCheckinAt']?.toString(),
     );
   }
 }

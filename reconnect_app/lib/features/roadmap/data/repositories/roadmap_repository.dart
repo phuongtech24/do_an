@@ -6,6 +6,7 @@ import '../../../../core/constants/api_constants.dart';
 import '../models/behavioral_experiment_model.dart';
 import '../models/fear_ladder_item_model.dart';
 import '../models/patient_quest_model.dart';
+import '../models/roadmap_program_state_model.dart';
 import '../models/roadmap_safety_overlay_model.dart';
 import '../models/verify_quest_proof_result.dart';
 
@@ -39,6 +40,27 @@ class RoadmapRepository {
       } else {
         throw Exception(json['message'] ?? 'Không thể tải nhiệm vụ hôm nay');
       }
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  Future<RoadmapProgramStateModel> getProgramState(String patientId, {String? token}) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiConstants.roadmapProgramState}?patientId=$patientId'),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      _handleHttpError(response, 'tải trạng thái lộ trình 14 tuần');
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      if (json['status'] == 200 && json['data'] != null) {
+        return RoadmapProgramStateModel.fromJson(json['data'] as Map<String, dynamic>);
+      }
+      throw Exception(json['message'] ?? 'Không thể tải trạng thái lộ trình 14 tuần');
     } catch (e) {
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
