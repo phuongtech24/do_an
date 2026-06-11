@@ -6,6 +6,9 @@ class RoadmapProgramStateModel {
   final String programPhaseCode;
   final String programPhaseLabel;
   final String nextRecommendedIntervention;
+  final String? therapyProgramStartedAt;
+  final String? weekStartDate;
+  final String? weekEndDate;
   final String? nextRerateAt;
   final List<RoadmapProgramModuleModel> unlockedModules;
   final List<RoadmapProgramModuleModel> lockedModules;
@@ -16,6 +19,9 @@ class RoadmapProgramStateModel {
     required this.programPhaseCode,
     required this.programPhaseLabel,
     required this.nextRecommendedIntervention,
+    required this.therapyProgramStartedAt,
+    required this.weekStartDate,
+    required this.weekEndDate,
     required this.nextRerateAt,
     required this.unlockedModules,
     required this.lockedModules,
@@ -27,6 +33,9 @@ class RoadmapProgramStateModel {
     programPhaseCode: '',
     programPhaseLabel: '',
     nextRecommendedIntervention: '',
+    therapyProgramStartedAt: null,
+    weekStartDate: null,
+    weekEndDate: null,
     nextRerateAt: null,
     unlockedModules: [],
     lockedModules: [],
@@ -49,6 +58,9 @@ class RoadmapProgramStateModel {
       programPhaseCode: json['programPhaseCode']?.toString() ?? '',
       programPhaseLabel: json['programPhaseLabel']?.toString() ?? '',
       nextRecommendedIntervention: json['nextRecommendedIntervention']?.toString() ?? '',
+      therapyProgramStartedAt: json['therapyProgramStartedAt']?.toString(),
+      weekStartDate: json['weekStartDate']?.toString(),
+      weekEndDate: json['weekEndDate']?.toString(),
       nextRerateAt: json['nextRerateAt']?.toString(),
       unlockedModules: unlocked,
       lockedModules: locked,

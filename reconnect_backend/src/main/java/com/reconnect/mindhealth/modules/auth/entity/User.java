@@ -41,6 +41,12 @@ public class User extends BaseObject {
     @Column(name = "is_active")
     private Boolean isActive = true;
 
+    @Column(name = "reset_password_token", length = 128)
+    private String resetPasswordToken;
+
+    @Column(name = "reset_password_expires_at")
+    private java.util.Date resetPasswordExpiresAt;
+
     @OneToOne(mappedBy = "user")
     private TherapistProfile therapistProfile;
 
@@ -110,6 +116,22 @@ public class User extends BaseObject {
 
     public void setIsActive(Boolean isActive) {
         this.isActive = isActive;
+    }
+
+    public String getResetPasswordToken() {
+        return resetPasswordToken;
+    }
+
+    public void setResetPasswordToken(String resetPasswordToken) {
+        this.resetPasswordToken = resetPasswordToken;
+    }
+
+    public java.util.Date getResetPasswordExpiresAt() {
+        return resetPasswordExpiresAt;
+    }
+
+    public void setResetPasswordExpiresAt(java.util.Date resetPasswordExpiresAt) {
+        this.resetPasswordExpiresAt = resetPasswordExpiresAt;
     }
     
 }

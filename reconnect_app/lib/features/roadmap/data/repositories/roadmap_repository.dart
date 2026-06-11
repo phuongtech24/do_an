@@ -112,8 +112,10 @@ class RoadmapRepository {
   Future<BehavioralExperimentModel> startBehavioralExperiment(
     String id, {
     required String prediction,
-    required int predictionBelief,
+    int? predictionBeliefBefore,
+    int? predictionBelief,
     required List<String> safetyBehaviors,
+    bool dropWithoutSafetyBehaviors = false,
     String? token,
   }) async {
     try {
@@ -129,8 +131,9 @@ class RoadmapRepository {
         },
         body: jsonEncode({
           'prediction': prediction,
-          'predictionBelief': predictionBelief,
+          'predictionBeliefBefore': predictionBeliefBefore ?? predictionBelief,
           'safetyBehaviorsJson': jsonEncode(normalizedSafetyBehaviors),
+          'dropWithoutSafetyBehaviors': dropWithoutSafetyBehaviors,
         }),
       );
       _handleHttpError(response, 'bắt đầu Behavioral Experiment');
@@ -147,7 +150,10 @@ class RoadmapRepository {
   Future<BehavioralExperimentModel> debriefBehavioralExperiment(
     String id, {
     required String executionNotes,
-    required String debrief,
+    String? outcome,
+    String? learning,
+    int? predictionBeliefAfter,
+    String? debrief,
     required int postFearScore,
     required int postAvoidanceScore,
     String? token,
@@ -161,7 +167,9 @@ class RoadmapRepository {
         },
         body: jsonEncode({
           'executionNotes': executionNotes,
-          'debrief': debrief,
+          'outcome': outcome ?? debrief ?? '',
+          'learning': learning ?? debrief ?? '',
+          'predictionBeliefAfter': predictionBeliefAfter,
           'postFearScore': postFearScore,
           'postAvoidanceScore': postAvoidanceScore,
         }),

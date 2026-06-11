@@ -7,22 +7,17 @@ import '../../../../theme/app_colors.dart';
 import '../../../onboarding/presentation/utils/onboarding_route_resolver.dart';
 import '../providers/auth_provider.dart';
 
-class AnonymousAuthScreen extends StatefulWidget {
+class AnonymousAuthScreen extends StatelessWidget {
   const AnonymousAuthScreen({super.key});
 
-  @override
-  State<AnonymousAuthScreen> createState() => _AnonymousAuthScreenState();
-}
-
-class _AnonymousAuthScreenState extends State<AnonymousAuthScreen> {
   @override
   Widget build(BuildContext context) {
     return MindHealthScaffold(
       title: 'MindHealth - Đăng nhập',
-      body: SingleChildScrollView(
+      body: const SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
+          children: [
             SizedBox(height: 6),
             _AuthHero(),
             SizedBox(height: 20),
@@ -48,13 +43,6 @@ class _AuthHero extends StatelessWidget {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(28),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.18),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
       ),
       child: Row(
         children: [
@@ -82,7 +70,7 @@ class _AuthHero extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Tiếp tục hành trình CBT của bạn hoặc bắt đầu trải nghiệm ẩn danh an toàn để làm LSAS trước.',
+                  'Tiếp tục hành trình CBT của bạn hoặc trải nghiệm Guest Mode an toàn để làm LSAS trước.',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.92),
                     height: 1.45,
@@ -106,13 +94,14 @@ class _PatientLoginForm extends StatefulWidget {
 
 class _PatientLoginFormState extends State<_PatientLoginForm> {
   final _formKey = GlobalKey<FormState>();
-  final _nicknameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _hidePassword = true;
+  bool _rememberMe = true;
 
   @override
   void dispose() {
-    _nicknameController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -122,31 +111,29 @@ class _PatientLoginFormState extends State<_PatientLoginForm> {
     final success = await auth.loginAnonymous(deviceId);
     if (!context.mounted) return;
 
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Đã tạo phiên ẩn danh. Hãy chọn biệt danh và avatar trước khi làm LSAS.'),
-          backgroundColor: AppColors.success,
-        ),
-      );
-      context.go('/profile-setup?mode=anonymous-demo');
-      return;
-    }
-
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Lỗi: ${auth.errorMessage}'),
-        backgroundColor: AppColors.alert,
+        content: Text(
+          success
+              ? 'Đã tạo phiên guest. Hãy chọn biệt danh và avatar trước khi làm LSAS.'
+              : 'Lỗi: ${auth.errorMessage}',
+        ),
+        backgroundColor: success ? AppColors.success : AppColors.alert,
       ),
     );
+
+    if (success) {
+      context.go('/profile-setup?mode=anonymous-demo');
+    }
   }
 
   Future<void> _onLogin(BuildContext context, AuthProvider auth) async {
     if (!_formKey.currentState!.validate()) return;
 
     await auth.login(
-      _nicknameController.text.trim(),
+      _emailController.text.trim(),
       _passwordController.text.trim(),
+      rememberMe: _rememberMe,
     );
     if (!context.mounted) return;
 
@@ -166,14 +153,125 @@ class _PatientLoginFormState extends State<_PatientLoginForm> {
       return;
     }
 
-    if (auth.status == AuthStatus.error) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Đăng nhập thất bại: ${auth.errorMessage}'),
+        backgroundColor: AppColors.alert,
+      ),
+    );
+  }
+
+  Future<void> _showForgotPasswordFlow(BuildContext context, AuthProvider auth) async {
+    final emailController = TextEditingController(text: _emailController.text.trim());
+    final resetTokenController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+
+    final requestReset = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Quên mật khẩu'),
+        content: TextField(
+          controller: emailController,
+          decoration: const InputDecoration(labelText: 'Email đăng nhập'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Tạo reset token'),
+          ),
+        ],
+      ),
+    );
+
+    if (requestReset != true) return;
+
+    final requested = await auth.requestPasswordReset(emailController.text.trim());
+    if (!mounted) return;
+    if (!requested) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Đăng nhập thất bại: ${auth.errorMessage}'),
+          content: Text(auth.errorMessage),
           backgroundColor: AppColors.alert,
         ),
       );
+      return;
     }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Đã tạo yêu cầu reset. Ở local/dev, hãy lấy reset token từ log backend rồi nhập vào bước tiếp theo.'),
+        backgroundColor: AppColors.success,
+      ),
+    );
+
+    final doReset = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Đặt lại mật khẩu'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: resetTokenController,
+                decoration: const InputDecoration(labelText: 'Reset token'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: newPasswordController,
+                decoration: const InputDecoration(labelText: 'Mật khẩu mới'),
+                obscureText: true,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: confirmPasswordController,
+                decoration: const InputDecoration(labelText: 'Nhập lại mật khẩu'),
+                obscureText: true,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Đặt lại'),
+          ),
+        ],
+      ),
+    );
+
+    if (doReset != true) return;
+
+    if (newPasswordController.text.trim() != confirmPasswordController.text.trim()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Mật khẩu nhập lại chưa khớp.'),
+          backgroundColor: AppColors.alert,
+        ),
+      );
+      return;
+    }
+
+    final resetOk = await auth.resetPassword(
+      resetToken: resetTokenController.text.trim(),
+      newPassword: newPasswordController.text.trim(),
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(resetOk ? 'Đặt lại mật khẩu thành công.' : auth.errorMessage),
+        backgroundColor: resetOk ? AppColors.success : AppColors.alert,
+      ),
+    );
   }
 
   @override
@@ -187,13 +285,13 @@ class _PatientLoginFormState extends State<_PatientLoginForm> {
           child: Column(
             children: [
               _AuthField(
-                controller: _nicknameController,
-                label: 'Nickname hoặc email',
-                hint: 'rainy_panda hoặc email của bạn',
+                controller: _emailController,
+                label: 'Email đăng nhập',
+                hint: 'you@example.com',
                 icon: Icons.account_circle_outlined,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Vui lòng nhập tài khoản.';
+                    return 'Vui lòng nhập email.';
                   }
                   return null;
                 },
@@ -222,13 +320,17 @@ class _PatientLoginFormState extends State<_PatientLoginForm> {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Tính năng quên mật khẩu sẽ được nối ở batch sau.')),
-                    );
-                  },
+                  onPressed: isLoading ? null : () => _showForgotPasswordFlow(context, auth),
                   child: const Text('Quên mật khẩu?'),
                 ),
+              ),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _rememberMe,
+                onChanged: isLoading ? null : (value) => setState(() => _rememberMe = value ?? true),
+                controlAffinity: ListTileControlAffinity.leading,
+                title: const Text('Ghi nhớ đăng nhập'),
+                subtitle: const Text('Lưu refresh token an toàn trên thiết bị này.'),
               ),
               const SizedBox(height: 4),
               SizedBox(
@@ -306,7 +408,7 @@ class _PatientLoginFormState extends State<_PatientLoginForm> {
                         const SizedBox(width: 12),
                         const Expanded(
                           child: Text(
-                            'Bắt đầu ngay (Ẩn danh)',
+                            'Bắt đầu ngay (ẩn danh)',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
@@ -318,12 +420,12 @@ class _PatientLoginFormState extends State<_PatientLoginForm> {
                     ),
                     const SizedBox(height: 10),
                     const Text(
-                      'Bạn sẽ được chọn biệt danh và avatar hệ thống trước, sau đó làm bài đánh giá LSAS 24 câu để xem app có thực sự hiểu trải nghiệm lo âu xã hội của mình không.',
+                      'Bạn sẽ chọn biệt danh và avatar hệ thống trước, sau đó làm bài LSAS 24 câu để trải nghiệm app trong chế độ an toàn.',
                       style: TextStyle(color: AppColors.textSecondary, height: 1.45),
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      'Sau bài LSAS, app mới mời bạn cung cấp thông tin thật tối thiểu để phục vụ an toàn y tế và mở khóa lộ trình CBT.',
+                      'Sau LSAS, app sẽ mời bạn liên kết tài khoản và cập nhật thông tin y tế tối thiểu để mở khóa lộ trình CBT chính thức.',
                       style: TextStyle(color: AppColors.textSecondary, height: 1.45),
                     ),
                     const SizedBox(height: 14),
@@ -333,7 +435,7 @@ class _PatientLoginFormState extends State<_PatientLoginForm> {
                         onPressed: isLoading ? null : () => _onStartAnonymous(context, auth),
                         icon: const Icon(Icons.privacy_tip_outlined, color: AppColors.primary),
                         label: const Text(
-                          'Bắt đầu ngay (Ẩn danh)',
+                          'Bắt đầu ngay (ẩn danh)',
                           style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.primary),
                         ),
                         style: FilledButton.styleFrom(

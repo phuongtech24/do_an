@@ -21,6 +21,7 @@ class AuthProvider extends ChangeNotifier {
   LoginResponse? _loginResponse;
   PatientProfileModel? _patientProfile;
   GuestProfileModel? _guestProfile;
+  bool _pendingDailyCheckinAfterLogin = false;
 
   // Getters
   AuthStatus get status => _status;
@@ -31,6 +32,7 @@ class AuthProvider extends ChangeNotifier {
   String? get token => _loginResponse?.token;
   bool get isLoggedIn => _loginResponse != null;
   bool get isGuest => _loginResponse?.user.role == 'GUEST';
+  bool get pendingDailyCheckinAfterLogin => _pendingDailyCheckinAfterLogin;
 
   Future<void> restoreSession() async {
     _status = AuthStatus.restoring;
@@ -39,6 +41,12 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       _loginResponse = await _sessionStorage.readSession();
+      if (_loginResponse != null &&
+          _loginResponse!.hasRefreshToken &&
+          _isTokenExpired(_loginResponse!.accessTokenExpiresAt)) {
+        _loginResponse = await _repository.refreshToken(_loginResponse!.refreshToken);
+        await _sessionStorage.saveSessionWithPreference(_loginResponse!, rememberMe: true);
+      }
       if (_loginResponse?.user.role == 'PATIENT') {
         await loadPatientProfile();
       } else if (_loginResponse?.user.role == 'GUEST') {
@@ -56,17 +64,18 @@ class AuthProvider extends ChangeNotifier {
   // ========================================
   // ĐĂNG NHẬP
   // ========================================
-  Future<void> login(String email, String password) async {
+  Future<void> login(String email, String password, {bool rememberMe = true}) async {
     _status = AuthStatus.loading;
     _errorMessage = '';
     notifyListeners();
 
     try {
-      final request = LoginRequest(email: email, password: password);
+      final request = LoginRequest(email: email, password: password, rememberMe: rememberMe);
       _loginResponse = await _repository.login(request);
-      await _sessionStorage.saveSession(_loginResponse!);
+      await _sessionStorage.saveSessionWithPreference(_loginResponse!, rememberMe: rememberMe);
       if (_loginResponse?.user.role == 'PATIENT') {
         await loadPatientProfile();
+        _pendingDailyCheckinAfterLogin = true;
       } else if (_loginResponse?.user.role == 'GUEST') {
         await loadGuestProfile();
       }
@@ -139,7 +148,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       final response = await _repository.loginAnonymous(deviceId);
       _loginResponse = response;
-      await _sessionStorage.saveSession(response);
+      await _sessionStorage.saveSessionWithPreference(response, rememberMe: true);
       await loadGuestProfile();
       _status = AuthStatus.success;
       notifyListeners();
@@ -159,6 +168,7 @@ class AuthProvider extends ChangeNotifier {
     _loginResponse = null;
     _patientProfile = null;
     _guestProfile = null;
+    _pendingDailyCheckinAfterLogin = false;
     _sessionStorage.clearSession();
     _status = AuthStatus.idle;
     notifyListeners();
@@ -281,8 +291,9 @@ class AuthProvider extends ChangeNotifier {
       );
       _loginResponse = response;
       _guestProfile = null;
-      await _sessionStorage.saveSession(response);
+      await _sessionStorage.saveSessionWithPreference(response, rememberMe: true);
       await loadPatientProfile();
+      _pendingDailyCheckinAfterLogin = true;
       _status = AuthStatus.success;
       notifyListeners();
       return true;
@@ -292,5 +303,58 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  void consumePendingDailyCheckinFlag() {
+    _pendingDailyCheckinAfterLogin = false;
+    notifyListeners();
+  }
+
+  Future<bool> requestPasswordReset(String email) async {
+    _status = AuthStatus.loading;
+    _errorMessage = '';
+    notifyListeners();
+    try {
+      await _repository.requestPasswordReset(email);
+      _status = AuthStatus.success;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _status = AuthStatus.error;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> resetPassword({
+    required String resetToken,
+    required String newPassword,
+  }) async {
+    _status = AuthStatus.loading;
+    _errorMessage = '';
+    notifyListeners();
+    try {
+      await _repository.resetPassword(resetToken: resetToken, newPassword: newPassword);
+      _status = AuthStatus.success;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _status = AuthStatus.error;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
+  bool _isTokenExpired(String? isoString) {
+    if (isoString == null || isoString.isEmpty) {
+      return false;
+    }
+    final expiresAt = DateTime.tryParse(isoString)?.toUtc();
+    if (expiresAt == null) {
+      return false;
+    }
+    return DateTime.now().toUtc().isAfter(expiresAt.subtract(const Duration(seconds: 30)));
   }
 }

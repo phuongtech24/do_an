@@ -9,6 +9,9 @@ public class RoadmapProgramStateDto {
     private String programPhaseCode;
     private String programPhaseLabel;
     private String nextRecommendedIntervention;
+    private LocalDateTime therapyProgramStartedAt;
+    private LocalDateTime weekStartDate;
+    private LocalDateTime weekEndDate;
     private LocalDateTime nextRerateAt;
     private List<RoadmapProgramModuleDto> unlockedModules = new ArrayList<>();
     private List<RoadmapProgramModuleDto> lockedModules = new ArrayList<>();
@@ -44,6 +47,30 @@ public class RoadmapProgramStateDto {
 
     public void setNextRecommendedIntervention(String nextRecommendedIntervention) {
         this.nextRecommendedIntervention = nextRecommendedIntervention;
+    }
+
+    public LocalDateTime getTherapyProgramStartedAt() {
+        return therapyProgramStartedAt;
+    }
+
+    public void setTherapyProgramStartedAt(LocalDateTime therapyProgramStartedAt) {
+        this.therapyProgramStartedAt = therapyProgramStartedAt;
+    }
+
+    public LocalDateTime getWeekStartDate() {
+        return weekStartDate;
+    }
+
+    public void setWeekStartDate(LocalDateTime weekStartDate) {
+        this.weekStartDate = weekStartDate;
+    }
+
+    public LocalDateTime getWeekEndDate() {
+        return weekEndDate;
+    }
+
+    public void setWeekEndDate(LocalDateTime weekEndDate) {
+        this.weekEndDate = weekEndDate;
     }
 
     public LocalDateTime getNextRerateAt() {

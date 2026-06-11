@@ -24,7 +24,7 @@ public class JwtFilter extends OncePerRequestFilter {
             String authHeader = request.getHeader("Authorization");
             if ( authHeader != null && authHeader.startsWith("Bearer ")) {
                 String token = authHeader.substring(7);
-                if (jwtUtil.validateToken(token)) {
+                if (jwtUtil.validateAccessToken(token)) {
                     String email = jwtUtil.getEmailFromToken(token);
                     UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(email,null, new ArrayList<>());
                     // Lưu thông tin vào "Hồ sơ an ninh" của request hiện tại

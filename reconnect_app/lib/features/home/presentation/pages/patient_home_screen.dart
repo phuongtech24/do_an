@@ -19,7 +19,6 @@ class PatientHomeScreen extends StatefulWidget {
 }
 
 class _PatientHomeScreenState extends State<PatientHomeScreen> {
-  static bool _moodDialogShownThisSession = false;
   bool _isCheckingHomeGate = true;
 
   double _anxietyScore = 45.0;
@@ -27,7 +26,6 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   double _sadnessScore = 20.0;
   double _anticipatoryAnxietyScore = 3.0;
   double _postEventRuminationScore = 2.0;
-  String _selectedMoodLabel = 'Bình thường';
   bool _hasBoosterAlert = false;
 
   bool get _shouldTriggerSafetyGate => _anxietyScore >= 90 || _sadnessScore >= 90;
@@ -47,7 +45,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
       'Buồn bã ${_sadnessScore.toInt()}/100 • '
       'Lo âu dự kiến ${_anticipatoryAnxietyScore.toInt()}/8 • '
       'Nhai lại ${_postEventRuminationScore.toInt()}/8 • '
-      'Cảm xúc: $_selectedMoodLabel';
+      'Cảm xúc: ${_resolveMoodLabel()}';
 
   String get _checkInLabel {
     if (_anxietyScore >= 90 || _sadnessScore >= 90) {
@@ -83,10 +81,23 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     if (isReassuranceFlow) {
       return;
     }
-    if (!_moodDialogShownThisSession) {
-      _moodDialogShownThisSession = true;
+    final auth = context.read<AuthProvider>();
+    if (auth.pendingDailyCheckinAfterLogin) {
       _showMoodCheckDialog();
     }
+  }
+
+  String _resolveMoodLabel() {
+    if (_sadnessScore >= 60 && _sadnessScore >= _anxietyScore) {
+      return 'Buồn bã';
+    }
+    if (_avoidanceUrgeScore >= 60 && _avoidanceUrgeScore > _anxietyScore) {
+      return 'Muốn né tránh';
+    }
+    if (_anxietyScore >= 50 || _anticipatoryAnxietyScore >= 4 || _postEventRuminationScore >= 4) {
+      return 'Lo âu';
+    }
+    return 'Ổn định';
   }
 
   void _showRecoveryCongratsDialog() {
@@ -215,28 +226,21 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     },
                   ),
                   const SizedBox(height: 12),
-                  const Text('Bạn đang cảm thấy thế nào?', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: ['Vui vẻ', 'Bình thường', 'Buồn bã', 'Lo âu', 'Giận dữ'].map((label) {
-                      final isSelected = _selectedMoodLabel == label;
-                      return ChoiceChip(
-                        label: Text(
-                          label,
-                          style: TextStyle(fontSize: 11, color: isSelected ? Colors.white : Colors.black87),
-                        ),
-                        selected: isSelected,
-                        selectedColor: AppColors.primary,
-                        onSelected: (selected) {
-                          if (selected) {
-                            setDialogState(() => _selectedMoodLabel = label);
-                            setState(() => _selectedMoodLabel = label);
-                          }
-                        },
-                      );
-                    }).toList(),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.06),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Text(
+                      'Nhãn cảm xúc hôm nay sẽ được hệ thống tự gán: ${_resolveMoodLabel()}',
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        color: AppColors.textSecondary,
+                        height: 1.4,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -244,7 +248,10 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () {
+                  context.read<AuthProvider>().consumePendingDailyCheckinFlag();
+                  Navigator.pop(context);
+                },
                 child: const Text('Bỏ qua', style: TextStyle(color: Colors.grey)),
               ),
               ElevatedButton(
@@ -285,6 +292,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     }
 
                     Navigator.pop(context);
+                    authProvider.consumePendingDailyCheckinFlag();
                     if (safetyResponse == 'UNSAFE') {
                       context.go('/safety-support');
                       return;

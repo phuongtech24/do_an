@@ -1,6 +1,10 @@
 package com.reconnect.mindhealth.modules.auth.service.impl;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
+import java.util.Date;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,9 +20,12 @@ import com.reconnect.mindhealth.modules.assessment.dto.LsasSubmissionDto;
 import com.reconnect.mindhealth.modules.assessment.enums.LsasSubmissionType;
 import com.reconnect.mindhealth.modules.assessment.service.IAssessmentService;
 import com.reconnect.mindhealth.modules.auth.dto.GuestLinkAccountRequestDto;
+import com.reconnect.mindhealth.modules.auth.dto.ForgotPasswordRequestDto;
 import com.reconnect.mindhealth.modules.auth.dto.LoginRequest;
 import com.reconnect.mindhealth.modules.auth.dto.LoginResponse;
+import com.reconnect.mindhealth.modules.auth.dto.RefreshTokenRequestDto;
 import com.reconnect.mindhealth.modules.auth.dto.RegisterRequest;
+import com.reconnect.mindhealth.modules.auth.dto.ResetPasswordRequestDto;
 import com.reconnect.mindhealth.modules.auth.dto.UserDto;
 import com.reconnect.mindhealth.modules.auth.entity.User;
 import com.reconnect.mindhealth.modules.auth.enums.Role;
@@ -145,8 +152,7 @@ public class AuthServiceImpl implements IAuthService {
             enforceTherapistNotRejected(entity);
         }
 
-        String token = this.jwtUtil.generateToken(entity.getEmail());
-        return new LoginResponse(new UserDto(entity), token);
+        return buildLoginResponse(entity);
     }
 
     private void validatePasswordOrThrow(LoginRequest request, User user) {
@@ -207,14 +213,13 @@ public class AuthServiceImpl implements IAuthService {
             guestProfileCreated = true;
         }
 
-        String token = this.jwtUtil.generateToken(entity.getEmail());
         log.info(
                 "Guest auth success deviceId={}, userId={}, createdUser={}, guestProfileCreated={}",
                 normalizedDeviceId,
                 entity.getId(),
                 createdUser[0],
                 guestProfileCreated);
-        return new LoginResponse(new UserDto(entity), token);
+        return buildLoginResponse(entity);
     }
 
     @Override
@@ -283,12 +288,70 @@ public class AuthServiceImpl implements IAuthService {
         migratePendingLsasIfPresent(patientProfile, guestProfile);
         guestProfileRepository.delete(guestProfile);
 
-        String token = this.jwtUtil.generateToken(guestUser.getEmail());
         log.info("Guest converted to patient guestId={}, patientId={}, email={}",
                 request.getGuestId(),
                 patientProfile.getId(),
                 normalizedEmail);
-        return new LoginResponse(new UserDto(guestUser), token);
+        return buildLoginResponse(guestUser);
+    }
+
+    @Override
+    public LoginResponse refreshToken(RefreshTokenRequestDto request) {
+        if (request == null || isBlank(request.getRefreshToken())) {
+            throw new IllegalArgumentException("Thiếu refresh token.");
+        }
+        String refreshToken = request.getRefreshToken().trim();
+        if (!jwtUtil.validateRefreshToken(refreshToken)) {
+            throw new IllegalArgumentException("Refresh token không hợp lệ hoặc đã hết hạn.");
+        }
+        String email = jwtUtil.getEmailFromToken(refreshToken);
+        User entity = userRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy tài khoản."));
+        if (Boolean.FALSE.equals(entity.getIsActive())) {
+            throw new IllegalStateException("Tài khoản đã bị khóa.");
+        }
+        return buildLoginResponse(entity);
+    }
+
+    @Override
+    public void requestPasswordReset(ForgotPasswordRequestDto request) {
+        if (request == null || isBlank(request.getEmail())) {
+            throw new IllegalArgumentException("Email là bắt buộc.");
+        }
+        String normalizedEmail = request.getEmail().trim().toLowerCase(Locale.ROOT);
+        userRepository.findByEmail(normalizedEmail).ifPresent(user -> {
+            String resetToken = generateResetToken();
+            Date expiresAt = new Date(System.currentTimeMillis() + 15 * 60 * 1000L);
+            user.setResetPasswordToken(resetToken);
+            user.setResetPasswordExpiresAt(expiresAt);
+            userRepository.save(user);
+            log.info("Password reset token generated email={}, resetToken={}, expiresAt={}",
+                    normalizedEmail,
+                    resetToken,
+                    expiresAt);
+        });
+    }
+
+    @Override
+    public void resetPassword(ResetPasswordRequestDto request) {
+        if (request == null || isBlank(request.getResetToken())) {
+            throw new IllegalArgumentException("Thiếu reset token.");
+        }
+        if (isBlank(request.getNewPassword()) || request.getNewPassword().trim().length() < 6) {
+            throw new IllegalArgumentException("Mật khẩu mới phải có ít nhất 6 ký tự.");
+        }
+        User entity = userRepository.findAll().stream()
+                .filter(user -> request.getResetToken().trim().equals(user.getResetPasswordToken()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Reset token không hợp lệ."));
+        if (entity.getResetPasswordExpiresAt() == null
+                || entity.getResetPasswordExpiresAt().before(new Date())) {
+            throw new IllegalArgumentException("Reset token đã hết hạn.");
+        }
+        entity.setPasswordHash(passwordEncoder.encode(request.getNewPassword().trim()));
+        entity.setResetPasswordToken(null);
+        entity.setResetPasswordExpiresAt(null);
+        userRepository.save(entity);
     }
 
     private void migratePendingLsasIfPresent(PatientProfile patientProfile, GuestProfile guestProfile) {
@@ -343,5 +406,25 @@ public class AuthServiceImpl implements IAuthService {
 
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    private LoginResponse buildLoginResponse(User entity) {
+        String accessToken = jwtUtil.generateAccessToken(entity.getEmail());
+        String refreshToken = jwtUtil.generateRefreshToken(entity.getEmail());
+        LoginResponse response = new LoginResponse();
+        response.setUser(new UserDto(entity));
+        response.setAccessToken(accessToken);
+        response.setRefreshToken(refreshToken);
+        response.setAccessTokenExpiresAt(jwtUtil.getAccessTokenExpiresAt());
+        response.setRefreshTokenExpiresAt(jwtUtil.getRefreshTokenExpiresAt());
+        response.setExpiresIn(jwtUtil.getAccessTokenExpiresIn());
+        response.setRefreshExpiresIn(jwtUtil.getRefreshTokenExpiresIn());
+        response.setToken(accessToken);
+        return response;
+    }
+
+    private String generateResetToken() {
+        long randomPart = ThreadLocalRandom.current().nextLong(100000, 999999);
+        return "RST-" + randomPart + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT);
     }
 }

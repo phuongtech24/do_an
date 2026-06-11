@@ -58,6 +58,9 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
           it.description.toLowerCase().contains(q) ||
           it.category.toLowerCase().contains(q) ||
           it.difficulty.toLowerCase().contains(q) ||
+          it.moduleCode.toLowerCase().contains(q) ||
+          it.programPhaseCode.toLowerCase().contains(q) ||
+          it.interventionType.toLowerCase().contains(q) ||
           it.id.toLowerCase().contains(q);
     }).toList();
   }
@@ -69,8 +72,16 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
 
     final titleCtrl = TextEditingController(text: item?.title ?? '');
     final descCtrl = TextEditingController(text: item?.description ?? '');
+    final moduleCodeCtrl = TextEditingController(text: item?.moduleCode ?? '');
+    final programWeekCtrl =
+        TextEditingController(text: item?.programWeek != null ? '${item!.programWeek}' : '');
+
     String category = item?.category ?? 'BEHAVIORAL';
     String difficulty = item?.difficulty ?? 'EASY';
+    String programPhaseCode = item?.programPhaseCode ?? 'PHASE_1_FOUNDATION';
+    String interventionType = item?.interventionType ?? 'BEHAVIORAL_EXPERIMENT';
+    bool therapistOnlyAssignable = item?.therapistOnlyAssignable ?? false;
+    bool hardLocked = item?.hardLocked ?? false;
 
     final ok = await showDialog<bool>(
       context: context,
@@ -78,53 +89,164 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
         builder: (context, setDialogState) => AlertDialog(
           title: Text(item == null ? 'Thêm Quest Template' : 'Chỉnh sửa Quest Template'),
           content: SizedBox(
-            width: 520,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: titleCtrl,
-                  decoration: const InputDecoration(labelText: 'Title', border: OutlineInputBorder()),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: descCtrl,
-                  minLines: 3,
-                  maxLines: 6,
-                  decoration: const InputDecoration(labelText: 'Description', border: OutlineInputBorder()),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        value: category,
-                        decoration: const InputDecoration(labelText: 'Category', border: OutlineInputBorder()),
-                        items: const [
-                          DropdownMenuItem(value: 'BEHAVIORAL', child: Text('BEHAVIORAL')),
-                          DropdownMenuItem(value: 'COGNITIVE', child: Text('COGNITIVE')),
-                          DropdownMenuItem(value: 'EMOTIONAL', child: Text('EMOTIONAL')),
-                          DropdownMenuItem(value: 'SOCIAL', child: Text('SOCIAL')),
-                        ],
-                        onChanged: (val) => setDialogState(() => category = val ?? category),
-                      ),
+            width: 560,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: titleCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Title',
+                      border: OutlineInputBorder(),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        value: difficulty,
-                        decoration: const InputDecoration(labelText: 'Difficulty', border: OutlineInputBorder()),
-                        items: const [
-                          DropdownMenuItem(value: 'EASY', child: Text('EASY')),
-                          DropdownMenuItem(value: 'MEDIUM', child: Text('MEDIUM')),
-                          DropdownMenuItem(value: 'HARD', child: Text('HARD')),
-                        ],
-                        onChanged: (val) => setDialogState(() => difficulty = val ?? difficulty),
-                      ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: descCtrl,
+                    minLines: 3,
+                    maxLines: 6,
+                    decoration: const InputDecoration(
+                      labelText: 'Description',
+                      border: OutlineInputBorder(),
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: moduleCodeCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Module Code',
+                      hintText: 'Ví dụ: SAFETY_BEHAVIOR_DROP',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          value: category,
+                          decoration: const InputDecoration(
+                            labelText: 'Category',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: 'BEHAVIORAL', child: Text('BEHAVIORAL')),
+                            DropdownMenuItem(value: 'COGNITIVE', child: Text('COGNITIVE')),
+                            DropdownMenuItem(value: 'EMOTIONAL', child: Text('EMOTIONAL')),
+                            DropdownMenuItem(value: 'SOCIAL', child: Text('SOCIAL')),
+                          ],
+                          onChanged: (val) => setDialogState(() => category = val ?? category),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          value: difficulty,
+                          decoration: const InputDecoration(
+                            labelText: 'Difficulty',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: 'EASY', child: Text('EASY')),
+                            DropdownMenuItem(value: 'MEDIUM', child: Text('MEDIUM')),
+                            DropdownMenuItem(value: 'HARD', child: Text('HARD')),
+                          ],
+                          onChanged: (val) => setDialogState(() => difficulty = val ?? difficulty),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: programWeekCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'Program Week',
+                            hintText: 'Ví dụ: 3',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          value: programPhaseCode,
+                          decoration: const InputDecoration(
+                            labelText: 'Program Phase',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'PHASE_1_FOUNDATION',
+                              child: Text('PHASE_1_FOUNDATION'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'PHASE_2_REAL_WORLD',
+                              child: Text('PHASE_2_REAL_WORLD'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'PHASE_3_DEEP_COGNITIVE',
+                              child: Text('PHASE_3_DEEP_COGNITIVE'),
+                            ),
+                          ],
+                          onChanged: (val) => setDialogState(
+                            () => programPhaseCode = val ?? programPhaseCode,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: interventionType,
+                    decoration: const InputDecoration(
+                      labelText: 'Intervention Type',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: 'BEHAVIORAL_EXPERIMENT',
+                        child: Text('BEHAVIORAL_EXPERIMENT'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'VICIOUS_CYCLE_MAP',
+                        child: Text('VICIOUS_CYCLE_MAP'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'VIDEO_FEEDBACK',
+                        child: Text('VIDEO_FEEDBACK'),
+                      ),
+                      DropdownMenuItem(value: 'SURVEY', child: Text('SURVEY')),
+                      DropdownMenuItem(value: 'THEN_VS_NOW', child: Text('THEN_VS_NOW')),
+                      DropdownMenuItem(
+                        value: 'IMAGERY_RESCRIPTING',
+                        child: Text('IMAGERY_RESCRIPTING'),
+                      ),
+                      DropdownMenuItem(value: 'THOUGHT_RECORD', child: Text('THOUGHT_RECORD')),
+                    ],
+                    onChanged: (val) => setDialogState(() => interventionType = val ?? interventionType),
+                  ),
+                  const SizedBox(height: 8),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Therapist only assignable'),
+                    subtitle: const Text('Chỉ bác sĩ mới giao bài này cho bệnh nhân'),
+                    value: therapistOnlyAssignable,
+                    onChanged: (val) => setDialogState(() => therapistOnlyAssignable = val),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Hard locked'),
+                    subtitle: const Text('Khóa cứng cho tới khi đúng phase / đủ điều kiện'),
+                    value: hardLocked,
+                    onChanged: (val) => setDialogState(() => hardLocked = val),
+                  ),
+                ],
+              ),
             ),
           ),
           actions: [
@@ -146,6 +268,9 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
 
     final title = titleCtrl.text.trim();
     final description = descCtrl.text.trim();
+    final moduleCode = moduleCodeCtrl.text.trim();
+    final weekRaw = programWeekCtrl.text.trim();
+    final programWeek = weekRaw.isEmpty ? null : int.tryParse(weekRaw);
     if (title.isEmpty || description.isEmpty) return;
 
     setState(() {
@@ -162,6 +287,12 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
             description: description,
             category: category,
             difficulty: difficulty,
+            moduleCode: moduleCode,
+            programWeek: programWeek,
+            programPhaseCode: programPhaseCode,
+            interventionType: interventionType,
+            therapistOnlyAssignable: therapistOnlyAssignable,
+            hardLocked: hardLocked,
           ),
         );
         if (!mounted) return;
@@ -170,7 +301,18 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
         final updated = await _repo.update(
           token: token,
           id: item.id,
-          input: item.copyWith(title: title, description: description, category: category, difficulty: difficulty),
+          input: item.copyWith(
+            title: title,
+            description: description,
+            category: category,
+            difficulty: difficulty,
+            moduleCode: moduleCode,
+            programWeek: programWeek,
+            programPhaseCode: programPhaseCode,
+            interventionType: interventionType,
+            therapistOnlyAssignable: therapistOnlyAssignable,
+            hardLocked: hardLocked,
+          ),
         );
         if (!mounted) return;
         setState(() => _items = _items.map((x) => x.id == item.id ? updated : x).toList());
@@ -234,7 +376,7 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
           children: [
             const Expanded(
               child: Text(
-                'Kho Nội dung CBT (Quest Templates)',
+                'Kho nội dung CBT (Quest Templates)',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
             ),
@@ -250,13 +392,13 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'CRUD quest templates dùng cho Roadmap assign.',
+          'Quản trị kho bài tập CBT và metadata 14 tuần cho roadmap.',
           style: TextStyle(color: AppColors.textSecondary),
         ),
         const SizedBox(height: 16),
         TextField(
           decoration: InputDecoration(
-            hintText: 'Tìm theo title/description/category/difficulty...',
+            hintText: 'Tìm theo title, module code, phase, type...',
             prefixIcon: const Icon(Icons.search, color: Colors.grey),
             filled: true,
             fillColor: Colors.white,
@@ -294,7 +436,16 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
                       return ListTile(
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         title: Text(it.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text('${it.category} • ${it.difficulty}\n${it.description}'),
+                        subtitle: Text(
+                          '${it.category} • ${it.difficulty}'
+                          '${it.moduleCode.isNotEmpty ? ' • ${it.moduleCode}' : ''}'
+                          '${it.programWeek != null ? ' • Tuần ${it.programWeek}' : ''}'
+                          '${it.programPhaseCode.isNotEmpty ? ' • ${it.programPhaseCode}' : ''}'
+                          '\n${it.description}'
+                          '${it.interventionType.isNotEmpty ? '\nType: ${it.interventionType}' : ''}'
+                          '${it.therapistOnlyAssignable ? '\nChỉ bác sĩ giao' : ''}'
+                          '${it.hardLocked ? ' • Hard lock' : ''}',
+                        ),
                         isThreeLine: true,
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -320,4 +471,3 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
     );
   }
 }
-

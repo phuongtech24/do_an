@@ -9,8 +9,10 @@ class RoadmapProgramModuleModel {
   final String prerequisiteCodesJson;
   final bool hardLocked;
   final bool unlocked;
+  final String unlockType;
   final String lockReason;
   final bool therapistOnlyAssignable;
+  final String? expectedUnlockAt;
 
   const RoadmapProgramModuleModel({
     required this.moduleCode,
@@ -23,8 +25,10 @@ class RoadmapProgramModuleModel {
     required this.prerequisiteCodesJson,
     required this.hardLocked,
     required this.unlocked,
+    required this.unlockType,
     required this.lockReason,
     required this.therapistOnlyAssignable,
+    required this.expectedUnlockAt,
   });
 
   factory RoadmapProgramModuleModel.fromJson(Map<String, dynamic> json) {
@@ -39,8 +43,10 @@ class RoadmapProgramModuleModel {
       prerequisiteCodesJson: json['prerequisiteCodesJson']?.toString() ?? '[]',
       hardLocked: json['hardLocked'] == true,
       unlocked: json['unlocked'] == true,
+      unlockType: json['unlockType']?.toString() ?? '',
       lockReason: json['lockReason']?.toString() ?? '',
       therapistOnlyAssignable: json['therapistOnlyAssignable'] == true,
+      expectedUnlockAt: json['expectedUnlockAt']?.toString(),
     );
   }
 }

@@ -60,8 +60,10 @@ class RoadmapProvider extends ChangeNotifier {
   Future<bool> startTodayExperiment({
     required String experimentId,
     required String prediction,
-    required int predictionBelief,
+    int? predictionBeliefBefore,
+    int? predictionBelief,
     required List<String> safetyBehaviors,
+    bool dropWithoutSafetyBehaviors = false,
     String? token,
   }) async {
     _status = RoadmapStatus.loading;
@@ -72,8 +74,10 @@ class RoadmapProvider extends ChangeNotifier {
       _todayExperiment = await _repository.startBehavioralExperiment(
         experimentId,
         prediction: prediction,
+        predictionBeliefBefore: predictionBeliefBefore,
         predictionBelief: predictionBelief,
         safetyBehaviors: safetyBehaviors,
+        dropWithoutSafetyBehaviors: dropWithoutSafetyBehaviors,
         token: token,
       );
       _status = RoadmapStatus.success;
@@ -90,7 +94,10 @@ class RoadmapProvider extends ChangeNotifier {
   Future<bool> debriefTodayExperiment({
     required String experimentId,
     required String executionNotes,
-    required String debrief,
+    String? outcome,
+    String? learning,
+    int? predictionBeliefAfter,
+    String? debrief,
     required int postFearScore,
     required int postAvoidanceScore,
     String? token,
@@ -103,6 +110,9 @@ class RoadmapProvider extends ChangeNotifier {
       _todayExperiment = await _repository.debriefBehavioralExperiment(
         experimentId,
         executionNotes: executionNotes,
+        outcome: outcome,
+        learning: learning,
+        predictionBeliefAfter: predictionBeliefAfter,
         debrief: debrief,
         postFearScore: postFearScore,
         postAvoidanceScore: postAvoidanceScore,

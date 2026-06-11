@@ -9,10 +9,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.reconnect.mindhealth.common.dto.ApiResponse;
+import com.reconnect.mindhealth.modules.auth.dto.ForgotPasswordRequestDto;
 import com.reconnect.mindhealth.modules.auth.dto.GuestLinkAccountRequestDto;
 import com.reconnect.mindhealth.modules.auth.dto.LoginRequest;
 import com.reconnect.mindhealth.modules.auth.dto.LoginResponse;
+import com.reconnect.mindhealth.modules.auth.dto.RefreshTokenRequestDto;
 import com.reconnect.mindhealth.modules.auth.dto.RegisterRequest;
+import com.reconnect.mindhealth.modules.auth.dto.ResetPasswordRequestDto;
 import com.reconnect.mindhealth.modules.auth.dto.UserDto;
 import com.reconnect.mindhealth.modules.auth.service.IAuthService;
 
@@ -63,6 +66,39 @@ public class AuthController {
         try {
             LoginResponse rs = authService.linkGuestAccount(request);
             return ResponseEntity.ok(ApiResponse.success("Đã liên kết tài khoản thành công.", rs));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<LoginResponse>> refresh(@RequestBody RefreshTokenRequestDto request) {
+        try {
+            LoginResponse rs = authService.refreshToken(request);
+            return ResponseEntity.ok(ApiResponse.success("Làm mới phiên đăng nhập thành công.", rs));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(@RequestBody ForgotPasswordRequestDto request) {
+        try {
+            authService.requestPasswordReset(request);
+            return ResponseEntity.ok(ApiResponse.success("Nếu email tồn tại, hệ thống đã tạo yêu cầu đặt lại mật khẩu.", null));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(@RequestBody ResetPasswordRequestDto request) {
+        try {
+            authService.resetPassword(request);
+            return ResponseEntity.ok(ApiResponse.success("Đặt lại mật khẩu thành công.", null));
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));

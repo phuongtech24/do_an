@@ -19,7 +19,6 @@ import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileReposi
 import com.reconnect.mindhealth.modules.roadmap.dto.PatientQuestDto;
 import com.reconnect.mindhealth.modules.roadmap.dto.RoadmapProgramModuleDto;
 import com.reconnect.mindhealth.modules.roadmap.dto.RoadmapProgramStateDto;
-import com.reconnect.mindhealth.modules.roadmap.entity.PatientQuest;
 import com.reconnect.mindhealth.modules.roadmap.entity.QuestTemplate;
 import com.reconnect.mindhealth.modules.roadmap.enums.QuestStatus;
 import com.reconnect.mindhealth.modules.roadmap.repository.PatientQuestRepository;
@@ -72,7 +71,7 @@ public class RoadmapProgramStateService {
                 .toList();
 
         for (QuestTemplate template : clinicalTemplates) {
-            RoadmapProgramModuleDto moduleDto = toModuleDto(template, phase, programWeek, patient.getId());
+            RoadmapProgramModuleDto moduleDto = toModuleDto(template, phase, programWeek, patient);
             if (Boolean.TRUE.equals(moduleDto.getUnlocked())) {
                 unlocked.add(moduleDto);
             } else {
@@ -85,6 +84,9 @@ public class RoadmapProgramStateService {
         dto.setProgramPhaseCode(phase.code());
         dto.setProgramPhaseLabel(phase.label());
         dto.setNextRecommendedIntervention(resolveNextRecommendedIntervention(programWeek));
+        dto.setTherapyProgramStartedAt(patient.getTherapyProgramStartedAt());
+        dto.setWeekStartDate(resolveWeekStartDate(patient, programWeek));
+        dto.setWeekEndDate(resolveWeekEndDate(patient, programWeek));
         dto.setNextRerateAt(resolveNextRerateAt(patient));
         dto.setUnlockedModules(unlocked);
         dto.setLockedModules(locked);
@@ -153,7 +155,7 @@ public class RoadmapProgramStateService {
             QuestTemplate template,
             ProgramPhase currentPhase,
             int currentWeek,
-            UUID patientId) {
+            PatientProfile patient) {
         RoadmapProgramModuleDto dto = new RoadmapProgramModuleDto();
         dto.setModuleCode(template.getModuleCode());
         dto.setTitle(template.getTitle());
@@ -165,21 +167,29 @@ public class RoadmapProgramStateService {
         dto.setPrerequisiteCodesJson(template.getPrerequisiteCodesJson());
         dto.setHardLocked(Boolean.TRUE.equals(template.getHardLocked()));
         dto.setTherapistOnlyAssignable(Boolean.TRUE.equals(template.getTherapistOnlyAssignable()));
+        dto.setExpectedUnlockAt(resolveExpectedUnlockAt(patient, template.getProgramWeek()));
 
         boolean weekUnlocked = template.getProgramWeek() == null || currentWeek >= template.getProgramWeek();
         List<String> prerequisites = readPrerequisites(template.getPrerequisiteCodesJson());
-        boolean prerequisitesMet = prerequisites.stream().allMatch(code -> isModuleCompleted(patientId, code));
+        boolean prerequisitesMet = prerequisites.stream().allMatch(code -> isModuleCompleted(patient.getId(), code));
         boolean unlocked = weekUnlocked && prerequisitesMet;
         dto.setUnlocked(unlocked);
 
         if (!weekUnlocked) {
+            dto.setUnlockType("TIME");
             dto.setLockReason("Mở từ tuần " + template.getProgramWeek() + " của lộ trình.");
         } else if (!prerequisitesMet) {
+            dto.setUnlockType("PREREQUISITE");
             dto.setLockReason("Cần hoàn thành module tiên quyết trước.");
         } else if (!currentPhase.code().equalsIgnoreCase(template.getProgramPhaseCode())
                 && Boolean.TRUE.equals(template.getHardLocked())) {
+            dto.setUnlockType("HARD_LOCK");
             dto.setLockReason("Kỹ thuật nâng cao chỉ mở đúng phase lâm sàng.");
+        } else if (Boolean.TRUE.equals(template.getTherapistOnlyAssignable()) && !unlocked) {
+            dto.setUnlockType("THERAPIST_ASSIGNMENT");
+            dto.setLockReason("Đang chờ bác sĩ giao bài phù hợp.");
         } else {
+            dto.setUnlockType(unlocked ? "UNLOCKED" : "TIME");
             dto.setLockReason("");
         }
         return dto;
@@ -206,7 +216,7 @@ public class RoadmapProgramStateService {
 
     private String resolveNextRecommendedIntervention(int week) {
         if (week <= 1) {
-            return "Hoàn tất Bản đồ vòng lặp lo âu và nhận diện suy nghĩ - triệu chứng - hành vi an toàn.";
+            return "Hoàn tất bản đồ vòng lặp lo âu và nhận diện suy nghĩ - triệu chứng - hành vi an toàn.";
         }
         if (week <= 3) {
             return "Ưu tiên các bài vứt bỏ hành vi an toàn và so sánh trải nghiệm trước/sau.";
@@ -223,6 +233,29 @@ public class RoadmapProgramStateService {
             return null;
         }
         return cycleStart.plusDays(14);
+    }
+
+    private LocalDateTime resolveWeekStartDate(PatientProfile patient, int programWeek) {
+        LocalDateTime startedAt = patient.getTherapyProgramStartedAt();
+        if (startedAt == null || programWeek <= 0) {
+            return null;
+        }
+        return startedAt.plusDays(Math.max(0, (programWeek - 1) * 7L));
+    }
+
+    private LocalDateTime resolveWeekEndDate(PatientProfile patient, int programWeek) {
+        LocalDateTime weekStart = resolveWeekStartDate(patient, programWeek);
+        if (weekStart == null) {
+            return null;
+        }
+        return weekStart.plusDays(6);
+    }
+
+    private LocalDateTime resolveExpectedUnlockAt(PatientProfile patient, Integer targetWeek) {
+        if (patient == null || patient.getTherapyProgramStartedAt() == null || targetWeek == null || targetWeek <= 0) {
+            return null;
+        }
+        return patient.getTherapyProgramStartedAt().plusDays(Math.max(0, (targetWeek - 1) * 7L));
     }
 
     private Integer resolveWeekTo(String moduleCode, Integer weekFrom) {

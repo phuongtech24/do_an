@@ -78,6 +78,13 @@ public class AdminQuestTemplateController {
             if (dto.getDifficulty() != null) {
                 qt.setDifficulty(dto.getDifficulty());
             }
+            qt.setModuleCode(dto.getModuleCode());
+            qt.setProgramWeek(dto.getProgramWeek());
+            qt.setProgramPhaseCode(dto.getProgramPhaseCode());
+            qt.setInterventionType(dto.getInterventionType());
+            qt.setPrerequisiteCodesJson(dto.getPrerequisiteCodesJson());
+            qt.setTherapistOnlyAssignable(Boolean.TRUE.equals(dto.getTherapistOnlyAssignable()));
+            qt.setHardLocked(Boolean.TRUE.equals(dto.getHardLocked()));
 
             QuestTemplate saved = questTemplateRepository.save(qt);
             return ResponseEntity.ok(ApiResponse.success("OK", new QuestTemplateDto(saved)));
@@ -105,6 +112,17 @@ public class AdminQuestTemplateController {
             if (dto.getDifficulty() != null) {
                 qt.setDifficulty(dto.getDifficulty());
             }
+            qt.setModuleCode(dto.getModuleCode());
+            qt.setProgramWeek(dto.getProgramWeek());
+            qt.setProgramPhaseCode(dto.getProgramPhaseCode());
+            qt.setInterventionType(dto.getInterventionType());
+            qt.setPrerequisiteCodesJson(dto.getPrerequisiteCodesJson());
+            if (dto.getTherapistOnlyAssignable() != null) {
+                qt.setTherapistOnlyAssignable(dto.getTherapistOnlyAssignable());
+            }
+            if (dto.getHardLocked() != null) {
+                qt.setHardLocked(dto.getHardLocked());
+            }
 
             QuestTemplate saved = questTemplateRepository.save(qt);
             return ResponseEntity.ok(ApiResponse.success("OK", new QuestTemplateDto(saved)));
@@ -126,4 +144,3 @@ public class AdminQuestTemplateController {
         }
     }
 }
-

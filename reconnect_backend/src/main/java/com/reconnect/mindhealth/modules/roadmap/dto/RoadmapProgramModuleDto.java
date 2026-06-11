@@ -1,5 +1,7 @@
 package com.reconnect.mindhealth.modules.roadmap.dto;
 
+import java.time.LocalDateTime;
+
 public class RoadmapProgramModuleDto {
     private String moduleCode;
     private String title;
@@ -11,8 +13,10 @@ public class RoadmapProgramModuleDto {
     private String prerequisiteCodesJson;
     private Boolean hardLocked;
     private Boolean unlocked;
+    private String unlockType;
     private String lockReason;
     private Boolean therapistOnlyAssignable;
+    private LocalDateTime expectedUnlockAt;
 
     public String getModuleCode() {
         return moduleCode;
@@ -94,6 +98,14 @@ public class RoadmapProgramModuleDto {
         this.unlocked = unlocked;
     }
 
+    public String getUnlockType() {
+        return unlockType;
+    }
+
+    public void setUnlockType(String unlockType) {
+        this.unlockType = unlockType;
+    }
+
     public String getLockReason() {
         return lockReason;
     }
@@ -108,5 +120,13 @@ public class RoadmapProgramModuleDto {
 
     public void setTherapistOnlyAssignable(Boolean therapistOnlyAssignable) {
         this.therapistOnlyAssignable = therapistOnlyAssignable;
+    }
+
+    public LocalDateTime getExpectedUnlockAt() {
+        return expectedUnlockAt;
+    }
+
+    public void setExpectedUnlockAt(LocalDateTime expectedUnlockAt) {
+        this.expectedUnlockAt = expectedUnlockAt;
     }
 }

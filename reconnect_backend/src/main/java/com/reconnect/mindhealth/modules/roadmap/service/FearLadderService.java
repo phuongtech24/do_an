@@ -224,18 +224,31 @@ public class FearLadderService {
     @Transactional
     public BehavioralExperimentDto startExperiment(UUID experimentId, BehavioralExperimentStartRequestDto request) {
         BehavioralExperiment experiment = requireExperiment(experimentId);
+        String prediction = normalizeRequiredText(request.getPrediction(), "prediction");
         String normalizedSafetyBehaviorsJson = normalizeSafetyBehaviorsJson(request.getSafetyBehaviorsJson());
-        experiment.setPrediction(request.getPrediction());
-        experiment.setPredictionBelief(normalizePercent(request.getPredictionBelief()));
+        if (!hasSafetyBehaviorCommitment(normalizedSafetyBehaviorsJson,
+                Boolean.TRUE.equals(request.getDropWithoutSafetyBehaviors()))) {
+            throw new IllegalArgumentException("Cần chọn ít nhất một hành vi an toàn để giảm hoặc xác nhận không dùng hành vi an toàn.");
+        }
+        Integer beliefSource = request.getPredictionBeliefBefore() != null
+                ? request.getPredictionBeliefBefore()
+                : request.getPredictionBelief();
+        int beliefBefore = normalizeRequiredPercent(beliefSource, "predictionBeliefBefore");
+        experiment.setPrediction(prediction);
+        experiment.setPredictionBelief(beliefBefore);
+        experiment.setPredictionBeliefBefore(beliefBefore);
         experiment.setSafetyBehaviorsJson(normalizedSafetyBehaviorsJson);
+        experiment.setSetupCompletedAt(LocalDateTime.now());
+        experiment.setStartedAt(LocalDateTime.now());
+        experiment.setFocusReminderShown(true);
         experiment.setStatus(BehavioralExperimentStatus.IN_PROGRESS);
         BehavioralExperiment saved = behavioralExperimentRepository.save(experiment);
         log.info(
-                "Behavioral experiment started patientId={}, experimentId={}, ladderItemId={}, predictionBelief={}, safetyBehaviorsJsonNormalized={}",
+                "Behavioral experiment started patientId={}, experimentId={}, ladderItemId={}, predictionBeliefBefore={}, safetyBehaviorsJsonNormalized={}",
                 saved.getPatientProfile() != null ? saved.getPatientProfile().getId() : null,
                 saved.getId(),
                 saved.getFearLadderItem() != null ? saved.getFearLadderItem().getId() : null,
-                saved.getPredictionBelief(),
+                saved.getPredictionBeliefBefore(),
                 normalizedSafetyBehaviorsJson);
         return new BehavioralExperimentDto(saved);
     }
@@ -243,9 +256,17 @@ public class FearLadderService {
     @Transactional
     public BehavioralExperimentDto debriefExperiment(UUID experimentId, BehavioralExperimentDebriefRequestDto request) {
         BehavioralExperiment experiment = requireExperiment(experimentId);
-        experiment.setExecutionNotes(request.getExecutionNotes());
+        if (experiment.getSetupCompletedAt() == null) {
+            throw new IllegalStateException("Bài thực hành chưa hoàn tất bước thiết lập.");
+        }
+        experiment.setExecutionNotes(trimToNull(request.getExecutionNotes()));
         experiment.setProofImageUrl(request.getProofImageUrl());
-        experiment.setDebrief(request.getDebrief());
+        experiment.setOutcome(normalizeRequiredText(request.getOutcome(), "outcome"));
+        experiment.setLearning(normalizeRequiredText(
+                request.getLearning() != null ? request.getLearning() : request.getDebrief(),
+                "learning"));
+        experiment.setDebrief(experiment.getLearning());
+        experiment.setPredictionBeliefAfter(normalizeRequiredPercent(request.getPredictionBeliefAfter(), "predictionBeliefAfter"));
         experiment.setPostFearScore(normalizeScore(request.getPostFearScore()));
         experiment.setPostAvoidanceScore(normalizeScore(request.getPostAvoidanceScore()));
         experiment.setStatus(BehavioralExperimentStatus.DONE);
@@ -262,10 +283,12 @@ public class FearLadderService {
 
         BehavioralExperiment saved = behavioralExperimentRepository.save(experiment);
         log.info(
-                "Behavioral experiment completed patientId={}, experimentId={}, ladderItemId={}, postFear={}, postAvoidance={}, ladderStatus={}",
+                "Behavioral experiment completed patientId={}, experimentId={}, ladderItemId={}, beliefBefore={}, beliefAfter={}, postFear={}, postAvoidance={}, ladderStatus={}",
                 saved.getPatientProfile() != null ? saved.getPatientProfile().getId() : null,
                 saved.getId(),
                 ladderItem.getId(),
+                saved.getPredictionBeliefBefore(),
+                saved.getPredictionBeliefAfter(),
                 saved.getPostFearScore(),
                 saved.getPostAvoidanceScore(),
                 ladderItem.getStatus());
@@ -363,6 +386,21 @@ public class FearLadderService {
         return Math.max(0, Math.min(100, score));
     }
 
+    private int normalizeRequiredPercent(Integer score, String fieldName) {
+        if (score == null) {
+            throw new IllegalArgumentException(fieldName + " là bắt buộc.");
+        }
+        return normalizePercent(score);
+    }
+
+    private String normalizeRequiredText(String value, String fieldName) {
+        String trimmed = trimToNull(value);
+        if (trimmed == null) {
+            throw new IllegalArgumentException(fieldName + " là bắt buộc.");
+        }
+        return trimmed;
+    }
+
     private String normalizeSafetyBehaviorsJson(String rawValue) {
         if (rawValue == null || rawValue.trim().isEmpty()) {
             return "[]";
@@ -406,5 +444,20 @@ public class FearLadderService {
         } catch (JsonProcessingException exception) {
             throw new IllegalArgumentException("Không thể chuẩn hóa danh sách hành vi an toàn.", exception);
         }
+    }
+
+    private boolean hasSafetyBehaviorCommitment(String normalizedSafetyBehaviorsJson, boolean dropWithoutSafetyBehaviors) {
+        if (dropWithoutSafetyBehaviors) {
+            return true;
+        }
+        return normalizedSafetyBehaviorsJson != null && !"[]".equals(normalizedSafetyBehaviorsJson);
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

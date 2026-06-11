@@ -33,6 +33,32 @@ public class UserSchemaMigrationRunner {
             } catch (Exception e) {
                 log.warn("User schema migration skipped or failed for users.role: {}", e.getMessage());
             }
+
+            ensureColumn(jdbcTemplate, "reset_password_token",
+                    "ALTER TABLE users ADD COLUMN reset_password_token VARCHAR(128) NULL");
+            ensureColumn(jdbcTemplate, "reset_password_expires_at",
+                    "ALTER TABLE users ADD COLUMN reset_password_expires_at DATETIME NULL");
         };
+    }
+
+    private void ensureColumn(JdbcTemplate jdbcTemplate, String columnName, String ddl) {
+        try {
+            Integer count = jdbcTemplate.queryForObject(
+                    """
+                            SELECT COUNT(*)
+                            FROM information_schema.COLUMNS
+                            WHERE TABLE_SCHEMA = DATABASE()
+                              AND TABLE_NAME = 'users'
+                              AND COLUMN_NAME = ?
+                            """,
+                    Integer.class,
+                    columnName);
+            if (count != null && count == 0) {
+                jdbcTemplate.execute(ddl);
+                log.info("User schema migration: added users.{}", columnName);
+            }
+        } catch (Exception e) {
+            log.warn("User schema migration skipped for {}: {}", columnName, e.getMessage());
+        }
     }
 }
