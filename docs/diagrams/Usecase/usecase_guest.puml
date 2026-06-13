@@ -1,0 +1,27 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+skinparam defaultFontName Arial
+
+actor "Khách vãng lai" as Guest
+
+rectangle "Chức năng của Khách vãng lai" {
+  usecase "Bắt đầu trải nghiệm nhanh" as G1
+  usecase "Chọn biệt danh\nvà ảnh đại diện ảo" as G2
+  usecase "Thực hiện LSAS thử" as G3
+  usecase "Liên kết email\nvà mật khẩu" as G4
+  usecase "Nhập hồ sơ y tế tối thiểu" as G5
+  usecase "Chuyển thành bệnh nhân" as G6
+}
+
+Guest --> G1
+Guest --> G2
+Guest --> G3
+Guest --> G4
+Guest --> G5
+
+G3 --> G4 : <<bao gồm>>
+G4 --> G5 : <<bao gồm>>
+G5 --> G6 : <<bao gồm>>
+@enduml

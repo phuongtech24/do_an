@@ -1,4 +1,4 @@
-package com.reconnect.mindhealth.modules.roadmap.service;
+﻿package com.reconnect.mindhealth.modules.roadmap.service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -128,13 +128,13 @@ public class FearLadderService {
         requirePatient(request.getPatientId());
         int masteredCount = 0;
         if (request.getItems() == null || request.getItems().isEmpty()) {
-            throw new IllegalArgumentException("Thiếu danh sách tình huống cần re-rate.");
+            throw new IllegalArgumentException("Thiáº¿u danh sÃ¡ch tÃ¬nh huá»‘ng cáº§n re-rate.");
         }
         for (FearLadderRerateItemDto itemDto : request.getItems()) {
             FearLadderItem item = fearLadderItemRepository.findById(itemDto.getLadderItemId())
-                    .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy Fear Ladder item."));
+                    .orElseThrow(() -> new EntityNotFoundException("KhÃ´ng tÃ¬m tháº¥y Fear Ladder item."));
             if (!item.getPatientProfile().getId().equals(request.getPatientId())) {
-                throw new SecurityException("Không được cập nhật thang sợ của bệnh nhân khác.");
+                throw new SecurityException("KhÃ´ng Ä‘Æ°á»£c cáº­p nháº­t thang sá»£ cá»§a bá»‡nh nhÃ¢n khÃ¡c.");
             }
             int fear = normalizeScore(itemDto.getFearScore());
             int avoidance = normalizeScore(itemDto.getAvoidanceScore());
@@ -160,15 +160,15 @@ public class FearLadderService {
     public PatientGoalDto saveGoal(PatientGoalDto dto) {
         PatientProfile patient = requirePatient(dto.getPatientId());
         if (dto.getGoalType() == null) {
-            throw new IllegalArgumentException("Thiếu goalType.");
+            throw new IllegalArgumentException("Thiáº¿u goalType.");
         }
 
         String description = dto.getDescription();
         if (description == null || description.isBlank()) {
             description = switch (dto.getGoalType()) {
-                case SOCIAL_INTERACTION -> "Kết bạn/mở rộng quan hệ";
-                case PERFORMANCE -> "Công việc/học tập/trình bày";
-                case GENERAL -> "Tự tin trong mọi tình huống";
+                case SOCIAL_INTERACTION -> "Káº¿t báº¡n/má»Ÿ rá»™ng quan há»‡";
+                case PERFORMANCE -> "CÃ´ng viá»‡c/há»c táº­p/trÃ¬nh bÃ y";
+                case GENERAL -> "Tá»± tin trong má»i tÃ¬nh huá»‘ng";
             };
         }
 
@@ -212,6 +212,36 @@ public class FearLadderService {
                 .orElseGet(() -> new BehavioralExperimentDto(createNextExperiment(patient)));
     }
 
+    @Transactional
+    public BehavioralExperimentDto selectExperiment(UUID patientId, UUID ladderItemId) {
+        PatientProfile patient = requirePatient(patientId);
+        FearLadderItem ladderItem = fearLadderItemRepository.findById(ladderItemId)
+                .orElseThrow(() -> new EntityNotFoundException("KhÃ´ng tÃ¬m tháº¥y báº­c thá»±c hÃ nh."));
+
+        if (!ladderItem.getPatientProfile().getId().equals(patient.getId())) {
+            throw new SecurityException("KhÃ´ng Ä‘Æ°á»£c chá»n bÃ i thá»±c hÃ nh cá»§a bá»‡nh nhÃ¢n khÃ¡c.");
+        }
+
+        List<FearLadderItem> ladderItems = fearLadderItemRepository.findByPatientProfile_IdOrderByLadderOrderAsc(patientId);
+        int unlockedUntilIndex = resolveUnlockedUntilIndex(ladderItems);
+        int selectedIndex = indexOfLadderItem(ladderItems, ladderItemId);
+        if (selectedIndex < 0 || selectedIndex > unlockedUntilIndex) {
+            throw new IllegalStateException("BÃ i thá»±c hÃ nh nÃ y chÆ°a Ä‘Æ°á»£c má»Ÿ.");
+        }
+
+        if (ladderItem.getStatus() == FearLadderStatus.MASTERED) {
+            throw new IllegalStateException("BÃ i thá»±c hÃ nh nÃ y Ä‘Ã£ hoÃ n thÃ nh vÃ  Ä‘Æ°á»£c lÃ m chá»§.");
+        }
+
+        return behavioralExperimentRepository
+                .findTopByPatientProfile_IdAndFearLadderItem_IdAndStatusInOrderByAssignedAtDesc(
+                        patientId,
+                        ladderItemId,
+                        List.of(BehavioralExperimentStatus.PLANNED, BehavioralExperimentStatus.IN_PROGRESS))
+                .map(BehavioralExperimentDto::new)
+                .orElseGet(() -> new BehavioralExperimentDto(createExperimentForItem(patient, ladderItem)));
+    }
+
     @Transactional(readOnly = true)
     public List<BehavioralExperimentDto> getExperimentHistory(UUID patientId) {
         requirePatient(patientId);
@@ -228,7 +258,7 @@ public class FearLadderService {
         String normalizedSafetyBehaviorsJson = normalizeSafetyBehaviorsJson(request.getSafetyBehaviorsJson());
         if (!hasSafetyBehaviorCommitment(normalizedSafetyBehaviorsJson,
                 Boolean.TRUE.equals(request.getDropWithoutSafetyBehaviors()))) {
-            throw new IllegalArgumentException("Cần chọn ít nhất một hành vi an toàn để giảm hoặc xác nhận không dùng hành vi an toàn.");
+            throw new IllegalArgumentException("Cáº§n chá»n Ã­t nháº¥t má»™t hÃ nh vi an toÃ n Ä‘á»ƒ giáº£m hoáº·c xÃ¡c nháº­n khÃ´ng dÃ¹ng hÃ nh vi an toÃ n.");
         }
         Integer beliefSource = request.getPredictionBeliefBefore() != null
                 ? request.getPredictionBeliefBefore()
@@ -257,7 +287,7 @@ public class FearLadderService {
     public BehavioralExperimentDto debriefExperiment(UUID experimentId, BehavioralExperimentDebriefRequestDto request) {
         BehavioralExperiment experiment = requireExperiment(experimentId);
         if (experiment.getSetupCompletedAt() == null) {
-            throw new IllegalStateException("Bài thực hành chưa hoàn tất bước thiết lập.");
+            throw new IllegalStateException("BÃ i thá»±c hÃ nh chÆ°a hoÃ n táº¥t bÆ°á»›c thiáº¿t láº­p.");
         }
         experiment.setExecutionNotes(trimToNull(request.getExecutionNotes()));
         experiment.setProofImageUrl(request.getProofImageUrl());
@@ -302,8 +332,12 @@ public class FearLadderService {
                 .limit(unlockedUntilIndex + 1L)
                 .filter(candidate -> candidate.getStatus() == FearLadderStatus.ACTIVE)
                 .findFirst()
-                .orElseThrow(() -> new IllegalStateException("Chưa có Fear Ladder hoặc tất cả tình huống đã mastered."));
+                .orElseThrow(() -> new IllegalStateException("ChÆ°a cÃ³ Fear Ladder hoáº·c táº¥t cáº£ tÃ¬nh huá»‘ng Ä‘Ã£ mastered."));
 
+        return createExperimentForItem(patient, item);
+    }
+
+    private BehavioralExperiment createExperimentForItem(PatientProfile patient, FearLadderItem item) {
         BehavioralExperiment experiment = new BehavioralExperiment();
         experiment.setPatientProfile(patient);
         experiment.setFearLadderItem(item);
@@ -313,7 +347,7 @@ public class FearLadderService {
         experiment.setDueDate(LocalDateTime.now().plusDays(2));
         BehavioralExperiment saved = behavioralExperimentRepository.save(experiment);
         log.info(
-                "Behavioral experiment assigned patientId={}, experimentId={}, ladderItemId={}, ladderOrder={}, bucket={}, currentTotalScore={}",
+                "Behavioral experiment assigned patientId={}, experimentId={}, ladderItemId={}, ladderOrder={}, bucket={}, currentTotalScore= {}",
                 patient.getId(),
                 saved.getId(),
                 item.getId(),
@@ -323,17 +357,26 @@ public class FearLadderService {
         return saved;
     }
 
+    private int indexOfLadderItem(List<FearLadderItem> items, UUID ladderItemId) {
+        for (int index = 0; index < items.size(); index++) {
+            if (items.get(index).getId().equals(ladderItemId)) {
+                return index;
+            }
+        }
+        return -1;
+    }
+
     private PatientProfile requirePatient(UUID patientId) {
         if (patientId == null) {
-            throw new IllegalArgumentException("Thiếu patientId.");
+            throw new IllegalArgumentException("Thiáº¿u patientId.");
         }
         return patientProfileRepository.findById(patientId)
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy bệnh nhân: " + patientId));
+                .orElseThrow(() -> new EntityNotFoundException("KhÃ´ng tÃ¬m tháº¥y bá»‡nh nhÃ¢n: " + patientId));
     }
 
     private BehavioralExperiment requireExperiment(UUID experimentId) {
         return behavioralExperimentRepository.findById(experimentId)
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy Behavioral Experiment: " + experimentId));
+                .orElseThrow(() -> new EntityNotFoundException("KhÃ´ng tÃ¬m tháº¥y Behavioral Experiment: " + experimentId));
     }
 
     private PatientGoalType resolvePrimaryGoalType(UUID patientId) {
@@ -388,7 +431,7 @@ public class FearLadderService {
 
     private int normalizeRequiredPercent(Integer score, String fieldName) {
         if (score == null) {
-            throw new IllegalArgumentException(fieldName + " là bắt buộc.");
+            throw new IllegalArgumentException(fieldName + " lÃ  báº¯t buá»™c.");
         }
         return normalizePercent(score);
     }
@@ -396,7 +439,7 @@ public class FearLadderService {
     private String normalizeRequiredText(String value, String fieldName) {
         String trimmed = trimToNull(value);
         if (trimmed == null) {
-            throw new IllegalArgumentException(fieldName + " là bắt buộc.");
+            throw new IllegalArgumentException(fieldName + " lÃ  báº¯t buá»™c.");
         }
         return trimmed;
     }
@@ -442,7 +485,7 @@ public class FearLadderService {
         try {
             return objectMapper.writeValueAsString(values);
         } catch (JsonProcessingException exception) {
-            throw new IllegalArgumentException("Không thể chuẩn hóa danh sách hành vi an toàn.", exception);
+            throw new IllegalArgumentException("KhÃ´ng thá»ƒ chuáº©n hÃ³a danh sÃ¡ch hÃ nh vi an toÃ n.", exception);
         }
     }
 
@@ -461,3 +504,4 @@ public class FearLadderService {
         return trimmed.isEmpty() ? null : trimmed;
     }
 }
+

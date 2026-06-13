@@ -1,0 +1,65 @@
+@startuml
+title Biểu đồ lớp - LSAS và Phân luồng lâm sàng
+
+class PatientProfile {
+  +id: UUID
+  +currentLsasScore: Integer
+  +lastLsasDate: Date
+  +isRedFlagActive: Boolean
+}
+
+class LsasAnswer {
+  +questionCode: String
+  +fearScore: Integer
+  +avoidanceScore: Integer
+}
+
+class LsasSubmission {
+  +id: UUID
+  +totalScore: Integer
+  +severityBand: String
+  +severityLabel: String
+  +clinicalRoute: String
+  +summaryMessage: String
+  +recommendedNextStep: String
+  +clinicalAttention: String
+  +redFlagTriggered: Boolean
+  +submittedAt: DateTime
+}
+
+class LsasSubmissionDto {
+  +totalScore: Integer
+  +severityBand: String
+  +severityLabel: String
+  +clinicalRoute: String
+  +summaryMessage: String
+  +recommendedNextStep: String
+  +clinicalAttention: String
+  +redFlagTriggered: Boolean
+}
+
+class AssessmentController {
+  +submitLsas(patientId, request)
+  +getLsasHistory(patientId)
+}
+
+class AssessmentService {
+  +submitLsas(patientId, answers)
+  +classifyLsas(score)
+}
+
+enum ClinicalRoute {
+  REASSURANCE
+  SELF_HELP
+  THERAPIST_TRACK_14_WEEKS
+  URGENT_RED_FLAG
+}
+
+PatientProfile "1" -- "0..*" LsasSubmission
+LsasSubmission "1" -- "24..*" LsasAnswer
+AssessmentController ..> AssessmentService
+AssessmentService ..> LsasSubmission
+AssessmentService ..> LsasSubmissionDto
+AssessmentService ..> ClinicalRoute
+
+@enduml

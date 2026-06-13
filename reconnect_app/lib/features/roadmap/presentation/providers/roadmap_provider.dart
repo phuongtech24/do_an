@@ -20,6 +20,7 @@ class RoadmapProvider extends ChangeNotifier {
   List<PatientQuestModel> _questHistory = [];
   List<FearLadderItemModel> _fearLadder = [];
   BehavioralExperimentModel? _todayExperiment;
+  List<BehavioralExperimentModel> _experimentHistory = [];
   bool _historyLoading = false;
   RoadmapSafetyOverlayModel _safetyOverlay = RoadmapSafetyOverlayModel.inactive;
   RoadmapProgramStateModel _programState = RoadmapProgramStateModel.empty;
@@ -30,6 +31,7 @@ class RoadmapProvider extends ChangeNotifier {
   List<PatientQuestModel> get questHistory => _questHistory;
   List<FearLadderItemModel> get fearLadder => _fearLadder;
   BehavioralExperimentModel? get todayExperiment => _todayExperiment;
+  List<BehavioralExperimentModel> get experimentHistory => _experimentHistory;
   bool get historyLoading => _historyLoading;
   RoadmapSafetyOverlayModel get safetyOverlay => _safetyOverlay;
   RoadmapProgramStateModel get programState => _programState;
@@ -42,10 +44,12 @@ class RoadmapProvider extends ChangeNotifier {
     try {
       final ladderFuture = _repository.getFearLadder(patientId, token: token);
       final experimentFuture = _repository.getTodayExperiment(patientId, token: token);
+      final experimentHistoryFuture = _repository.getBehavioralExperimentHistory(patientId, token: token);
       final overlayFuture = _repository.getSafetyOverlay(patientId, token: token);
       final programStateFuture = _repository.getProgramState(patientId, token: token);
       _fearLadder = await ladderFuture;
       _todayExperiment = await experimentFuture;
+      _experimentHistory = await experimentHistoryFuture;
       _safetyOverlay = await overlayFuture;
       _programState = await programStateFuture;
       _dailyQuests = _programState.todayAssignments;
@@ -80,6 +84,37 @@ class RoadmapProvider extends ChangeNotifier {
         dropWithoutSafetyBehaviors: dropWithoutSafetyBehaviors,
         token: token,
       );
+      final patientId = _todayExperiment?.patientId;
+      if (patientId != null && patientId.isNotEmpty) {
+        _experimentHistory = await _repository.getBehavioralExperimentHistory(patientId, token: token);
+      }
+      _status = RoadmapStatus.success;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _status = RoadmapStatus.error;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> selectExercise(
+    String patientId,
+    String ladderItemId, {
+    String? token,
+  }) async {
+    _status = RoadmapStatus.loading;
+    _errorMessage = '';
+    notifyListeners();
+
+    try {
+      _todayExperiment = await _repository.selectBehavioralExperiment(
+        patientId,
+        ladderItemId,
+        token: token,
+      );
+      _experimentHistory = await _repository.getBehavioralExperimentHistory(patientId, token: token);
       _status = RoadmapStatus.success;
       notifyListeners();
       return true;
@@ -118,6 +153,10 @@ class RoadmapProvider extends ChangeNotifier {
         postAvoidanceScore: postAvoidanceScore,
         token: token,
       );
+      final patientId = _todayExperiment?.patientId;
+      if (patientId != null && patientId.isNotEmpty) {
+        _experimentHistory = await _repository.getBehavioralExperimentHistory(patientId, token: token);
+      }
       _status = RoadmapStatus.success;
       notifyListeners();
       return true;

@@ -1,0 +1,54 @@
+@startuml
+title Biểu đồ hoạt động - Đăng ký
+
+start
+:Người dùng mở màn đăng ký;
+:Nhập email;
+:Nhập mật khẩu;
+:Nhập xác nhận mật khẩu;
+:Bấm "Đăng ký";
+
+if (Thông tin hợp lệ?) then (Có)
+  :Hệ thống kiểm tra email đã tồn tại chưa;
+  if (Email đã tồn tại?) then (Có)
+    :Hiển thị thông báo email đã được sử dụng;
+    stop
+  else (Không)
+    :Tạo tài khoản mới;
+    :Thông báo đăng ký thành công;
+    :Chuyển sang đăng nhập;
+    stop
+  endif
+else (Không)
+  :Hiển thị lỗi dữ liệu đăng ký;
+  stop
+endif
+
+@enduml
+@startuml
+title Biểu đồ hoạt động - Đăng ký
+
+start
+:Người dùng mở màn đăng ký;
+:Nhập email;
+:Nhập mật khẩu;
+:Nhập xác nhận mật khẩu;
+:Bấm "Đăng ký";
+
+if (Thông tin hợp lệ?) then (Có)
+  :Hệ thống kiểm tra email đã tồn tại chưa;
+  if (Email đã tồn tại?) then (Có)
+    :Hiển thị thông báo email đã được sử dụng;
+    stop
+  else (Không)
+    :Tạo tài khoản mới;
+    :Thông báo đăng ký thành công;
+    :Chuyển sang đăng nhập;
+    stop
+  endif
+else (Không)
+  :Hiển thị lỗi dữ liệu đăng ký;
+  stop
+endif
+
+@enduml

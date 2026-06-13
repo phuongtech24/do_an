@@ -109,6 +109,58 @@ class RoadmapRepository {
     }
   }
 
+  Future<List<BehavioralExperimentModel>> getBehavioralExperimentHistory(
+    String patientId, {
+    String? token,
+  }) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiConstants.behavioralExperimentHistory}?patientId=$patientId'),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      _handleHttpError(response, 'tải lịch sử bài thực hành');
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      if (json['status'] == 200 && json['data'] != null) {
+        final list = json['data'] as List<dynamic>;
+        return list
+            .map((e) => BehavioralExperimentModel.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  Future<BehavioralExperimentModel> selectBehavioralExperiment(
+    String patientId,
+    String ladderItemId, {
+    String? token,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConstants.behavioralExperimentSelect}?patientId=$patientId&ladderItemId=$ladderItemId'),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      _handleHttpError(response, 'chọn bài thực hành');
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      if (json['status'] == 200 && json['data'] != null) {
+        return BehavioralExperimentModel.fromJson(json['data'] as Map<String, dynamic>);
+      }
+      throw Exception(json['message'] ?? 'Không thể chọn bài thực hành');
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
   Future<BehavioralExperimentModel> startBehavioralExperiment(
     String id, {
     required String prediction,

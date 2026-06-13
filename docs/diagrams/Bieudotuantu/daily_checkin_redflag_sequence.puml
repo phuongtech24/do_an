@@ -1,0 +1,35 @@
+@startuml
+title Biểu đồ tuần tự - Điểm danh cảm xúc và Cờ đỏ
+
+actor "Bệnh nhân" as Patient
+participant "Ứng dụng" as App
+participant "Bộ điều khiển cảm xúc" as MoodController
+participant "Dịch vụ điểm danh cảm xúc" as MoodService
+participant "Dịch vụ dashboard lâm sàng" as DashboardService
+database "Cơ sở dữ liệu" as DB
+
+Patient -> App : Gửi điểm danh cảm xúc
+App -> MoodController : saveMoodCheckin(...)
+MoodController -> MoodService : Phân tích điểm số
+
+alt Vượt ngưỡng nguy cơ
+  MoodService --> MoodController : Yêu cầu chốt an toàn
+  MoodController --> App : Hiển thị popup an toàn
+
+  Patient -> App : Chọn "Không an toàn"
+  App -> MoodController : Xác nhận không an toàn
+  MoodController -> MoodService : Bật cờ đỏ
+  MoodService -> DB : Lưu red flag
+  MoodService -> DashboardService : Đẩy ca ưu tiên
+  DashboardService --> MoodService : Đã cập nhật
+  MoodService --> MoodController : Trả packet khẩn cấp
+  MoodController --> App : Mở hỗ trợ khẩn cấp
+
+else Không vượt ngưỡng
+  MoodService -> DB : Lưu mood check-in
+  DB --> MoodService : Thành công
+  MoodService --> MoodController : Trả điều hướng tiếp theo
+  MoodController --> App : Mở Thẻ đối phó hoặc Nhật ký suy nghĩ
+end
+
+@enduml

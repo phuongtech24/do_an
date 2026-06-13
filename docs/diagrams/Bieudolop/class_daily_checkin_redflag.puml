@@ -1,0 +1,54 @@
+@startuml
+title Biểu đồ lớp - Điểm danh cảm xúc, Chốt an toàn và Cờ đỏ
+
+class PatientProfile {
+  +id: UUID
+  +isRedFlagActive: Boolean
+  +currentRiskScore: Integer
+}
+
+class MoodCheckin {
+  +id: UUID
+  +anxietyScore: Integer
+  +sadnessScore: Integer
+  +avoidanceUrgeScore: Integer
+  +anticipatoryAnxietyScore: Integer
+  +ruminationScore: Integer
+  +moodLabel: String
+  +createdAt: DateTime
+}
+
+class SafetyGateResponse {
+  +safe: Boolean
+}
+
+class RedFlagLog {
+  +id: UUID
+  +reason: String
+  +active: Boolean
+  +triggeredAt: DateTime
+}
+
+class MoodController {
+  +saveMoodCheckin(patientId, request)
+  +confirmSafetyGate(patientId, safe)
+}
+
+class MoodService {
+  +analyzeMood(patientId, scores)
+  +activateRedFlag(patientId, reason)
+}
+
+class DashboardService {
+  +pushPriorityCase(patientId)
+}
+
+PatientProfile "1" -- "0..*" MoodCheckin
+PatientProfile "1" -- "0..*" RedFlagLog
+MoodController ..> MoodService
+MoodService ..> MoodCheckin
+MoodService ..> SafetyGateResponse
+MoodService ..> RedFlagLog
+MoodService ..> DashboardService
+
+@enduml

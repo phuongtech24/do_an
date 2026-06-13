@@ -22,6 +22,14 @@ services:
     ports:
       - "6379:6379"
 
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: mindhealth-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
   backend:
     build:
       context: ../reconnect_backend
@@ -30,6 +38,7 @@ services:
     depends_on:
       - mysql
       - redis
+      - mailpit
     environment:
       DB_HOST: mysql
       DB_PORT: 3306
@@ -43,6 +52,12 @@ services:
       REDIS_PORT: 6379
       APP_CACHE_ENABLED: "true"
       SPRING_CACHE_TYPE: redis
+      APP_MAIL_ENABLED: "true"
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
+      MAIL_FROM: no-reply@mindhealth.local
+      MAIL_SMTP_AUTH: "false"
+      MAIL_SMTP_STARTTLS_ENABLE: "false"
     ports:
       - "8081:8080"
     volumes:

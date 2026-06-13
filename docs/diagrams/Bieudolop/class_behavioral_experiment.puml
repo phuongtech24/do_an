@@ -1,0 +1,74 @@
+@startuml
+title Biểu đồ lớp - Thang sợ hãi và Thử nghiệm hành vi
+
+class PatientProfile {
+  +id: UUID
+}
+
+class RoadmapProgramState {
+  +id: UUID
+  +programWeek: Integer
+  +programPhaseCode: String
+  +programPhaseLabel: String
+}
+
+class FearLadderItem {
+  +id: UUID
+  +ladderOrder: Integer
+  +situationText: String
+  +difficulty: String
+  +status: String
+  +unlocked: Boolean
+  +currentFearScore: Integer
+  +currentAvoidanceScore: Integer
+}
+
+class BehavioralExperiment {
+  +id: UUID
+  +prediction: String
+  +predictionBeliefBefore: Integer
+  +predictionBeliefAfter: Integer
+  +safetyBehaviorsJson: String
+  +outcome: String
+  +learning: String
+  +status: String
+  +setupCompletedAt: DateTime
+  +startedAt: DateTime
+  +completedAt: DateTime
+}
+
+class BehavioralExperimentStartRequestDto {
+  +prediction: String
+  +predictionBeliefBefore: Integer
+  +safetyBehaviorsJson: String
+  +dropWithoutSafetyBehaviors: Boolean
+}
+
+class BehavioralExperimentDebriefRequestDto {
+  +outcome: String
+  +predictionBeliefAfter: Integer
+  +learning: String
+  +postFearScore: Integer
+  +postAvoidanceScore: Integer
+}
+
+class FearLadderService {
+  +startExperiment(experimentId, request)
+  +debriefExperiment(experimentId, request)
+}
+
+class RoadmapController {
+  +startExperiment(experimentId, request)
+  +debriefExperiment(experimentId, request)
+  +getProgramState(patientId)
+}
+
+PatientProfile "1" -- "0..1" RoadmapProgramState
+PatientProfile "1" -- "0..*" FearLadderItem
+FearLadderItem "1" -- "0..*" BehavioralExperiment
+RoadmapController ..> FearLadderService
+FearLadderService ..> BehavioralExperiment
+FearLadderService ..> BehavioralExperimentStartRequestDto
+FearLadderService ..> BehavioralExperimentDebriefRequestDto
+
+@enduml

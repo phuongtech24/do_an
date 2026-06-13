@@ -1,0 +1,76 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+skinparam defaultFontName Arial
+
+actor "Bệnh nhân" as Patient
+
+rectangle "Chức năng của Bệnh nhân" {
+
+  package "Tài khoản và hồ sơ" {
+    usecase "Đăng nhập" as P1
+    usecase "Đăng xuất" as P2
+    usecase "Quên mật khẩu" as P3
+    usecase "Bật chế độ ẩn danh" as P4
+    usecase "Quản lý hồ sơ cá nhân" as P5
+  }
+
+  package "Đánh giá và phân luồng" {
+    usecase "Thực hiện LSAS" as P6
+    usecase "Xem kết quả LSAS" as P7
+    usecase "Thiết lập mục tiêu trị liệu" as P8
+    usecase "Chọn bác sĩ phù hợp" as P9
+  }
+
+  package "Lộ trình điều trị" {
+    usecase "Xem lộ trình CBT 14 tuần" as P10
+    usecase "Xem thang sợ hãi" as P11
+    usecase "Thực hiện thử nghiệm hành vi" as P12
+    usecase "Nhận bài tập từ hệ thống\nhoặc từ bác sĩ" as P13
+  }
+
+  package "Điểm danh và nhật ký" {
+    usecase "Điểm danh cảm xúc hằng ngày" as P14
+    usecase "Xác nhận trạng thái an toàn" as P15
+    usecase "Viết nhật ký suy nghĩ 6 bước" as P16
+    usecase "Xem thẻ đối phó" as P17
+  }
+
+  package "Tư vấn từ xa và duy trì" {
+    usecase "Xem khung giờ trống" as P18
+    usecase "Đặt lịch tư vấn từ xa" as P19
+    usecase "Xem lịch hẹn của tôi" as P20
+    usecase "Tham gia buổi tư vấn" as P21
+    usecase "Nhận nhắc lịch duy trì" as P22
+  }
+}
+
+Patient --> P1
+Patient --> P2
+Patient --> P3
+Patient --> P4
+Patient --> P5
+Patient --> P6
+Patient --> P7
+Patient --> P8
+Patient --> P9
+Patient --> P10
+Patient --> P11
+Patient --> P12
+Patient --> P13
+Patient --> P14
+Patient --> P15
+Patient --> P16
+Patient --> P17
+Patient --> P18
+Patient --> P19
+Patient --> P20
+Patient --> P21
+Patient --> P22
+
+P6 --> P7 : <<bao gồm>>
+P7 --> P8 : <<bao gồm>>
+P8 --> P9 : <<bao gồm>>
+P15 --> P14 : <<mở rộng>>
+@enduml

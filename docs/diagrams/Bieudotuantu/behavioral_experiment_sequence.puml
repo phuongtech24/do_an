@@ -1,0 +1,29 @@
+@startuml
+title Biểu đồ tuần tự - Thử nghiệm hành vi
+
+actor "Bệnh nhân" as Patient
+participant "Ứng dụng" as App
+participant "Bộ điều khiển lộ trình" as RoadmapController
+participant "Dịch vụ thử nghiệm hành vi" as BehavioralExperimentService
+database "Cơ sở dữ liệu" as DB
+
+Patient -> App : Thiết lập bài thực hành
+App -> RoadmapController : Bắt đầu thử nghiệm
+RoadmapController -> BehavioralExperimentService : startExperiment(...)
+BehavioralExperimentService -> BehavioralExperimentService : Kiểm tra prediction, belief trước, hành vi an toàn
+BehavioralExperimentService -> DB : Lưu trạng thái đang thực hành
+DB --> BehavioralExperimentService : Thành công
+BehavioralExperimentService --> RoadmapController : Trả dữ liệu bài thực hành
+RoadmapController --> App : Hiển thị trạng thái đang thực hành
+
+Patient -> App : Tổng kết bài thực hành
+App -> RoadmapController : Gửi kết quả tổng kết
+RoadmapController -> BehavioralExperimentService : debriefExperiment(...)
+BehavioralExperimentService -> BehavioralExperimentService : Đánh giá kết quả, belief sau, bài học
+BehavioralExperimentService -> DB : Lưu tổng kết
+BehavioralExperimentService -> DB : Cập nhật thang sợ hãi nếu đủ điều kiện
+DB --> BehavioralExperimentService : Thành công
+BehavioralExperimentService --> RoadmapController : Trả kết quả hoàn tất
+RoadmapController --> App : Hiển thị tổng kết bài thực hành
+
+@enduml

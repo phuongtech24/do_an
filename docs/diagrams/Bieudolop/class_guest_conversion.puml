@@ -1,0 +1,67 @@
+@startuml
+title Biểu đồ lớp - Guest Mode và Cổng chuyển đổi
+
+class User {
+  +id: UUID
+  +email: String
+  +passwordHash: String
+  +role: Role
+  +isAnonymous: Boolean
+}
+
+class PatientProfile {
+  +id: UUID
+  +nickname: String
+  +avatarIcon: String
+  +anonymousModeEnabled: Boolean
+  +realFullName: String
+  +phoneNumber: String
+  +lsasDemoCompleted: Boolean
+  +safetyGateCompleted: Boolean
+  +medicalProfileCompleted: Boolean
+}
+
+class AnonymousRegisterRequest {
+  +nickname: String
+  +avatarIcon: String
+  +deviceId: String
+}
+
+class LinkGuestAccountRequest {
+  +email: String
+  +password: String
+  +realFullName: String
+  +phoneNumber: String
+}
+
+class AuthController {
+  +registerAnonymous(request)
+  +linkGuestAccount(request)
+}
+
+class AuthService {
+  +registerAnonymous(request)
+  +linkGuestAccount(request)
+}
+
+class LoginResponse {
+  +accessToken: String
+  +refreshToken: String
+  +isGuest: Boolean
+  +accountLinked: Boolean
+}
+
+enum Role {
+  GUEST
+  PATIENT
+}
+
+User "1" -- "0..1" PatientProfile
+AuthController ..> AuthService
+AuthController ..> AnonymousRegisterRequest
+AuthController ..> LinkGuestAccountRequest
+AuthService ..> User
+AuthService ..> PatientProfile
+AuthService ..> LoginResponse
+
+@enduml

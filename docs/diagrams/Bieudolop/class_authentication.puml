@@ -1,0 +1,79 @@
+@startuml
+title Biểu đồ lớp - Đăng nhập, Đăng ký, Quên mật khẩu
+
+class User {
+  +id: UUID
+  +email: String
+  +passwordHash: String
+  +role: Role
+  +isActive: Boolean
+  +resetPasswordToken: String
+  +resetPasswordExpiresAt: DateTime
+}
+
+class LoginRequest {
+  +email: String
+  +password: String
+  +rememberMe: Boolean
+}
+
+class RegisterRequest {
+  +email: String
+  +password: String
+  +confirmPassword: String
+}
+
+class ForgotPasswordRequest {
+  +email: String
+}
+
+class ResetPasswordRequest {
+  +token: String
+  +newPassword: String
+}
+
+class LoginResponse {
+  +accessToken: String
+  +refreshToken: String
+  +expiresIn: Long
+  +refreshExpiresIn: Long
+}
+
+class AuthController {
+  +login(request)
+  +register(request)
+  +forgotPassword(request)
+  +resetPassword(request)
+}
+
+class AuthService {
+  +login(request)
+  +register(request)
+  +requestPasswordReset(email)
+  +resetPassword(request)
+}
+
+class JwtUtil {
+  +generateAccessToken(user)
+  +generateRefreshToken(user)
+  +validateAccessToken(token)
+  +validateRefreshToken(token)
+}
+
+enum Role {
+  GUEST
+  PATIENT
+  THERAPIST
+  ADMIN
+}
+
+AuthController ..> AuthService
+AuthController ..> LoginRequest
+AuthController ..> RegisterRequest
+AuthController ..> ForgotPasswordRequest
+AuthController ..> ResetPasswordRequest
+AuthService ..> User
+AuthService ..> LoginResponse
+AuthService ..> JwtUtil
+
+@enduml

@@ -1,0 +1,39 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+skinparam defaultFontName Arial
+
+actor "Khách vãng lai" as Guest
+actor "Bệnh nhân" as Patient
+
+rectangle "Hệ thống ReConnect MindHealth" {
+  usecase "Liên kết tài khoản\nvà quản lý ẩn danh" as UC1
+  usecase "Thực hiện LSAS\nvà nhận phân luồng" as UC2
+  usecase "Theo lộ trình CBT\nvà thực hiện thử nghiệm hành vi" as UC3
+  usecase "Điểm danh cảm xúc\nvà viết nhật ký suy nghĩ" as UC4
+  usecase "Đặt lịch và tham gia\n tư vấn từ xa" as UC5
+  usecase "Quản lý người dùng\nvà điều phối lâm sàng" as UC6
+  usecase "Quản lý Cờ Đỏ\nvà nhắc nhở hệ thống" as UC7
+}
+
+actor "Bác sĩ" as Therapist
+actor "Quản trị viên" as Admin
+
+Guest --> UC1
+Guest --> UC2
+
+Patient --> UC1
+Patient --> UC2
+Patient --> UC3
+Patient --> UC4
+Patient --> UC5
+Patient --> UC7
+
+Therapist --> UC3
+Therapist --> UC5
+Therapist --> UC7
+
+Admin --> UC6
+Admin --> UC7
+@enduml

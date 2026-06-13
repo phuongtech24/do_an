@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -182,7 +182,7 @@ class _PatientLoginFormState extends State<_PatientLoginForm> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Tạo reset token'),
+            child: const Text('Gửi email đặt lại'),
           ),
         ],
       ),
@@ -204,7 +204,9 @@ class _PatientLoginFormState extends State<_PatientLoginForm> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Đã tạo yêu cầu reset. Ở local/dev, hãy lấy reset token từ log backend rồi nhập vào bước tiếp theo.'),
+        content: Text(
+          'Hệ thống đã tạo yêu cầu đặt lại mật khẩu. Hãy kiểm tra email của bạn. Nếu đang chạy local chưa cấu hình mail, bạn có thể lấy reset token từ log backend.',
+        ),
         backgroundColor: AppColors.success,
       ),
     );

@@ -1,0 +1,62 @@
+@startuml
+title Biểu đồ hoạt động - Đăng nhập
+
+start
+:Người dùng mở màn đăng nhập;
+:Nhập email và mật khẩu;
+:Bấm "Đăng nhập";
+
+if (Thông tin đã nhập đầy đủ?) then (Có)
+  :Hệ thống kiểm tra tài khoản;
+  if (Tài khoản tồn tại?) then (Có)
+    :Hệ thống xác thực mật khẩu;
+    if (Mật khẩu đúng?) then (Đúng)
+      :Tạo phiên đăng nhập;
+      :Nạp thông tin người dùng;
+      :Điều hướng vào trang chủ;
+      stop
+    else (Sai)
+      :Hiển thị thông báo sai mật khẩu;
+      stop
+    endif
+  else (Không)
+    :Hiển thị thông báo tài khoản không tồn tại;
+    stop
+  endif
+else (Không)
+  :Hiển thị yêu cầu nhập đầy đủ thông tin;
+  stop
+endif
+
+@enduml
+@startuml
+title Biểu đồ hoạt động - Đăng nhập
+
+start
+:Người dùng mở màn đăng nhập;
+:Nhập email và mật khẩu;
+:Bấm "Đăng nhập";
+
+if (Thông tin đã nhập đầy đủ?) then (Có)
+  :Hệ thống kiểm tra tài khoản;
+  if (Tài khoản tồn tại?) then (Có)
+    :Hệ thống xác thực mật khẩu;
+    if (Mật khẩu đúng?) then (Đúng)
+      :Tạo phiên đăng nhập;
+      :Nạp thông tin người dùng;
+      :Điều hướng vào trang chủ;
+      stop
+    else (Sai)
+      :Hiển thị thông báo sai mật khẩu;
+      stop
+    endif
+  else (Không)
+    :Hiển thị thông báo tài khoản không tồn tại;
+    stop
+  endif
+else (Không)
+  :Hiển thị yêu cầu nhập đầy đủ thông tin;
+  stop
+endif
+
+@enduml

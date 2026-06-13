@@ -1,0 +1,59 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+skinparam defaultFontName Arial
+
+actor "Bác sĩ" as Therapist
+
+rectangle "Chức năng của Bác sĩ" {
+
+  package "Quản lý bệnh nhân" {
+    usecase "Xem danh sách bệnh nhân\nđược phân công" as T1
+    usecase "Xem bảng điều khiển lâm sàng" as T2
+    usecase "Xem ca Cờ Đỏ" as T3
+  }
+
+  package "Theo dõi lâm sàng" {
+    usecase "Xem tổng hợp trước buổi tư vấn" as T4
+    usecase "Xem xu hướng LSAS" as T5
+    usecase "Xem thang sợ hãi" as T6
+    usecase "Xem nhật ký suy nghĩ" as T7
+    usecase "Xem dữ liệu điểm danh cảm xúc" as T8
+  }
+
+  package "Can thiệp điều trị" {
+    usecase "Giao bài tập CBT" as T9
+    usecase "Giao thử nghiệm hành vi" as T10
+    usecase "Thêm ghi chú lâm sàng" as T11
+    usecase "Kích hoạt trạng thái tốt nghiệp" as T12
+  }
+
+  package "Tư vấn từ xa" {
+    usecase "Quản lý lịch làm việc" as T13
+    usecase "Xem lịch hẹn sắp tới" as T14
+    usecase "Tham gia buổi tư vấn từ xa" as T15
+  }
+}
+
+Therapist --> T1
+Therapist --> T2
+Therapist --> T3
+Therapist --> T4
+Therapist --> T5
+Therapist --> T6
+Therapist --> T7
+Therapist --> T8
+Therapist --> T9
+Therapist --> T10
+Therapist --> T11
+Therapist --> T12
+Therapist --> T13
+Therapist --> T14
+Therapist --> T15
+
+T4 --> T5 : <<bao gồm>>
+T4 --> T6 : <<bao gồm>>
+T4 --> T7 : <<bao gồm>>
+T4 --> T8 : <<bao gồm>>
+@enduml

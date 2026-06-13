@@ -31,6 +31,7 @@ import com.reconnect.mindhealth.modules.auth.entity.User;
 import com.reconnect.mindhealth.modules.auth.enums.Role;
 import com.reconnect.mindhealth.modules.auth.repository.UserRepository;
 import com.reconnect.mindhealth.modules.auth.service.IAuthService;
+import com.reconnect.mindhealth.modules.auth.service.PasswordResetEmailService;
 import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
 import com.reconnect.mindhealth.modules.clinical.entity.TherapistProfile;
 import com.reconnect.mindhealth.modules.clinical.enums.ApprovalStatus;
@@ -73,6 +74,9 @@ public class AuthServiceImpl implements IAuthService {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private PasswordResetEmailService passwordResetEmailService;
 
     @Override
     public UserDto register(RegisterRequest request) {
@@ -325,6 +329,7 @@ public class AuthServiceImpl implements IAuthService {
             user.setResetPasswordToken(resetToken);
             user.setResetPasswordExpiresAt(expiresAt);
             userRepository.save(user);
+            passwordResetEmailService.sendResetPasswordEmail(normalizedEmail, resetToken, expiresAt);
             log.info("Password reset token generated email={}, resetToken={}, expiresAt={}",
                     normalizedEmail,
                     resetToken,

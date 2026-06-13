@@ -1,6 +1,17 @@
 spring:
   application:
     name: reconnect_backend
+  mail:
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:true}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS_ENABLE:true}
   cache:
     type: ${SPRING_CACHE_TYPE:none}
   servlet:
@@ -53,6 +64,11 @@ app:
   cache:
     enabled: ${APP_CACHE_ENABLED:false}
     therapist-directory-ttl-minutes: ${THERAPIST_DIRECTORY_CACHE_TTL_MINUTES:10}
+  mail:
+    enabled: ${APP_MAIL_ENABLED:false}
+    from: ${MAIL_FROM:no-reply@mindhealth.local}
+    reset-password-subject: ${MAIL_RESET_PASSWORD_SUBJECT:MindHealth - Đặt lại mật khẩu}
+    reset-password-url-base: ${MAIL_RESET_PASSWORD_URL_BASE:}
 
 # Encryption configuration
 # Keys are loaded from environment variables (ENCRYPTION_KEY, ENCRYPTION_IV)

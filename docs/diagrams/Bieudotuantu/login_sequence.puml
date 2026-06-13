@@ -1,0 +1,21 @@
+@startuml
+title Biểu đồ tuần tự - Đăng nhập
+
+actor "Người dùng" as User
+participant "Ứng dụng" as App
+participant "Bộ điều khiển xác thực" as AuthController
+participant "Dịch vụ xác thực" as AuthService
+database "Cơ sở dữ liệu" as DB
+
+User -> App : Nhập email, mật khẩu
+App -> AuthController : Gửi yêu cầu đăng nhập
+AuthController -> AuthService : Xử lý đăng nhập
+AuthService -> DB : Tìm tài khoản theo email
+DB --> AuthService : Trả dữ liệu tài khoản
+AuthService -> AuthService : Kiểm tra mật khẩu
+AuthService -> AuthService : Tạo access token / refresh token
+AuthService --> AuthController : Trả kết quả đăng nhập
+AuthController --> App : LoginResponse
+App --> User : Điều hướng vào trang chủ
+
+@enduml

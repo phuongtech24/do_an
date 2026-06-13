@@ -15,4 +15,9 @@ public interface BehavioralExperimentRepository extends JpaRepository<Behavioral
     Optional<BehavioralExperiment> findTopByPatientProfile_IdAndStatusInOrderByAssignedAtDesc(
             UUID patientId,
             List<BehavioralExperimentStatus> statuses);
+
+    Optional<BehavioralExperiment> findTopByPatientProfile_IdAndFearLadderItem_IdAndStatusInOrderByAssignedAtDesc(
+            UUID patientId,
+            UUID fearLadderItemId,
+            List<BehavioralExperimentStatus> statuses);
 }

@@ -1,0 +1,26 @@
+@startuml
+title Biểu đồ tuần tự - Đăng ký
+
+actor "Người dùng" as User
+participant "Ứng dụng" as App
+participant "Bộ điều khiển xác thực" as AuthController
+participant "Dịch vụ xác thực" as AuthService
+database "Cơ sở dữ liệu" as DB
+
+User -> App : Nhập email, mật khẩu, xác nhận mật khẩu
+App -> AuthController : Gửi yêu cầu đăng ký
+AuthController -> AuthService : Xử lý đăng ký
+AuthService -> DB : Kiểm tra email đã tồn tại chưa
+DB --> AuthService : Kết quả kiểm tra
+
+alt Email chưa tồn tại
+  AuthService -> DB : Tạo tài khoản mới
+  DB --> AuthService : Tạo thành công
+  AuthService --> AuthController : Trả kết quả thành công
+  AuthController --> App : Thông báo đăng ký thành công
+else Email đã tồn tại
+  AuthService --> AuthController : Báo lỗi email đã tồn tại
+  AuthController --> App : Hiển thị lỗi
+end
+
+@enduml

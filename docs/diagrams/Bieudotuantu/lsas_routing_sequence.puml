@@ -1,0 +1,34 @@
+@startuml
+title Biểu đồ tuần tự - LSAS và Phân luồng lâm sàng
+
+actor "Bệnh nhân" as Patient
+participant "Ứng dụng" as App
+participant "Bộ điều khiển đánh giá" as AssessmentController
+participant "Dịch vụ đánh giá" as AssessmentService
+database "Cơ sở dữ liệu" as DB
+
+Patient -> App : Nộp bài LSAS
+App -> AssessmentController : Gửi submission LSAS
+AssessmentController -> AssessmentService : Xử lý LSAS
+
+AssessmentService -> AssessmentService : Tính tổng điểm
+AssessmentService -> AssessmentService : Xác định mức độ
+AssessmentService -> AssessmentService : Xác định nhánh lâm sàng
+AssessmentService -> DB : Lưu kết quả đánh giá
+DB --> AssessmentService : Thành công
+
+alt Điểm < 30
+  AssessmentService --> AssessmentController : Nhánh An tâm
+  AssessmentController --> App : Packet an tâm
+else Điểm 30-59
+  AssessmentService --> AssessmentController : Nhánh Tự hỗ trợ
+  AssessmentController --> App : Packet tự hỗ trợ
+else Điểm 60-89
+  AssessmentService --> AssessmentController : Nhánh Lộ trình 14 tuần
+  AssessmentController --> App : Packet therapist track
+else Điểm >= 90
+  AssessmentService --> AssessmentController : Nhánh Cờ đỏ khẩn cấp
+  AssessmentController --> App : Packet cờ đỏ
+end
+
+@enduml

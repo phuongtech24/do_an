@@ -51,6 +51,7 @@ class ApiConstants {
   static const String fearLadder = '$baseUrl/fear-ladder';
   static const String behavioralExperimentToday = '$baseUrl/behavioral-experiments/today';
   static const String behavioralExperimentHistory = '$baseUrl/behavioral-experiments/history';
+  static const String behavioralExperimentSelect = '$baseUrl/behavioral-experiments/select';
   static String startBehavioralExperiment(String id) => '$baseUrl/behavioral-experiments/$id/start';
   static String debriefBehavioralExperiment(String id) => '$baseUrl/behavioral-experiments/$id/debrief';
 
