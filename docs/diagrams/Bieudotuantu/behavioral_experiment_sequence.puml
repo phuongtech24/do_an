@@ -2,28 +2,36 @@
 title Biểu đồ tuần tự - Thử nghiệm hành vi
 
 actor "Bệnh nhân" as Patient
-participant "Ứng dụng" as App
-participant "Bộ điều khiển lộ trình" as RoadmapController
-participant "Dịch vụ thử nghiệm hành vi" as BehavioralExperimentService
+boundary "Màn hình lộ trình" as RoadmapView
+control "BehavioralExperimentController" as BehavioralExperimentController
+control "FearLadderService" as FearLadderService
 database "Cơ sở dữ liệu" as DB
 
-Patient -> App : Thiết lập bài thực hành
-App -> RoadmapController : Bắt đầu thử nghiệm
-RoadmapController -> BehavioralExperimentService : startExperiment(...)
-BehavioralExperimentService -> BehavioralExperimentService : Kiểm tra prediction, belief trước, hành vi an toàn
-BehavioralExperimentService -> DB : Lưu trạng thái đang thực hành
-DB --> BehavioralExperimentService : Thành công
-BehavioralExperimentService --> RoadmapController : Trả dữ liệu bài thực hành
-RoadmapController --> App : Hiển thị trạng thái đang thực hành
+Patient -> RoadmapView : Chọn một bài trong danh sách bài đang mở
+RoadmapView -> BehavioralExperimentController : selectExperiment(patientId, ladderItemId)
+BehavioralExperimentController -> FearLadderService : selectExperiment(patientId, ladderItemId)
+FearLadderService -> DB : Kiểm tra bậc đang mở\nvà bài thực hành hiện có
+DB --> FearLadderService : Trả dữ liệu
+FearLadderService --> BehavioralExperimentController : Trả bài thực hành đã chọn
+BehavioralExperimentController --> RoadmapView : Hiển thị màn thiết lập
 
-Patient -> App : Tổng kết bài thực hành
-App -> RoadmapController : Gửi kết quả tổng kết
-RoadmapController -> BehavioralExperimentService : debriefExperiment(...)
-BehavioralExperimentService -> BehavioralExperimentService : Đánh giá kết quả, belief sau, bài học
-BehavioralExperimentService -> DB : Lưu tổng kết
-BehavioralExperimentService -> DB : Cập nhật thang sợ hãi nếu đủ điều kiện
-DB --> BehavioralExperimentService : Thành công
-BehavioralExperimentService --> RoadmapController : Trả kết quả hoàn tất
-RoadmapController --> App : Hiển thị tổng kết bài thực hành
+Patient -> RoadmapView : Nhập prediction, belief trước,\nhành vi an toàn sẽ bỏ
+RoadmapView -> BehavioralExperimentController : startExperiment(experimentId, request)
+BehavioralExperimentController -> FearLadderService : startExperiment(experimentId, request)
+FearLadderService -> FearLadderService : Kiểm tra dữ liệu thiết lập
+FearLadderService -> DB : Lưu setup, startedAt,\ntrạng thái IN_PROGRESS
+DB --> FearLadderService : Thành công
+FearLadderService --> BehavioralExperimentController : Trả dữ liệu đang thực hành
+BehavioralExperimentController --> RoadmapView : Hiển thị nhắc hướng chú ý ra bên ngoài
+
+Patient -> RoadmapView : Gửi outcome, belief sau, learning
+RoadmapView -> BehavioralExperimentController : debriefExperiment(experimentId, request)
+BehavioralExperimentController -> FearLadderService : debriefExperiment(experimentId, request)
+FearLadderService -> FearLadderService : Đánh giá kết quả\nvà cập nhật điểm bậc
+FearLadderService -> DB : Lưu tổng kết bài thực hành
+FearLadderService -> DB : Cập nhật Fear Ladder
+DB --> FearLadderService : Thành công
+FearLadderService --> BehavioralExperimentController : Trả kết quả hoàn tất
+BehavioralExperimentController --> RoadmapView : Hiển thị tổng kết\nvà trạng thái đã hoàn thành
 
 @enduml

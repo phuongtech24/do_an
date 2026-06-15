@@ -6,7 +6,6 @@ class User {
   +email: String
   +passwordHash: String
   +role: Role
-  +isAnonymous: Boolean
 }
 
 class PatientProfile {
@@ -19,6 +18,12 @@ class PatientProfile {
   +lsasDemoCompleted: Boolean
   +safetyGateCompleted: Boolean
   +medicalProfileCompleted: Boolean
+}
+
+class GuestSessionDto {
+  +isGuest: Boolean
+  +accountLinked: Boolean
+  +canViewLsasResult: Boolean
 }
 
 class AnonymousRegisterRequest {
@@ -44,13 +49,6 @@ class AuthService {
   +linkGuestAccount(request)
 }
 
-class LoginResponse {
-  +accessToken: String
-  +refreshToken: String
-  +isGuest: Boolean
-  +accountLinked: Boolean
-}
-
 enum Role {
   GUEST
   PATIENT
@@ -62,6 +60,11 @@ AuthController ..> AnonymousRegisterRequest
 AuthController ..> LinkGuestAccountRequest
 AuthService ..> User
 AuthService ..> PatientProfile
-AuthService ..> LoginResponse
+AuthService ..> GuestSessionDto
+
+note right of PatientProfile
+anonymousModeEnabled chỉ áp dụng cho Patient,
+không dùng để biểu diễn Guest.
+end note
 
 @enduml

@@ -2,35 +2,39 @@
 title Biểu đồ tuần tự - Guest Mode và Cổng chuyển đổi
 
 actor "Khách" as Guest
-participant "Ứng dụng" as App
-participant "Bộ điều khiển xác thực" as AuthController
-participant "Bộ điều khiển đánh giá" as AssessmentController
-participant "Dịch vụ xác thực" as AuthService
-participant "Dịch vụ đánh giá" as AssessmentService
+boundary "Màn hình trải nghiệm Guest" as GuestView
+control "AuthController" as AuthController
+control "AssessmentController" as AssessmentController
+control "AuthService" as AuthService
+control "AssessmentService" as AssessmentService
 database "Cơ sở dữ liệu" as DB
 
-Guest -> App : Bắt đầu ngay
-App -> AuthController : Tạo phiên Khách
-AuthController -> AuthService : Tạo tài khoản Khách
-AuthService -> DB : Lưu phiên Khách
+Guest -> GuestView : Bắt đầu ngay\nchọn nickname và avatar
+GuestView -> AuthController : registerAnonymous(nickname, avatar, deviceId)
+AuthController -> AuthService : Tạo hoặc khôi phục phiên Guest
+AuthService -> DB : Lưu User role = GUEST
 DB --> AuthService : Thành công
-AuthService --> AuthController : Trả thông tin Khách
-AuthController --> App : Guest session
+AuthService --> AuthController : Guest session
+AuthController --> GuestView : Trả phiên Guest
+GuestView --> Guest : Cho vào LSAS demo
 
-Guest -> App : Thực hiện LSAS thử nghiệm
-App -> AssessmentController : Gửi bài LSAS
-AssessmentController -> AssessmentService : Lưu LSAS thử nghiệm
-AssessmentService -> DB : Lưu bài LSAS
+Guest -> GuestView : Hoàn thành LSAS demo
+GuestView -> AssessmentController : Gửi bài LSAS demo
+AssessmentController -> AssessmentService : Lưu LSAS demo
+AssessmentService -> DB : Lưu kết quả LSAS bị khóa
 DB --> AssessmentService : Thành công
-AssessmentService --> AssessmentController : Kết quả đang bị khóa
-AssessmentController --> App : Hiển thị cổng chuyển đổi
+AssessmentService --> AssessmentController : Kết quả chưa được mở
+AssessmentController --> GuestView : Hiển thị cổng chuyển đổi
+GuestView --> Guest : Yêu cầu liên kết email và hồ sơ tối thiểu
 
-Guest -> App : Nhập email, mật khẩu, thông tin tối thiểu
-App -> AuthController : Liên kết tài khoản
-AuthController -> AuthService : Chuyển Khách thành Bệnh nhân
-AuthService -> DB : Cập nhật tài khoản và hồ sơ
+Guest -> GuestView : Nhập email, mật khẩu,\nhọ tên thật, số điện thoại
+GuestView -> AuthController : linkGuestAccount(request)
+AuthController -> AuthService : Chuyển Guest thành Patient
+AuthService -> DB : Cập nhật role = PATIENT
+AuthService -> DB : Hoàn tất hồ sơ Patient
 DB --> AuthService : Thành công
-AuthService --> AuthController : Trả tài khoản Bệnh nhân
-AuthController --> App : Mở khóa kết quả LSAS
+AuthService --> AuthController : Tài khoản Patient + token
+AuthController --> GuestView : Mở khóa kết quả LSAS
+GuestView --> Guest : Điều hướng sang luồng Patient
 
 @enduml

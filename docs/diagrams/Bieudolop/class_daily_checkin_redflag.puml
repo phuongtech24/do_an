@@ -14,7 +14,7 @@ class MoodCheckin {
   +avoidanceUrgeScore: Integer
   +anticipatoryAnxietyScore: Integer
   +ruminationScore: Integer
-  +moodLabel: String
+  +moodLabel: String {derived}
   +createdAt: DateTime
 }
 
@@ -36,6 +36,7 @@ class MoodController {
 
 class MoodService {
   +analyzeMood(patientId, scores)
+  +determineMoodLabel(scores)
   +activateRedFlag(patientId, reason)
 }
 

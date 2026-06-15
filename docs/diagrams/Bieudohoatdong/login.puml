@@ -2,52 +2,31 @@
 title Biểu đồ hoạt động - Đăng nhập
 
 start
-:Người dùng mở màn đăng nhập;
+:Người dùng mở màn hình đăng nhập;
 :Nhập email và mật khẩu;
-:Bấm "Đăng nhập";
-
-if (Thông tin đã nhập đầy đủ?) then (Có)
-  :Hệ thống kiểm tra tài khoản;
-  if (Tài khoản tồn tại?) then (Có)
-    :Hệ thống xác thực mật khẩu;
-    if (Mật khẩu đúng?) then (Đúng)
-      :Tạo phiên đăng nhập;
-      :Nạp thông tin người dùng;
-      :Điều hướng vào trang chủ;
-      stop
-    else (Sai)
-      :Hiển thị thông báo sai mật khẩu;
-      stop
-    endif
-  else (Không)
-    :Hiển thị thông báo tài khoản không tồn tại;
-    stop
-  endif
+if (Chọn ghi nhớ đăng nhập?) then (Có)
+  :Đánh dấu ghi nhớ phiên;
 else (Không)
-  :Hiển thị yêu cầu nhập đầy đủ thông tin;
-  stop
 endif
-
-@enduml
-@startuml
-title Biểu đồ hoạt động - Đăng nhập
-
-start
-:Người dùng mở màn đăng nhập;
-:Nhập email và mật khẩu;
 :Bấm "Đăng nhập";
 
-if (Thông tin đã nhập đầy đủ?) then (Có)
-  :Hệ thống kiểm tra tài khoản;
+if (Đã nhập đầy đủ thông tin?) then (Có)
+  :Hệ thống kiểm tra tài khoản theo email;
   if (Tài khoản tồn tại?) then (Có)
-    :Hệ thống xác thực mật khẩu;
-    if (Mật khẩu đúng?) then (Đúng)
-      :Tạo phiên đăng nhập;
-      :Nạp thông tin người dùng;
-      :Điều hướng vào trang chủ;
-      stop
-    else (Sai)
-      :Hiển thị thông báo sai mật khẩu;
+    if (Tài khoản đang hoạt động?) then (Có)
+      :Hệ thống xác thực mật khẩu;
+      if (Mật khẩu đúng?) then (Đúng)
+        :Tạo access token và refresh token;
+        :Tạo phiên đăng nhập;
+        :Nạp hồ sơ và vai trò người dùng;
+        :Điều hướng vào màn hình phù hợp;
+        stop
+      else (Sai)
+        :Hiển thị thông báo sai mật khẩu;
+        stop
+      endif
+    else (Không)
+      :Thông báo tài khoản bị vô hiệu hóa;
       stop
     endif
   else (Không)
@@ -55,7 +34,7 @@ if (Thông tin đã nhập đầy đủ?) then (Có)
     stop
   endif
 else (Không)
-  :Hiển thị yêu cầu nhập đầy đủ thông tin;
+  :Yêu cầu nhập đầy đủ thông tin;
   stop
 endif
 

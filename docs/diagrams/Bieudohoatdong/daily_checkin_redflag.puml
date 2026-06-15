@@ -4,22 +4,20 @@ title Biểu đồ hoạt động - Điểm danh cảm xúc, Chốt an toàn và
 start
 :Bệnh nhân mở điểm danh cảm xúc;
 :Chấm 5 chỉ số cảm xúc;
+:Hệ thống lưu điểm số và suy ra nhãn cảm xúc;
 
 if (Lo âu hoặc Buồn bã vượt ngưỡng nguy cơ?) then (Có)
   :Hiển thị chốt an toàn;
-
   if (Người dùng chọn "Không an toàn"?) then (Có)
     :Bật Cờ đỏ;
+    :Lưu nhật ký nguy cơ;
     :Dừng luồng CBT hiện tại;
     :Mở hỗ trợ khẩn cấp;
-    :Đẩy ca bệnh lên dashboard Bác sĩ / Quản trị viên;
+    :Đẩy ca bệnh lên dashboard Bác sĩ và Quản trị viên;
     stop
   else (Không)
-    :Tiếp tục đánh giá điều hướng;
+    :Ghi nhận trạng thái an toàn;
   endif
-
-else (Không)
-  :Tiếp tục đánh giá điều hướng;
 endif
 
 if (Mức nhẹ?) then (Có)

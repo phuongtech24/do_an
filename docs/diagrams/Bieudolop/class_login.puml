@@ -1,5 +1,5 @@
 @startuml
-title Biểu đồ lớp - Đăng nhập, Đăng ký, Quên mật khẩu
+title Biểu đồ lớp - Chức năng đăng nhập
 
 class User {
   +id: UUID
@@ -16,33 +16,10 @@ class RefreshToken {
   +revoked: Boolean
 }
 
-class PasswordResetToken {
-  +id: UUID
-  +token: String
-  +expiresAt: DateTime
-  +used: Boolean
-}
-
 class LoginRequest {
   +email: String
   +password: String
   +rememberMe: Boolean
-}
-
-class RegisterRequest {
-  +email: String
-  +password: String
-  +confirmPassword: String
-}
-
-class ForgotPasswordRequest {
-  +email: String
-}
-
-class ResetPasswordRequest {
-  +token: String
-  +newPassword: String
-  +confirmPassword: String
 }
 
 class LoginResponse {
@@ -54,17 +31,11 @@ class LoginResponse {
 
 class AuthController {
   +login(request)
-  +register(request)
-  +forgotPassword(request)
-  +resetPassword(request)
   +refreshToken(request)
 }
 
 class AuthService {
   +login(request)
-  +register(request)
-  +requestPasswordReset(email)
-  +resetPassword(request)
   +refreshToken(token)
 }
 
@@ -75,10 +46,6 @@ class JwtUtil {
   +validateRefreshToken(token)
 }
 
-class MailService {
-  +sendResetPasswordEmail(email, token)
-}
-
 enum Role {
   GUEST
   PATIENT
@@ -87,17 +54,11 @@ enum Role {
 }
 
 User "1" -- "0..*" RefreshToken
-User "1" -- "0..*" PasswordResetToken
 AuthController ..> AuthService
 AuthController ..> LoginRequest
-AuthController ..> RegisterRequest
-AuthController ..> ForgotPasswordRequest
-AuthController ..> ResetPasswordRequest
 AuthService ..> User
 AuthService ..> RefreshToken
-AuthService ..> PasswordResetToken
 AuthService ..> LoginResponse
 AuthService ..> JwtUtil
-AuthService ..> MailService
 
 @enduml

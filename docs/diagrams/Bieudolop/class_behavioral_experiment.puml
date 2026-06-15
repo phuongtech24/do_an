@@ -16,9 +16,9 @@ class FearLadderItem {
   +id: UUID
   +ladderOrder: Integer
   +situationText: String
-  +difficulty: String
+  +bucket: String
   +status: String
-  +unlocked: Boolean
+  +unlocked: Boolean {derived}
   +currentFearScore: Integer
   +currentAvoidanceScore: Integer
 }
@@ -29,6 +29,8 @@ class BehavioralExperiment {
   +predictionBeliefBefore: Integer
   +predictionBeliefAfter: Integer
   +safetyBehaviorsJson: String
+  +focusReminderShown: Boolean
+  +executionNotes: String
   +outcome: String
   +learning: String
   +status: String
@@ -52,21 +54,22 @@ class BehavioralExperimentDebriefRequestDto {
   +postAvoidanceScore: Integer
 }
 
-class FearLadderService {
+class BehavioralExperimentController {
+  +selectExperiment(patientId, ladderItemId)
   +startExperiment(experimentId, request)
   +debriefExperiment(experimentId, request)
 }
 
-class RoadmapController {
+class FearLadderService {
+  +selectExperiment(patientId, ladderItemId)
   +startExperiment(experimentId, request)
   +debriefExperiment(experimentId, request)
-  +getProgramState(patientId)
 }
 
 PatientProfile "1" -- "0..1" RoadmapProgramState
 PatientProfile "1" -- "0..*" FearLadderItem
 FearLadderItem "1" -- "0..*" BehavioralExperiment
-RoadmapController ..> FearLadderService
+BehavioralExperimentController ..> FearLadderService
 FearLadderService ..> BehavioralExperiment
 FearLadderService ..> BehavioralExperimentStartRequestDto
 FearLadderService ..> BehavioralExperimentDebriefRequestDto

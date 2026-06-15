@@ -6,6 +6,10 @@ class PatientProfile {
   +currentLsasScore: Integer
   +lastLsasDate: Date
   +isRedFlagActive: Boolean
+  +triageRequired: Boolean
+  +triageStatus: String
+  +triagePriority: String
+  +triageTriggeredAt: DateTime
 }
 
 class LsasAnswer {
@@ -46,6 +50,7 @@ class AssessmentController {
 class AssessmentService {
   +submitLsas(patientId, answers)
   +classifyLsas(score)
+  +triggerClinicalTriage(patientId)
 }
 
 enum ClinicalRoute {
