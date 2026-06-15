@@ -1,0 +1,47 @@
+@startuml
+title Biểu đồ tuần tự - Viết Thought Record có hỗ trợ AI
+
+actor "Bệnh nhân" as Patient
+boundary "Màn hình Thought Record" as ThoughtRecordView
+control "JournalController" as JournalController
+control "JournalService" as JournalService
+control "AiController" as AiController
+control "AiAssistantService" as AiAssistantService
+database "Cơ sở dữ liệu" as DB
+
+Patient -> ThoughtRecordView : Mở Thought Record
+ThoughtRecordView --> Patient : Hiển thị quy trình 6 bước
+
+Patient -> ThoughtRecordView : Nhập tình huống, cảm xúc,\nhành vi an toàn, suy nghĩ tự động
+ThoughtRecordView -> AiController : Yêu cầu Guided Discovery
+AiController -> AiAssistantService : guidedDiscovery(payload)
+AiAssistantService --> AiController : 1-2 câu hỏi Socratic
+AiController --> ThoughtRecordView : Trả gợi ý phản biện
+ThoughtRecordView --> Patient : Hiển thị câu hỏi gợi ý
+
+Patient -> ThoughtRecordView : Hoàn thiện phản hồi thích nghi
+ThoughtRecordView -> AiController : Yêu cầu gợi ý lỗi tư duy
+AiController -> AiAssistantService : cognitiveDistortions(payload)
+AiAssistantService --> AiController : 1-3 lỗi tư duy gợi ý
+AiController --> ThoughtRecordView : Trả distortions
+ThoughtRecordView --> Patient : Hiển thị lỗi tư duy gợi ý
+
+Patient -> ThoughtRecordView : Bấm lưu Thought Record
+ThoughtRecordView -> JournalController : Gửi nội dung nhật ký
+JournalController -> JournalService : saveThoughtRecord(request)
+JournalService -> AiAssistantService : analyzeJournalRiskAndDistortions(content)
+AiAssistantService --> JournalService : aiRiskScore / severity / reason
+JournalService -> DB : Lưu Thought Record + aiRiskScore
+
+alt AI trả kết quả hợp lệ
+  JournalService --> JournalController : JournalDto đã lưu
+  JournalController --> ThoughtRecordView : Trả kết quả thành công
+  ThoughtRecordView --> Patient : Hiển thị tổng kết + gợi ý đã lưu
+else AI lỗi hoặc không phản hồi
+  JournalService -> JournalService : Dùng fallback mặc định
+  JournalService --> JournalController : JournalDto đã lưu
+  JournalController --> ThoughtRecordView : Trả kết quả thành công
+  ThoughtRecordView --> Patient : Hiển thị tổng kết không làm gãy luồng
+end
+
+@enduml
