@@ -27,8 +27,13 @@ import com.reconnect.mindhealth.modules.journal.enums.JournalType;
 import com.reconnect.mindhealth.modules.journal.service.IJournalService;
 import com.reconnect.mindhealth.modules.risk.entity.DailyRiskLog;
 import com.reconnect.mindhealth.modules.risk.repository.DailyRiskLogRepository;
+import com.reconnect.mindhealth.modules.roadmap.entity.FearLadderItem;
 import com.reconnect.mindhealth.modules.roadmap.entity.PatientQuest;
+import com.reconnect.mindhealth.modules.roadmap.enums.FearLadderStatus;
+import com.reconnect.mindhealth.modules.roadmap.repository.BehavioralExperimentRepository;
+import com.reconnect.mindhealth.modules.roadmap.repository.FearLadderItemRepository;
 import com.reconnect.mindhealth.modules.roadmap.service.RoadmapDailyAssignmentService;
+import com.reconnect.mindhealth.modules.roadmap.service.RoadmapProgramStateService;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -44,6 +49,9 @@ public class AdminDemoControlService {
     private final IJournalService journalService;
     private final AppointmentRepository appointmentRepository;
     private final ClinicalTriageService clinicalTriageService;
+    private final FearLadderItemRepository fearLadderItemRepository;
+    private final BehavioralExperimentRepository behavioralExperimentRepository;
+    private final RoadmapProgramStateService roadmapProgramStateService;
 
     public AdminDemoControlService(
             PatientProfileRepository patientProfileRepository,
@@ -52,7 +60,10 @@ public class AdminDemoControlService {
             UserMoodRepository userMoodRepository,
             IJournalService journalService,
             AppointmentRepository appointmentRepository,
-            ClinicalTriageService clinicalTriageService) {
+            ClinicalTriageService clinicalTriageService,
+            FearLadderItemRepository fearLadderItemRepository,
+            BehavioralExperimentRepository behavioralExperimentRepository,
+            RoadmapProgramStateService roadmapProgramStateService) {
         this.patientProfileRepository = patientProfileRepository;
         this.dailyRiskLogRepository = dailyRiskLogRepository;
         this.roadmapDailyAssignmentService = roadmapDailyAssignmentService;
@@ -60,6 +71,9 @@ public class AdminDemoControlService {
         this.journalService = journalService;
         this.appointmentRepository = appointmentRepository;
         this.clinicalTriageService = clinicalTriageService;
+        this.fearLadderItemRepository = fearLadderItemRepository;
+        this.behavioralExperimentRepository = behavioralExperimentRepository;
+        this.roadmapProgramStateService = roadmapProgramStateService;
     }
 
     @Transactional
@@ -175,6 +189,66 @@ public class AdminDemoControlService {
         log.info("Admin demo control set LSAS band adminId={}, patientId={}, band={}, score={}",
                 adminId, patientId, normalizedBand, score);
         return snapshot(patient, "SET_LSAS_BAND", "Đã chuyển bệnh nhân sang nhánh demo LSAS: " + normalizedBand + ".");
+    }
+
+    @Transactional
+    public AdminDemoControlResultDto setProgramWeek(UUID patientId, Integer requestedWeek, UUID adminId) {
+        PatientProfile patient = getPatient(patientId);
+        int programWeek = Math.max(1, Math.min(requestedWeek == null ? 1 : requestedWeek, 14));
+        patient.setCurrentProgramWeek(programWeek);
+        patient.setTherapyProgramStartedAt(LocalDateTime.now().minusDays(Math.max(0, (programWeek - 1) * 7L)));
+        patient.setGraduatedAt(null);
+        patient.setTaperingStage(TaperingStage.NONE);
+        patientProfileRepository.save(patient);
+        clearBehavioralExperiments(patientId);
+
+        log.info("Admin demo control set program week adminId={}, patientId={}, week={}",
+                adminId, patientId, programWeek);
+        return snapshot(patient, "SET_PROGRAM_WEEK", "Đã đặt tuần trị liệu demo thành tuần " + programWeek + ".");
+    }
+
+    @Transactional
+    public AdminDemoControlResultDto setFearLadderMastery(UUID patientId, Integer requestedMasteredCount, UUID adminId) {
+        PatientProfile patient = getPatient(patientId);
+        List<FearLadderItem> items = fearLadderItemRepository.findByPatientProfile_IdOrderByLadderOrderAsc(patientId);
+        if (items.isEmpty()) {
+            throw new IllegalStateException("Bệnh nhân chưa có Fear Ladder để ép tiến độ demo.");
+        }
+
+        int masteredCount = Math.max(0, Math.min(requestedMasteredCount == null ? 0 : requestedMasteredCount, items.size()));
+        for (int index = 0; index < items.size(); index++) {
+            FearLadderItem item = items.get(index);
+            if (index < masteredCount) {
+                item.setStatus(FearLadderStatus.MASTERED);
+                item.setCurrentFearScore(0);
+                item.setCurrentAvoidanceScore(0);
+            } else {
+                item.setStatus(FearLadderStatus.ACTIVE);
+            }
+        }
+        fearLadderItemRepository.saveAll(items);
+        clearBehavioralExperiments(patientId);
+
+        log.info("Admin demo control set fear ladder mastery adminId={}, patientId={}, masteredCount={}",
+                adminId, patientId, masteredCount);
+        return snapshot(
+                patient,
+                "SET_FEAR_LADDER_MASTERY",
+                "Đã cập nhật tiến độ Fear Ladder demo: " + masteredCount + "/" + items.size() + " bậc đã làm chủ.");
+    }
+
+    @Transactional
+    public AdminDemoControlResultDto resetFearLadderProgress(UUID patientId, UUID adminId) {
+        PatientProfile patient = getPatient(patientId);
+        List<FearLadderItem> items = fearLadderItemRepository.findByPatientProfile_IdOrderByLadderOrderAsc(patientId);
+        for (FearLadderItem item : items) {
+            item.setStatus(FearLadderStatus.ACTIVE);
+        }
+        fearLadderItemRepository.saveAll(items);
+        clearBehavioralExperiments(patientId);
+
+        log.info("Admin demo control reset fear ladder progress adminId={}, patientId={}", adminId, patientId);
+        return snapshot(patient, "RESET_FEAR_LADDER_PROGRESS", "Đã reset tiến độ Fear Ladder để demo lại từ đầu.");
     }
 
     @Transactional
@@ -388,7 +462,37 @@ public class AdminDemoControlService {
         result.setClinicalAttention((patient.getCurrentLsasScore() != null ? patient.getCurrentLsasScore() : 0) >= 95);
         result.setTaperingStage(patient.getTaperingStage() != null ? patient.getTaperingStage().name() : null);
         result.setGraduatedAt(patient.getGraduatedAt() != null ? patient.getGraduatedAt().toString() : null);
+
+        int programWeek = roadmapProgramStateService.resolveProgramWeek(patient);
+        RoadmapProgramStateService.ProgramPhase phase = roadmapProgramStateService.resolvePhase(programWeek);
+        List<FearLadderItem> ladderItems = fearLadderItemRepository.findByPatientProfile_IdOrderByLadderOrderAsc(patient.getId());
+        int masteredCount = (int) ladderItems.stream()
+                .filter(item -> item.getStatus() == FearLadderStatus.MASTERED)
+                .count();
+
+        result.setProgramWeek(programWeek);
+        result.setProgramPhaseCode(phase.code());
+        result.setProgramPhaseLabel(phase.label());
+        result.setFearLadderUnlockedCount(resolveUnlockedCount(ladderItems));
+        result.setFearLadderMasteredCount(masteredCount);
+        result.setGraduationReady(!ladderItems.isEmpty() && masteredCount == ladderItems.size());
         return result;
+    }
+
+    private int resolveUnlockedCount(List<FearLadderItem> items) {
+        if (items.isEmpty()) {
+            return 0;
+        }
+        for (int index = 0; index < items.size(); index++) {
+            if (items.get(index).getStatus() != FearLadderStatus.MASTERED) {
+                return Math.min(items.size(), index + 1);
+            }
+        }
+        return items.size();
+    }
+
+    private void clearBehavioralExperiments(UUID patientId) {
+        behavioralExperimentRepository.deleteByPatientProfile_Id(patientId);
     }
 
     private String resolveClinicalRoute(Integer totalScore) {

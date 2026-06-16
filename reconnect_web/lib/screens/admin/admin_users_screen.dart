@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../features/admin/data/models/admin_user_model.dart';
 import '../../features/admin/data/repositories/admin_user_repository.dart';
+import '../../shared/widgets/pagination_bar.dart';
 import '../../theme/app_colors.dart';
 
 class AdminUsersScreen extends StatefulWidget {
@@ -19,6 +20,10 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   String _error = '';
   String _query = '';
   List<AdminUserModel> _users = [];
+  int _pageIndex = 1;
+  int _pageSize = 10;
+  int _totalPages = 0;
+  int _totalElements = 0;
 
   @override
   void initState() {
@@ -26,7 +31,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
-  Future<void> _load() async {
+  Future<void> _load({int? pageIndex, int? pageSize, String? keyword}) async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final token = auth.token;
     if (token == null || token.isEmpty) {
@@ -36,11 +41,24 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     setState(() {
       _loading = true;
       _error = '';
+      if (pageIndex != null) _pageIndex = pageIndex;
+      if (pageSize != null) _pageSize = pageSize;
+      if (keyword != null) _query = keyword;
     });
     try {
-      final list = await _repo.listUsers(token: token);
+      final page = await _repo.listUsersPaged(
+        token: token,
+        keyword: _query,
+        pageIndex: _pageIndex,
+        pageSize: _pageSize,
+      );
       if (!mounted) return;
-      setState(() => _users = list);
+      setState(() {
+        _users = page.content;
+        _totalPages = page.totalPages;
+        _totalElements = page.totalElements;
+        _pageIndex = page.pageIndex;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = e.toString().replaceAll('Exception: ', ''));
@@ -48,17 +66,6 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       if (!mounted) return;
       setState(() => _loading = false);
     }
-  }
-
-  List<AdminUserModel> get _filtered {
-    final q = _query.trim().toLowerCase();
-    if (q.isEmpty) return _users;
-    return _users.where((u) {
-      return u.email.toLowerCase().contains(q) ||
-          (u.username ?? '').toLowerCase().contains(q) ||
-          u.role.toLowerCase().contains(q) ||
-          u.id.toLowerCase().contains(q);
-    }).toList();
   }
 
   Future<void> _toggleActive(AdminUserModel user, bool active) async {
@@ -79,9 +86,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _error = e.toString().replaceAll('Exception: ', '');
-      });
+      setState(() => _error = e.toString().replaceAll('Exception: ', ''));
       await _load();
     }
   }
@@ -104,9 +109,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _error = e.toString().replaceAll('Exception: ', '');
-      });
+      setState(() => _error = e.toString().replaceAll('Exception: ', ''));
       await _load();
     }
   }
@@ -152,7 +155,8 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
               borderSide: BorderSide(color: Colors.grey.shade300),
             ),
           ),
-          onChanged: (v) => setState(() => _query = v),
+          onChanged: (v) => _query = v,
+          onSubmitted: (v) => _load(pageIndex: 1, keyword: v),
         ),
         const SizedBox(height: 12),
         if (_error.isNotEmpty)
@@ -167,47 +171,60 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
               borderRadius: BorderRadius.circular(12),
               side: BorderSide(color: Colors.grey[300]!),
             ),
-            child: _loading && _users.isEmpty
-                ? const Center(child: CircularProgressIndicator())
-                : ListView.separated(
-                    itemCount: _filtered.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final u = _filtered[index];
-                      return ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        title: Text(u.email, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text('role: ${u.role} • active: ${u.isActive} • anonymous: ${u.isAnonymous}'),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Switch(
-                              value: u.isActive,
-                              onChanged: (v) => _toggleActive(u, v),
-                              activeColor: AppColors.success,
-                            ),
-                            const SizedBox(width: 8),
-                            DropdownButton<String>(
-                              value: u.role,
-                              onChanged: (val) {
-                                if (val == null) return;
-                                _changeRole(u, val);
-                              },
-                              items: const [
-                                DropdownMenuItem(value: 'PATIENT', child: Text('PATIENT')),
-                                DropdownMenuItem(value: 'THERAPIST', child: Text('THERAPIST')),
-                                DropdownMenuItem(value: 'ADMIN', child: Text('ADMIN')),
-                              ],
-                            ),
-                          ],
+            child: Column(
+              children: [
+                Expanded(
+                  child: _loading && _users.isEmpty
+                      ? const Center(child: CircularProgressIndicator())
+                      : ListView.separated(
+                          itemCount: _users.length,
+                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final u = _users[index];
+                            return ListTile(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              title: Text(u.email, style: const TextStyle(fontWeight: FontWeight.bold)),
+                              subtitle: Text('role: ${u.role} • active: ${u.isActive} • anonymous: ${u.isAnonymous}'),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Switch(
+                                    value: u.isActive,
+                                    onChanged: (v) => _toggleActive(u, v),
+                                    activeColor: AppColors.success,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  DropdownButton<String>(
+                                    value: u.role,
+                                    onChanged: (val) {
+                                      if (val == null) return;
+                                      _changeRole(u, val);
+                                    },
+                                    items: const [
+                                      DropdownMenuItem(value: 'PATIENT', child: Text('PATIENT')),
+                                      DropdownMenuItem(value: 'THERAPIST', child: Text('THERAPIST')),
+                                      DropdownMenuItem(value: 'ADMIN', child: Text('ADMIN')),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
+                ),
+                PaginationBar(
+                  pageIndex: _pageIndex,
+                  totalPages: _totalPages,
+                  totalElements: _totalElements,
+                  pageSize: _pageSize,
+                  onPageChanged: (page) => _load(pageIndex: page),
+                  onPageSizeChanged: (size) => _load(pageIndex: 1, pageSize: size),
+                ),
+              ],
+            ),
           ),
         ),
       ],
     );
   }
 }
-

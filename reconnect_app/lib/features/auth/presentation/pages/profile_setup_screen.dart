@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -33,16 +34,36 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   final _realFullNameController = TextEditingController();
   final _phoneNumberController = TextEditingController();
   final _emergencyContactController = TextEditingController();
-  final _educationController = TextEditingController();
   final _occupationController = TextEditingController();
-  final _relationshipController = TextEditingController();
   final _medicalHistoryController = TextEditingController();
 
   bool _anonymousMode = true;
   String _gender = 'Nữ';
+  String? _selectedEducationLevel;
+  String? _selectedRelationshipStatus;
   DateTime? _dateOfBirth;
   int _avatarIndex = 0;
   bool _initialized = false;
+
+  static const List<String> _educationLevels = [
+    'Cấp 2',
+    'Cấp 3',
+    'Trung cấp',
+    'Cao đẳng',
+    'Đại học',
+    'Sau đại học',
+    'Khác',
+  ];
+
+  static const List<String> _relationshipStatuses = [
+    'Độc thân',
+    'Đang tìm hiểu',
+    'Hẹn hò',
+    'Đã kết hôn',
+    'Ly hôn',
+    'Góa',
+    'Khác',
+  ];
 
   static const List<_AvatarOption> _avatarOptions = [
     _AvatarOption(code: 'avatar_cat', icon: Icons.pets_outlined, label: 'Mèo nhỏ'),
@@ -62,9 +83,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     _realFullNameController.dispose();
     _phoneNumberController.dispose();
     _emergencyContactController.dispose();
-    _educationController.dispose();
     _occupationController.dispose();
-    _relationshipController.dispose();
     _medicalHistoryController.dispose();
     super.dispose();
   }
@@ -91,10 +110,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       _realFullNameController.text = profile?.realFullName ?? '';
       _phoneNumberController.text = profile?.phoneNumber ?? '';
       _emergencyContactController.text = profile?.emergencyContactPhone ?? '';
-      _educationController.text = profile?.educationLevel ?? '';
       _occupationController.text = profile?.occupation ?? '';
-      _relationshipController.text = profile?.relationshipStatus ?? '';
       _medicalHistoryController.text = profile?.medicalHistory ?? '';
+      _selectedEducationLevel = _educationLevels.contains(profile?.educationLevel)
+          ? profile?.educationLevel
+          : null;
+      _selectedRelationshipStatus = _relationshipStatuses.contains(profile?.relationshipStatus)
+          ? profile?.relationshipStatus
+          : null;
       _anonymousMode = profile?.anonymousModeEnabled ?? true;
       _gender = profile?.gender?.isNotEmpty == true ? profile!.gender! : 'Nữ';
       if (profile?.dateOfBirth != null && profile!.dateOfBirth!.isNotEmpty) {
@@ -271,13 +294,18 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                     TextFormField(
                       controller: _phoneNumberController,
                       keyboardType: TextInputType.phone,
+                      inputFormatters: const [FilteringTextInputFormatter.digitsOnly],
                       decoration: const InputDecoration(
                         labelText: 'Số điện thoại cá nhân',
                         prefixIcon: Icon(Icons.phone_outlined),
                       ),
                       validator: (value) {
-                        if (_showMedicalSection && (value == null || value.trim().isEmpty)) {
+                        final text = value?.trim() ?? '';
+                        if (_showMedicalSection && text.isEmpty) {
                           return 'Vui lòng nhập số điện thoại cá nhân.';
+                        }
+                        if (text.isNotEmpty && !RegExp(r'^\d+$').hasMatch(text)) {
+                          return 'Số điện thoại chỉ được chứa chữ số.';
                         }
                         return null;
                       },
@@ -286,18 +314,36 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                     TextFormField(
                       controller: _emergencyContactController,
                       keyboardType: TextInputType.phone,
+                      inputFormatters: const [FilteringTextInputFormatter.digitsOnly],
                       decoration: const InputDecoration(
                         labelText: 'Số điện thoại người liên hệ khẩn cấp',
                         prefixIcon: Icon(Icons.contact_phone_outlined),
                       ),
+                      validator: (value) {
+                        final text = value?.trim() ?? '';
+                        if (text.isNotEmpty && !RegExp(r'^\d+$').hasMatch(text)) {
+                          return 'Số điện thoại chỉ được chứa chữ số.';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _educationController,
+                    DropdownButtonFormField<String>(
+                      value: _selectedEducationLevel,
                       decoration: const InputDecoration(
                         labelText: 'Trình độ học vấn',
                         prefixIcon: Icon(Icons.school_outlined),
                       ),
+                      items: _educationLevels
+                          .map((item) => DropdownMenuItem<String>(value: item, child: Text(item)))
+                          .toList(),
+                      onChanged: (value) => setState(() => _selectedEducationLevel = value),
+                      validator: (value) {
+                        if (_showMedicalSection && (value == null || value.trim().isEmpty)) {
+                          return 'Vui lòng chọn trình độ học vấn.';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -308,12 +354,22 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _relationshipController,
+                    DropdownButtonFormField<String>(
+                      value: _selectedRelationshipStatus,
                       decoration: const InputDecoration(
                         labelText: 'Tình trạng hôn nhân / mối quan hệ',
                         prefixIcon: Icon(Icons.favorite_border),
                       ),
+                      items: _relationshipStatuses
+                          .map((item) => DropdownMenuItem<String>(value: item, child: Text(item)))
+                          .toList(),
+                      onChanged: (value) => setState(() => _selectedRelationshipStatus = value),
+                      validator: (value) {
+                        if (_showMedicalSection && (value == null || value.trim().isEmpty)) {
+                          return 'Vui lòng chọn tình trạng hôn nhân / mối quan hệ.';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -411,9 +467,9 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         'gender': _gender,
         'phoneNumber': _phoneNumberController.text.trim(),
         'emergencyContactPhone': _emergencyContactController.text.trim(),
-        'educationLevel': _educationController.text.trim(),
+        'educationLevel': _selectedEducationLevel,
         'occupation': _occupationController.text.trim(),
-        'relationshipStatus': _relationshipController.text.trim(),
+        'relationshipStatus': _selectedRelationshipStatus,
         'medicalHistory': _medicalHistoryController.text.trim(),
       });
     }

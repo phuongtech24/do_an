@@ -1,9 +1,11 @@
 package com.reconnect.mindhealth.modules.journal.controller;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -14,12 +16,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.reconnect.mindhealth.common.dto.ApiResponse;
+import com.reconnect.mindhealth.common.util.PagingUtils;
 import com.reconnect.mindhealth.modules.journal.dto.JournalDto;
+import com.reconnect.mindhealth.modules.journal.dto.JournalSearchRequestDto;
 import com.reconnect.mindhealth.modules.journal.service.IJournalService;
 
-/**
- * Controller class for CBT Journal APIs.
- */
 @RestController
 @RequestMapping("/api/journal")
 public class JournalController {
@@ -27,10 +28,6 @@ public class JournalController {
     @Autowired
     private IJournalService journalService;
 
-    /**
-     * POST /api/journal/thought-records
-     * Saves a new CBT Journal (Thought Record or Credit List).
-     */
     @PostMapping("/thought-records")
     public ResponseEntity<ApiResponse<JournalDto>> saveJournal(@RequestBody JournalDto dto) {
         try {
@@ -47,16 +44,9 @@ public class JournalController {
         }
     }
 
-    /**
-     * GET /api/journal/thought-records
-     * Retrieves all journals written by a specific patient.
-     */
     @GetMapping("/thought-records")
     public ResponseEntity<ApiResponse<List<JournalDto>>> getJournalsByPatient(@RequestParam UUID patientId) {
         try {
-            if (patientId == null) {
-                return ResponseEntity.ok(ApiResponse.error("Thiếu thông tin patientId."));
-            }
             List<JournalDto> list = journalService.getJournalsByPatient(patientId);
             return ResponseEntity.ok(ApiResponse.success("Lấy danh sách nhật ký thành công!", list));
         } catch (Exception e) {
@@ -64,22 +54,49 @@ public class JournalController {
         }
     }
 
-    /**
-     * GET /api/journal/thought-records/{id}
-     * Retrieves a single journal's details, verifying ownership.
-     */
+    @PostMapping("/thought-records/paging")
+    public ResponseEntity<ApiResponse<Page<JournalDto>>> getJournalsByPatientPaging(
+            @RequestBody(required = false) JournalSearchRequestDto request) {
+        try {
+            if (request == null || request.getPatientId() == null) {
+                return ResponseEntity.ok(ApiResponse.error("Thiếu thông tin patientId."));
+            }
+            String keyword = request.normalizedKeyword();
+            List<JournalDto> list = journalService.getJournalsByPatient(request.getPatientId()).stream()
+                    .filter(item -> matchesKeyword(item, keyword))
+                    .toList();
+            return ResponseEntity.ok(ApiResponse.success("Lấy danh sách nhật ký thành công!", PagingUtils.paginate(list, request)));
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.error("Lỗi khi tải danh sách: " + e.getMessage()));
+        }
+    }
+
     @GetMapping("/thought-records/{id}")
     public ResponseEntity<ApiResponse<JournalDto>> getJournalById(
             @PathVariable UUID id,
             @RequestParam UUID patientId) {
         try {
-            if (patientId == null) {
-                return ResponseEntity.ok(ApiResponse.error("Thiếu thông tin patientId."));
-            }
             JournalDto journal = journalService.getJournalById(id, patientId);
             return ResponseEntity.ok(ApiResponse.success("Lấy chi tiết nhật ký thành công!", journal));
         } catch (Exception e) {
             return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
         }
+    }
+
+    private boolean matchesKeyword(JournalDto item, String keyword) {
+        if (keyword == null) {
+            return true;
+        }
+        String normalized = keyword.toLowerCase(Locale.ROOT);
+        return containsIgnoreCase(item.getSituation(), normalized)
+                || containsIgnoreCase(item.getWorstPrediction(), normalized)
+                || containsIgnoreCase(item.getAutomaticThought(), normalized)
+                || containsIgnoreCase(item.getAdaptiveResponse(), normalized)
+                || containsIgnoreCase(item.getContent(), normalized)
+                || containsIgnoreCase(item.getJournalType() != null ? item.getJournalType().name() : null, normalized);
+    }
+
+    private boolean containsIgnoreCase(String value, String keyword) {
+        return value != null && value.toLowerCase(Locale.ROOT).contains(keyword);
     }
 }

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/auth/auth_provider.dart';
 import '../../features/therapist/data/models/therapist_patient_list_item.dart';
 import '../../features/therapist/data/repositories/therapist_patient_repository.dart';
+import '../../shared/widgets/pagination_bar.dart';
 import '../../theme/app_colors.dart';
 import 'patient_detail_screen.dart';
 import 'therapist_appointments_screen.dart';
@@ -22,8 +23,13 @@ class _TherapistDashboardScreenState extends State<TherapistDashboardScreen> {
   bool _redFlagOnly = false;
   bool _loading = true;
   String _error = '';
+  String _query = '';
   List<TherapistPatientListItem> _patients = [];
   int _redFlagCount = 0;
+  int _pageIndex = 1;
+  int _pageSize = 9;
+  int _totalPages = 0;
+  int _totalElements = 0;
 
   @override
   void initState() {
@@ -31,10 +37,13 @@ class _TherapistDashboardScreenState extends State<TherapistDashboardScreen> {
     _loadPatients();
   }
 
-  Future<void> _loadPatients() async {
+  Future<void> _loadPatients({int? pageIndex, int? pageSize, String? keyword}) async {
     setState(() {
       _loading = true;
       _error = '';
+      if (pageIndex != null) _pageIndex = pageIndex;
+      if (pageSize != null) _pageSize = pageSize;
+      if (keyword != null) _query = keyword;
     });
     try {
       final auth = Provider.of<AuthProvider>(context, listen: false);
@@ -42,11 +51,20 @@ class _TherapistDashboardScreenState extends State<TherapistDashboardScreen> {
       if (token == null || token.isEmpty) {
         throw Exception('Chưa đăng nhập');
       }
-      final list = await _repo.listPatients(token: token, redFlagOnly: _redFlagOnly);
+      final page = await _repo.listPatientsPaged(
+        token: token,
+        redFlagOnly: _redFlagOnly,
+        keyword: _query,
+        pageIndex: _pageIndex,
+        pageSize: _pageSize,
+      );
       final red = await _repo.listPatients(token: token, redFlagOnly: true);
       setState(() {
-        _patients = list;
+        _patients = page.content;
         _redFlagCount = red.length;
+        _totalPages = page.totalPages;
+        _totalElements = page.totalElements;
+        _pageIndex = page.pageIndex;
       });
     } catch (e) {
       setState(() => _error = e.toString().replaceAll('Exception: ', ''));
@@ -242,6 +260,25 @@ class _TherapistDashboardScreenState extends State<TherapistDashboardScreen> {
           'Mỗi thẻ hiển thị mức rủi ro, LSAS và goal chính để bạn vào hồ sơ nhanh hơn.',
           style: TextStyle(color: AppColors.textSecondary),
         ),
+        const SizedBox(height: 14),
+        TextField(
+          decoration: InputDecoration(
+            hintText: 'Tìm theo nickname / tên thật / mục tiêu...',
+            prefixIcon: const Icon(Icons.search, color: Colors.grey),
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.grey.shade300),
+            ),
+          ),
+          onChanged: (v) => _query = v,
+          onSubmitted: (v) => _loadPatients(pageIndex: 1, keyword: v),
+        ),
         const SizedBox(height: 20),
         Expanded(
           child: Container(
@@ -251,24 +288,38 @@ class _TherapistDashboardScreenState extends State<TherapistDashboardScreen> {
               borderRadius: BorderRadius.circular(28),
               border: Border.all(color: AppColors.primary.withOpacity(0.08)),
             ),
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _error.isNotEmpty
-                    ? Center(child: Text(_error, style: const TextStyle(color: AppColors.alert)))
-                    : _patients.isEmpty
-                        ? const Center(
-                            child: Text('Chưa có bệnh nhân phù hợp với bộ lọc hiện tại.', style: TextStyle(color: AppColors.textSecondary)),
-                          )
-                        : GridView.builder(
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 3,
-                              crossAxisSpacing: 18,
-                              mainAxisSpacing: 18,
-                              childAspectRatio: 1.22,
-                            ),
-                            itemCount: _patients.length,
-                            itemBuilder: (context, index) => _buildPatientCard(context, _patients[index]),
-                          ),
+            child: Column(
+              children: [
+                Expanded(
+                  child: _loading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _error.isNotEmpty
+                          ? Center(child: Text(_error, style: const TextStyle(color: AppColors.alert)))
+                          : _patients.isEmpty
+                              ? const Center(
+                                  child: Text('Chưa có bệnh nhân phù hợp với bộ lọc hiện tại.', style: TextStyle(color: AppColors.textSecondary)),
+                                )
+                              : GridView.builder(
+                                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 3,
+                                    crossAxisSpacing: 18,
+                                    mainAxisSpacing: 18,
+                                    childAspectRatio: 1.22,
+                                  ),
+                                  itemCount: _patients.length,
+                                  itemBuilder: (context, index) => _buildPatientCard(context, _patients[index]),
+                                ),
+                ),
+                PaginationBar(
+                  pageIndex: _pageIndex,
+                  totalPages: _totalPages,
+                  totalElements: _totalElements,
+                  pageSize: _pageSize,
+                  onPageChanged: (page) => _loadPatients(pageIndex: page),
+                  onPageSizeChanged: (size) => _loadPatients(pageIndex: 1, pageSize: size),
+                ),
+              ],
+            ),
           ),
         ),
       ],

@@ -15,6 +15,7 @@ class AdminQuestsScreen extends StatefulWidget {
 
 class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
   final AdminQuestTemplateRepository _repo = AdminQuestTemplateRepository();
+
   bool _loading = false;
   String _error = '';
   String _query = '';
@@ -33,10 +34,12 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
       setState(() => _error = 'Chưa đăng nhập.');
       return;
     }
+
     setState(() {
       _loading = true;
       _error = '';
     });
+
     try {
       final list = await _repo.list(token: token);
       if (!mounted) return;
@@ -78,8 +81,12 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
 
     String category = item?.category ?? 'BEHAVIORAL';
     String difficulty = item?.difficulty ?? 'EASY';
-    String programPhaseCode = item?.programPhaseCode ?? 'PHASE_1_FOUNDATION';
-    String interventionType = item?.interventionType ?? 'BEHAVIORAL_EXPERIMENT';
+    String programPhaseCode = item?.programPhaseCode.isNotEmpty == true
+        ? item!.programPhaseCode
+        : 'MAP_AND_BELIEF_BREAK';
+    String interventionType = item?.interventionType.isNotEmpty == true
+        ? item!.interventionType
+        : 'BEHAVIORAL_EXPERIMENT';
     bool therapistOnlyAssignable = item?.therapistOnlyAssignable ?? false;
     bool hardLocked = item?.hardLocked ?? false;
 
@@ -87,7 +94,7 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: Text(item == null ? 'Thêm Quest Template' : 'Chỉnh sửa Quest Template'),
+          title: Text(item == null ? 'Thêm module CBT' : 'Chỉnh sửa module CBT'),
           content: SizedBox(
             width: 560,
             child: SingleChildScrollView(
@@ -97,7 +104,7 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
                   TextField(
                     controller: titleCtrl,
                     decoration: const InputDecoration(
-                      labelText: 'Title',
+                      labelText: 'Tên module',
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -107,7 +114,7 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
                     minLines: 3,
                     maxLines: 6,
                     decoration: const InputDecoration(
-                      labelText: 'Description',
+                      labelText: 'Mô tả',
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -115,7 +122,7 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
                   TextField(
                     controller: moduleCodeCtrl,
                     decoration: const InputDecoration(
-                      labelText: 'Module Code',
+                      labelText: 'Mã module',
                       hintText: 'Ví dụ: SAFETY_BEHAVIOR_DROP',
                       border: OutlineInputBorder(),
                     ),
@@ -127,7 +134,7 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
                         child: DropdownButtonFormField<String>(
                           value: category,
                           decoration: const InputDecoration(
-                            labelText: 'Category',
+                            labelText: 'Nhóm nội dung',
                             border: OutlineInputBorder(),
                           ),
                           items: const [
@@ -144,7 +151,7 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
                         child: DropdownButtonFormField<String>(
                           value: difficulty,
                           decoration: const InputDecoration(
-                            labelText: 'Difficulty',
+                            labelText: 'Mức độ',
                             border: OutlineInputBorder(),
                           ),
                           items: const [
@@ -165,7 +172,7 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
                           controller: programWeekCtrl,
                           keyboardType: TextInputType.number,
                           decoration: const InputDecoration(
-                            labelText: 'Program Week',
+                            labelText: 'Tuần trị liệu',
                             hintText: 'Ví dụ: 3',
                             border: OutlineInputBorder(),
                           ),
@@ -176,21 +183,21 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
                         child: DropdownButtonFormField<String>(
                           value: programPhaseCode,
                           decoration: const InputDecoration(
-                            labelText: 'Program Phase',
+                            labelText: 'Phase trị liệu',
                             border: OutlineInputBorder(),
                           ),
                           items: const [
                             DropdownMenuItem(
-                              value: 'PHASE_1_FOUNDATION',
-                              child: Text('PHASE_1_FOUNDATION'),
+                              value: 'MAP_AND_BELIEF_BREAK',
+                              child: Text('MAP_AND_BELIEF_BREAK'),
                             ),
                             DropdownMenuItem(
-                              value: 'PHASE_2_REAL_WORLD',
-                              child: Text('PHASE_2_REAL_WORLD'),
+                              value: 'REAL_WORLD_EXPERIMENTS',
+                              child: Text('REAL_WORLD_EXPERIMENTS'),
                             ),
                             DropdownMenuItem(
-                              value: 'PHASE_3_DEEP_COGNITIVE',
-                              child: Text('PHASE_3_DEEP_COGNITIVE'),
+                              value: 'DEEP_COGNITIVE_MEMORY',
+                              child: Text('DEEP_COGNITIVE_MEMORY'),
                             ),
                           ],
                           onChanged: (val) => setDialogState(
@@ -204,7 +211,7 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
                   DropdownButtonFormField<String>(
                     value: interventionType,
                     decoration: const InputDecoration(
-                      labelText: 'Intervention Type',
+                      labelText: 'Loại can thiệp',
                       border: OutlineInputBorder(),
                     ),
                     items: const [
@@ -233,15 +240,15 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
                   const SizedBox(height: 8),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Therapist only assignable'),
-                    subtitle: const Text('Chỉ bác sĩ mới giao bài này cho bệnh nhân'),
+                    title: const Text('Chỉ bác sĩ được giao'),
+                    subtitle: const Text('Dùng cho module chỉ nên xuất hiện khi therapist chủ động giao bài.'),
                     value: therapistOnlyAssignable,
                     onChanged: (val) => setDialogState(() => therapistOnlyAssignable = val),
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Hard locked'),
-                    subtitle: const Text('Khóa cứng cho tới khi đúng phase / đủ điều kiện'),
+                    title: const Text('Khóa cứng theo phase'),
+                    subtitle: const Text('Chỉ mở khi đúng phase hoặc đủ điều kiện tiên quyết lâm sàng.'),
                     value: hardLocked,
                     onChanged: (val) => setDialogState(() => hardLocked = val),
                   ),
@@ -277,6 +284,7 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
       _loading = true;
       _error = '';
     });
+
     try {
       if (item == null) {
         final created = await _repo.create(
@@ -335,7 +343,7 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Xóa Quest Template?'),
+        title: const Text('Xóa module CBT?'),
         content: Text('Bạn chắc chắn muốn xóa: "${item.title}"'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
@@ -376,7 +384,7 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
           children: [
             const Expanded(
               child: Text(
-                'Kho nội dung CBT (Quest Templates)',
+                'Kho module CBT 14 tuần',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
             ),
@@ -392,13 +400,13 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Quản trị kho bài tập CBT và metadata 14 tuần cho roadmap.',
+          'Quản trị kho module/phác đồ 14 tuần. Đây là thư viện nội dung CBT dùng để giao bài, không phải Fear Ladder cá nhân hóa của từng bệnh nhân.',
           style: TextStyle(color: AppColors.textSecondary),
         ),
         const SizedBox(height: 16),
         TextField(
           decoration: InputDecoration(
-            hintText: 'Tìm theo title, module code, phase, type...',
+            hintText: 'Tìm theo tên module, mã module, phase, loại can thiệp...',
             prefixIcon: const Icon(Icons.search, color: Colors.grey),
             filled: true,
             fillColor: Colors.white,
@@ -442,7 +450,7 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
                           '${it.programWeek != null ? ' • Tuần ${it.programWeek}' : ''}'
                           '${it.programPhaseCode.isNotEmpty ? ' • ${it.programPhaseCode}' : ''}'
                           '\n${it.description}'
-                          '${it.interventionType.isNotEmpty ? '\nType: ${it.interventionType}' : ''}'
+                          '${it.interventionType.isNotEmpty ? '\nCan thiệp: ${it.interventionType}' : ''}'
                           '${it.therapistOnlyAssignable ? '\nChỉ bác sĩ giao' : ''}'
                           '${it.hardLocked ? ' • Hard lock' : ''}',
                         ),

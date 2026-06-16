@@ -7,6 +7,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import com.reconnect.mindhealth.modules.roadmap.support.QuestTemplatePhaseCodeNormalizer;
+
 @Configuration
 public class QuestTemplateSchemaMigrationRunner {
 
@@ -29,6 +31,7 @@ public class QuestTemplateSchemaMigrationRunner {
                     "ALTER TABLE quest_templates ADD COLUMN therapist_only_assignable BIT(1) NOT NULL DEFAULT b'0'");
             ensureColumn(jdbcTemplate, "hard_locked",
                     "ALTER TABLE quest_templates ADD COLUMN hard_locked BIT(1) NOT NULL DEFAULT b'0'");
+            normalizePhaseCodes(jdbcTemplate);
         };
     }
 
@@ -50,6 +53,28 @@ public class QuestTemplateSchemaMigrationRunner {
             }
         } catch (Exception e) {
             log.warn("Quest template schema migration skipped for {}: {}", columnName, e.getMessage());
+        }
+    }
+
+    private void normalizePhaseCodes(JdbcTemplate jdbcTemplate) {
+        normalizePhaseCode(jdbcTemplate, "PHASE_1_FOUNDATION");
+        normalizePhaseCode(jdbcTemplate, "PHASE_2_REAL_WORLD");
+        normalizePhaseCode(jdbcTemplate, "PHASE_3_DEEP_COGNITIVE");
+    }
+
+    private void normalizePhaseCode(JdbcTemplate jdbcTemplate, String legacyValue) {
+        try {
+            String canonicalValue = QuestTemplatePhaseCodeNormalizer.normalize(legacyValue);
+            int updated = jdbcTemplate.update(
+                    "UPDATE quest_templates SET program_phase_code = ? WHERE UPPER(program_phase_code) = ?",
+                    canonicalValue,
+                    legacyValue);
+            if (updated > 0) {
+                log.info("Quest template phase migration: normalized {} row(s) from {} to {}",
+                        updated, legacyValue, canonicalValue);
+            }
+        } catch (Exception e) {
+            log.warn("Quest template phase migration skipped for {}: {}", legacyValue, e.getMessage());
         }
     }
 }

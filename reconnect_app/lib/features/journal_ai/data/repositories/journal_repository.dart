@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:reconnect_app/core/constants/api_constants.dart';
+import 'package:reconnect_app/core/models/paged_result.dart';
 import 'package:reconnect_app/features/journal_ai/data/models/journal_model.dart';
 
 class JournalRepository {
@@ -75,6 +76,44 @@ class JournalRepository {
       if (json['status'] == 200 && json['data'] != null) {
         final List<dynamic> listData = json['data'];
         return listData.map((item) => JournalModel.fromJson(item)).toList();
+      } else {
+        throw Exception(json['message'] ?? 'Không thể tải danh sách nhật ký');
+      }
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  Future<PagedResult<JournalModel>> getJournalsPaged(
+    String patientId, {
+    String? token,
+    String? keyword,
+    int pageIndex = 1,
+    int pageSize = 10,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConstants.baseUrl}/journal/thought-records/paging'),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'patientId': patientId,
+          'keyword': keyword?.trim(),
+          'pageIndex': pageIndex,
+          'pageSize': pageSize,
+        }),
+      );
+
+      _handleHttpError(response, 'tải danh sách nhật ký');
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+
+      if (json['status'] == 200 && json['data'] != null) {
+        return PagedResult<JournalModel>.fromJson(
+          json['data'] as Map<String, dynamic>,
+          itemParser: JournalModel.fromJson,
+        );
       } else {
         throw Exception(json['message'] ?? 'Không thể tải danh sách nhật ký');
       }

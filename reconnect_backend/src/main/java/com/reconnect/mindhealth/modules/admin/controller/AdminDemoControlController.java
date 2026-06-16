@@ -8,12 +8,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.reconnect.mindhealth.common.dto.ApiResponse;
 import com.reconnect.mindhealth.common.security.AuthContextService;
+import com.reconnect.mindhealth.modules.admin.dto.AdminDemoControlProgressRequestDto;
 import com.reconnect.mindhealth.modules.admin.dto.AdminDemoControlResultDto;
 import com.reconnect.mindhealth.modules.admin.service.AdminDemoControlService;
 import com.reconnect.mindhealth.modules.auth.entity.User;
@@ -107,6 +109,48 @@ public class AdminDemoControlController {
             User admin = requireAdmin();
             return ResponseEntity.ok(ApiResponse.success("OK",
                     adminDemoControlService.setLsasBand(patientId, band, admin.getId())));
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/patients/{patientId}/set-program-week")
+    public ResponseEntity<ApiResponse<AdminDemoControlResultDto>> setProgramWeek(
+            @PathVariable UUID patientId,
+            @RequestParam(required = false) Integer programWeek,
+            @RequestBody(required = false) AdminDemoControlProgressRequestDto body) {
+        try {
+            User admin = requireAdmin();
+            Integer effectiveWeek = programWeek != null ? programWeek : (body != null ? body.getProgramWeek() : null);
+            return ResponseEntity.ok(ApiResponse.success("OK",
+                    adminDemoControlService.setProgramWeek(patientId, effectiveWeek, admin.getId())));
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/patients/{patientId}/set-fear-ladder-mastery")
+    public ResponseEntity<ApiResponse<AdminDemoControlResultDto>> setFearLadderMastery(
+            @PathVariable UUID patientId,
+            @RequestParam(required = false) Integer masteredCount,
+            @RequestBody(required = false) AdminDemoControlProgressRequestDto body) {
+        try {
+            User admin = requireAdmin();
+            Integer effectiveCount = masteredCount != null ? masteredCount : (body != null ? body.getMasteredCount() : null);
+            return ResponseEntity.ok(ApiResponse.success("OK",
+                    adminDemoControlService.setFearLadderMastery(patientId, effectiveCount, admin.getId())));
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/patients/{patientId}/reset-fear-ladder-progress")
+    public ResponseEntity<ApiResponse<AdminDemoControlResultDto>> resetFearLadderProgress(
+            @PathVariable UUID patientId) {
+        try {
+            User admin = requireAdmin();
+            return ResponseEntity.ok(ApiResponse.success("OK",
+                    adminDemoControlService.resetFearLadderProgress(patientId, admin.getId())));
         } catch (Exception e) {
             return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
         }

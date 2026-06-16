@@ -1,4 +1,5 @@
 import '../../../../core/network/api_client.dart';
+import '../../../../core/models/paged_result.dart';
 import '../../../admin/data/models/quest_template_model.dart';
 import '../models/therapist_patient_list_item.dart';
 import '../models/therapist_pre_session_review_model.dart';
@@ -19,6 +20,35 @@ class TherapistPatientRepository {
         final list = (raw as List<dynamic>? ?? []);
         return list.map((e) => TherapistPatientListItem.fromJson(e as Map<String, dynamic>)).toList();
       },
+    );
+    if (res.status != 200 || res.data == null) {
+      throw Exception(res.message.isNotEmpty ? res.message : 'Cannot load patients');
+    }
+    return res.data!;
+  }
+
+  Future<PagedResult<TherapistPatientListItem>> listPatientsPaged({
+    required String token,
+    required bool redFlagOnly,
+    String? keyword,
+    int pageIndex = 1,
+    int pageSize = 8,
+  }) async {
+    final res = await _api.post<PagedResult<TherapistPatientListItem>>(
+      '/therapist/patients/paging',
+      headers: {'Authorization': 'Bearer $token'},
+      body: {
+        'redFlagOnly': redFlagOnly,
+        'keyword': keyword?.trim(),
+        'pageIndex': pageIndex,
+        'pageSize': pageSize,
+      },
+      parseData: (raw) => raw is Map<String, dynamic>
+          ? PagedResult<TherapistPatientListItem>.fromJson(
+              raw,
+              itemParser: TherapistPatientListItem.fromJson,
+            )
+          : null,
     );
     if (res.status != 200 || res.data == null) {
       throw Exception(res.message.isNotEmpty ? res.message : 'Cannot load patients');

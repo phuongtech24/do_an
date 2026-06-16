@@ -2,10 +2,12 @@ package com.reconnect.mindhealth.modules.booster.controller;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -17,10 +19,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.reconnect.mindhealth.common.dto.ApiResponse;
-import com.reconnect.mindhealth.modules.booster.dto.AppointmentNoteRequestDto;
+import com.reconnect.mindhealth.common.util.PagingUtils;
 import com.reconnect.mindhealth.modules.booster.dto.AppointmentDto;
+import com.reconnect.mindhealth.modules.booster.dto.AppointmentNoteRequestDto;
 import com.reconnect.mindhealth.modules.booster.dto.AvailableSlotDto;
 import com.reconnect.mindhealth.modules.booster.dto.BookAppointmentRequestDto;
+import com.reconnect.mindhealth.modules.booster.dto.MyAppointmentSearchRequestDto;
 import com.reconnect.mindhealth.modules.booster.dto.TherapistScheduleSlotDto;
 import com.reconnect.mindhealth.modules.booster.dto.TherapistWeeklyScheduleSlotDto;
 import com.reconnect.mindhealth.modules.booster.dto.ToggleSlotRequestDto;
@@ -60,7 +64,8 @@ public class BoosterController {
     @PostMapping("/appointments/book")
     public ResponseEntity<ApiResponse<AppointmentDto>> book(@RequestBody BookAppointmentRequestDto request) {
         try {
-            log.info("Book appointment: patientId={}, startAt={}", request != null ? request.getPatientId() : null,
+            log.info("Book appointment: patientId={}, startAt={}",
+                    request != null ? request.getPatientId() : null,
                     request != null ? request.getStartAt() : null);
             return ResponseEntity.ok(ApiResponse.success("OK", boosterService.bookAppointment(request)));
         } catch (Exception e) {
@@ -79,6 +84,26 @@ public class BoosterController {
             return ResponseEntity.ok(ApiResponse.success("OK", boosterService.getMyAppointments(patientId)));
         } catch (Exception e) {
             log.warn("Get my appointments failed: patientId={}, err={}", patientId, e.toString());
+            return ResponseEntity.ok(ApiResponse.error("Lỗi khi tải lịch hẹn: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/appointments/my/paging")
+    public ResponseEntity<ApiResponse<Page<AppointmentDto>>> myAppointmentsPaging(
+            @RequestBody(required = false) MyAppointmentSearchRequestDto request) {
+        try {
+            if (request == null || request.getPatientId() == null) {
+                return ResponseEntity.ok(ApiResponse.error("Thiếu thông tin patientId."));
+            }
+            String keyword = request.normalizedKeyword();
+            List<AppointmentDto> list = boosterService.getMyAppointments(request.getPatientId()).stream()
+                    .filter(item -> matchesKeyword(item, keyword))
+                    .toList();
+            return ResponseEntity.ok(ApiResponse.success("OK", PagingUtils.paginate(list, request)));
+        } catch (Exception e) {
+            log.warn("Get my appointments paging failed: patientId={}, err={}",
+                    request != null ? request.getPatientId() : null,
+                    e.toString());
             return ResponseEntity.ok(ApiResponse.error("Lỗi khi tải lịch hẹn: " + e.getMessage()));
         }
     }
@@ -195,5 +220,21 @@ public class BoosterController {
             log.warn("Run scheduling failed: err={}", e.toString());
             return ResponseEntity.ok(ApiResponse.error("Lỗi khi chạy scheduling: " + e.getMessage()));
         }
+    }
+
+    private boolean matchesKeyword(AppointmentDto item, String keyword) {
+        if (keyword == null) {
+            return true;
+        }
+        String normalized = keyword.toLowerCase(Locale.ROOT);
+        return containsIgnoreCase(item.getTherapistDisplayName(), normalized)
+                || containsIgnoreCase(item.getPurpose() != null ? item.getPurpose().name() : null, normalized)
+                || containsIgnoreCase(item.getClinicalPurposeCode(), normalized)
+                || containsIgnoreCase(item.getCarePhaseCode(), normalized)
+                || containsIgnoreCase(item.getStatus() != null ? item.getStatus().name() : null, normalized);
+    }
+
+    private boolean containsIgnoreCase(String value, String keyword) {
+        return value != null && value.toLowerCase(Locale.ROOT).contains(keyword);
     }
 }

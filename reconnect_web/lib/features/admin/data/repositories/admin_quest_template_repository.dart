@@ -1,4 +1,5 @@
 import '../../../../core/network/api_client.dart';
+import '../../../../core/models/paged_result.dart';
 import '../models/quest_template_model.dart';
 
 class AdminQuestTemplateRepository {
@@ -12,6 +13,33 @@ class AdminQuestTemplateRepository {
         final list = (raw as List<dynamic>? ?? []);
         return list.map((e) => QuestTemplateModel.fromJson(e as Map<String, dynamic>)).toList();
       },
+    );
+    if (res.status != 200 || res.data == null) {
+      throw Exception(res.message.isNotEmpty ? res.message : 'Cannot load quest templates');
+    }
+    return res.data!;
+  }
+
+  Future<PagedResult<QuestTemplateModel>> listPaged({
+    required String token,
+    String? keyword,
+    int pageIndex = 1,
+    int pageSize = 10,
+  }) async {
+    final res = await _api.post<PagedResult<QuestTemplateModel>>(
+      '/admin/quest-templates/paging',
+      headers: {'Authorization': 'Bearer $token'},
+      body: {
+        'keyword': keyword?.trim(),
+        'pageIndex': pageIndex,
+        'pageSize': pageSize,
+      },
+      parseData: (raw) => raw is Map<String, dynamic>
+          ? PagedResult<QuestTemplateModel>.fromJson(
+              raw,
+              itemParser: QuestTemplateModel.fromJson,
+            )
+          : null,
     );
     if (res.status != 200 || res.data == null) {
       throw Exception(res.message.isNotEmpty ? res.message : 'Cannot load quest templates');

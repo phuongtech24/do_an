@@ -11,6 +11,7 @@ import '../../features/admin/data/repositories/admin_therapist_approval_reposito
 import '../../features/admin/data/repositories/admin_therapist_credentials_repository.dart';
 import '../../features/admin/data/repositories/admin_therapist_management_repository.dart';
 import '../../features/admin/data/repositories/admin_user_repository.dart';
+import '../../shared/widgets/pagination_bar.dart';
 import '../../theme/app_colors.dart';
 
 class AdminVerifyDoctorScreen extends StatefulWidget {
@@ -29,6 +30,10 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
   bool _loading = false;
   String _error = '';
   String _query = '';
+  int _pageIndex = 1;
+  int _pageSize = 10;
+  int _totalPages = 0;
+  int _totalElements = 0;
   List<TherapistApplicantModel> _items = [];
 
   @override

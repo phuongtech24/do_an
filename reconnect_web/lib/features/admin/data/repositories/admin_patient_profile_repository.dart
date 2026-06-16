@@ -1,4 +1,5 @@
 import '../../../../core/network/api_client.dart';
+import '../../../../core/models/paged_result.dart';
 import '../models/admin_patient_profile_model.dart';
 
 class AdminPatientProfileRepository {
@@ -30,6 +31,37 @@ class AdminPatientProfileRepository {
             .map((e) => AdminPatientProfileModel.fromJson(e as Map<String, dynamic>))
             .toList();
       },
+    );
+    if (res.status != 200 || res.data == null) {
+      throw Exception(res.message.isNotEmpty ? res.message : 'Cannot load patients');
+    }
+    return res.data!;
+  }
+
+  Future<PagedResult<AdminPatientProfileModel>> listPatientsPaged({
+    required String token,
+    bool redFlagOnly = false,
+    bool triageOnly = false,
+    String? keyword,
+    int pageIndex = 1,
+    int pageSize = 10,
+  }) async {
+    final res = await _api.post<PagedResult<AdminPatientProfileModel>>(
+      '/admin/patients/paging',
+      headers: {'Authorization': 'Bearer $token'},
+      body: {
+        'redFlagOnly': redFlagOnly,
+        'triageOnly': triageOnly,
+        'keyword': keyword?.trim(),
+        'pageIndex': pageIndex,
+        'pageSize': pageSize,
+      },
+      parseData: (raw) => raw is Map<String, dynamic>
+          ? PagedResult<AdminPatientProfileModel>.fromJson(
+              raw,
+              itemParser: AdminPatientProfileModel.fromJson,
+            )
+          : null,
     );
     if (res.status != 200 || res.data == null) {
       throw Exception(res.message.isNotEmpty ? res.message : 'Cannot load patients');

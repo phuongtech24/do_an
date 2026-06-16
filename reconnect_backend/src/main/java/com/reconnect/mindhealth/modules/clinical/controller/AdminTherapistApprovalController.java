@@ -1,8 +1,10 @@
 package com.reconnect.mindhealth.modules.clinical.controller;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -15,8 +17,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.reconnect.mindhealth.common.dto.ApiResponse;
 import com.reconnect.mindhealth.common.security.AuthContextService;
+import com.reconnect.mindhealth.common.util.PagingUtils;
 import com.reconnect.mindhealth.modules.auth.entity.User;
 import com.reconnect.mindhealth.modules.auth.enums.Role;
+import com.reconnect.mindhealth.modules.clinical.dto.AdminTherapistSearchRequestDto;
 import com.reconnect.mindhealth.modules.clinical.dto.CreateTherapistAccountRequestDto;
 import com.reconnect.mindhealth.modules.clinical.dto.TherapistApplicantDto;
 import com.reconnect.mindhealth.modules.clinical.entity.TherapistProfile;
@@ -55,6 +59,22 @@ public class AdminTherapistApprovalController {
             requireAdmin();
             List<TherapistApplicantDto> dtos = therapistDirectoryQueryService.listAdminTherapists(status);
             return ResponseEntity.ok(ApiResponse.success("OK", dtos));
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/paging")
+    public ResponseEntity<ApiResponse<Page<TherapistApplicantDto>>> searchByPage(
+            @RequestBody(required = false) AdminTherapistSearchRequestDto request) {
+        try {
+            requireAdmin();
+            AdminTherapistSearchRequestDto safeRequest = request != null ? request : new AdminTherapistSearchRequestDto();
+            String keyword = safeRequest.normalizedKeyword();
+            List<TherapistApplicantDto> dtos = therapistDirectoryQueryService.listAdminTherapists(safeRequest.getStatus()).stream()
+                    .filter(item -> matchesKeyword(item, keyword))
+                    .toList();
+            return ResponseEntity.ok(ApiResponse.success("OK", PagingUtils.paginate(dtos, safeRequest)));
         } catch (Exception e) {
             return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
         }
@@ -103,5 +123,20 @@ public class AdminTherapistApprovalController {
         } catch (Exception e) {
             return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
         }
+    }
+
+    private boolean matchesKeyword(TherapistApplicantDto item, String keyword) {
+        if (keyword == null) {
+            return true;
+        }
+        String normalized = keyword.toLowerCase(Locale.ROOT);
+        return containsIgnoreCase(item.getFullName(), normalized)
+                || containsIgnoreCase(item.getEmail(), normalized)
+                || containsIgnoreCase(item.getSpecialization(), normalized)
+                || containsIgnoreCase(item.getApprovalStatus() != null ? item.getApprovalStatus().name() : null, normalized);
+    }
+
+    private boolean containsIgnoreCase(String value, String keyword) {
+        return value != null && value.toLowerCase(Locale.ROOT).contains(keyword);
     }
 }

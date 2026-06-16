@@ -15,6 +15,12 @@ public class AdminDemoControlResultDto {
     private String taperingStage;
     private String graduatedAt;
     private String guestState;
+    private Integer programWeek;
+    private String programPhaseCode;
+    private String programPhaseLabel;
+    private Integer fearLadderUnlockedCount;
+    private Integer fearLadderMasteredCount;
+    private Boolean graduationReady;
 
     public AdminDemoControlResultDto() {
     }
@@ -119,5 +125,53 @@ public class AdminDemoControlResultDto {
 
     public void setGuestState(String guestState) {
         this.guestState = guestState;
+    }
+
+    public Integer getProgramWeek() {
+        return programWeek;
+    }
+
+    public void setProgramWeek(Integer programWeek) {
+        this.programWeek = programWeek;
+    }
+
+    public String getProgramPhaseCode() {
+        return programPhaseCode;
+    }
+
+    public void setProgramPhaseCode(String programPhaseCode) {
+        this.programPhaseCode = programPhaseCode;
+    }
+
+    public String getProgramPhaseLabel() {
+        return programPhaseLabel;
+    }
+
+    public void setProgramPhaseLabel(String programPhaseLabel) {
+        this.programPhaseLabel = programPhaseLabel;
+    }
+
+    public Integer getFearLadderUnlockedCount() {
+        return fearLadderUnlockedCount;
+    }
+
+    public void setFearLadderUnlockedCount(Integer fearLadderUnlockedCount) {
+        this.fearLadderUnlockedCount = fearLadderUnlockedCount;
+    }
+
+    public Integer getFearLadderMasteredCount() {
+        return fearLadderMasteredCount;
+    }
+
+    public void setFearLadderMasteredCount(Integer fearLadderMasteredCount) {
+        this.fearLadderMasteredCount = fearLadderMasteredCount;
+    }
+
+    public Boolean getGraduationReady() {
+        return graduationReady;
+    }
+
+    public void setGraduationReady(Boolean graduationReady) {
+        this.graduationReady = graduationReady;
     }
 }

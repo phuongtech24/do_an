@@ -1,18 +1,23 @@
 package com.reconnect.mindhealth.modules.clinical.controller;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.Comparator;
 
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.reconnect.mindhealth.common.dto.ApiResponse;
+import com.reconnect.mindhealth.common.util.PagingUtils;
 import com.reconnect.mindhealth.modules.assessment.entity.LsasSubmission;
 import com.reconnect.mindhealth.modules.assessment.entity.UserMood;
 import com.reconnect.mindhealth.modules.assessment.enums.LsasSubmissionType;
@@ -22,6 +27,7 @@ import com.reconnect.mindhealth.modules.booster.entity.Appointment;
 import com.reconnect.mindhealth.modules.booster.enums.AppointmentStatus;
 import com.reconnect.mindhealth.modules.booster.repository.AppointmentRepository;
 import com.reconnect.mindhealth.modules.clinical.dto.TherapistPatientListItemDto;
+import com.reconnect.mindhealth.modules.clinical.dto.TherapistPatientSearchRequestDto;
 import com.reconnect.mindhealth.modules.clinical.dto.TherapistPreSessionReviewDto;
 import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
 import com.reconnect.mindhealth.modules.clinical.service.TherapistAssignmentService;
@@ -34,8 +40,8 @@ import com.reconnect.mindhealth.modules.roadmap.entity.PatientQuest;
 import com.reconnect.mindhealth.modules.roadmap.enums.PatientGoalStatus;
 import com.reconnect.mindhealth.modules.roadmap.repository.BehavioralExperimentRepository;
 import com.reconnect.mindhealth.modules.roadmap.repository.FearLadderItemRepository;
-import com.reconnect.mindhealth.modules.roadmap.repository.PatientQuestRepository;
 import com.reconnect.mindhealth.modules.roadmap.repository.PatientGoalRepository;
+import com.reconnect.mindhealth.modules.roadmap.repository.PatientQuestRepository;
 import com.reconnect.mindhealth.modules.roadmap.service.RoadmapProgramStateService;
 
 @RestController
@@ -79,17 +85,22 @@ public class TherapistDashboardController {
     @GetMapping("/patients")
     public ResponseEntity<ApiResponse<List<TherapistPatientListItemDto>>> listPatients(
             @RequestParam(name = "redFlagOnly", defaultValue = "false") boolean redFlagOnly) {
-        List<PatientProfile> list = therapistAssignmentService.listPatientsForCurrentTherapist(redFlagOnly);
-        List<TherapistPatientListItemDto> dto = list.stream()
-                .map(this::buildPatientListItem)
-                .sorted(Comparator
-                        .comparing((TherapistPatientListItemDto item) -> !Boolean.TRUE.equals(item.getIsRedFlagActive()))
-                        .thenComparing((TherapistPatientListItemDto item) -> safe(item.getCurrentLsasScore()) < 95)
-                        .thenComparing((TherapistPatientListItemDto item) -> item.getUpcomingAppointmentAt() == null)
-                        .thenComparing((TherapistPatientListItemDto item) -> !Boolean.TRUE.equals(item.getStalledProgress()))
-                        .thenComparing(item -> safe(item.getCurrentRiskScore()), Comparator.reverseOrder()))
-                .collect(Collectors.toList());
+        List<TherapistPatientListItemDto> dto = buildPatientListItems(redFlagOnly, null);
         return ResponseEntity.ok(ApiResponse.success("OK", dto));
+    }
+
+    @PostMapping("/patients/paging")
+    public ResponseEntity<ApiResponse<Page<TherapistPatientListItemDto>>> searchPatientsByPage(
+            @RequestBody(required = false) TherapistPatientSearchRequestDto request) {
+        try {
+            TherapistPatientSearchRequestDto safeRequest = request != null ? request : new TherapistPatientSearchRequestDto();
+            List<TherapistPatientListItemDto> dto = buildPatientListItems(
+                    Boolean.TRUE.equals(safeRequest.getRedFlagOnly()),
+                    safeRequest.normalizedKeyword());
+            return ResponseEntity.ok(ApiResponse.success("OK", PagingUtils.paginate(dto, safeRequest)));
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.error("Lỗi khi tải danh sách bệnh nhân: " + e.getMessage()));
+        }
     }
 
     @GetMapping("/patients/{patientId}/pre-session-review")
@@ -101,6 +112,20 @@ public class TherapistDashboardController {
         } catch (Exception e) {
             return ResponseEntity.ok(ApiResponse.error("Lỗi khi tải pre-session review: " + e.getMessage()));
         }
+    }
+
+    private List<TherapistPatientListItemDto> buildPatientListItems(boolean redFlagOnly, String keyword) {
+        List<PatientProfile> list = therapistAssignmentService.listPatientsForCurrentTherapist(redFlagOnly);
+        return list.stream()
+                .map(this::buildPatientListItem)
+                .filter(item -> matchesKeyword(item, keyword))
+                .sorted(Comparator
+                        .comparing((TherapistPatientListItemDto item) -> !Boolean.TRUE.equals(item.getIsRedFlagActive()))
+                        .thenComparing((TherapistPatientListItemDto item) -> safe(item.getCurrentLsasScore()) < 95)
+                        .thenComparing((TherapistPatientListItemDto item) -> item.getUpcomingAppointmentAt() == null)
+                        .thenComparing((TherapistPatientListItemDto item) -> !Boolean.TRUE.equals(item.getStalledProgress()))
+                        .thenComparing(item -> safe(item.getCurrentRiskScore()), Comparator.reverseOrder()))
+                .collect(Collectors.toList());
     }
 
     private TherapistPatientListItemDto buildPatientListItem(PatientProfile patient) {
@@ -120,8 +145,8 @@ public class TherapistDashboardController {
 
     private Integer resolveBaselineLsas(PatientProfile patient) {
         return Optional.ofNullable(lsasSubmissionRepository.findTopByPatientProfile_IdAndSubmissionTypeOrderByCreateDateAsc(
-                        patient.getId(),
-                        LsasSubmissionType.BASELINE))
+                patient.getId(),
+                LsasSubmissionType.BASELINE))
                 .map(LsasSubmission::getTotalScore)
                 .orElse(patient.getCurrentLsasScore());
     }
@@ -206,6 +231,20 @@ public class TherapistDashboardController {
         dto.setRedFlagActive(patient.getIsRedFlagActive());
         dto.setUpcomingAppointmentAt(resolveUpcomingAppointment(patient));
         return dto;
+    }
+
+    private boolean matchesKeyword(TherapistPatientListItemDto item, String keyword) {
+        if (keyword == null) {
+            return true;
+        }
+        String normalized = keyword.toLowerCase(Locale.ROOT);
+        return containsIgnoreCase(item.getNickname(), normalized)
+                || containsIgnoreCase(item.getRealFullName(), normalized)
+                || containsIgnoreCase(item.getPrimaryGoal(), normalized);
+    }
+
+    private boolean containsIgnoreCase(String value, String keyword) {
+        return value != null && value.toLowerCase(Locale.ROOT).contains(keyword);
     }
 
     private int safe(Integer value) {

@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reconnect.mindhealth.common.util.JwtUtil;
+import com.reconnect.mindhealth.common.util.PatientProfileFieldValidator;
 import com.reconnect.mindhealth.modules.assessment.dto.LsasAnswerRequestDto;
 import com.reconnect.mindhealth.modules.assessment.dto.LsasSubmissionDto;
 import com.reconnect.mindhealth.modules.assessment.enums.LsasSubmissionType;
@@ -114,11 +115,17 @@ public class AuthServiceImpl implements IAuthService {
             profile.setRealFullName(trimToNull(request.getRealFullName()));
             profile.setDateOfBirth(request.getDateOfBirth());
             profile.setGender(trimToNull(request.getGender()));
-            profile.setPhoneNumber(trimToNull(request.getPhoneNumber()));
-            profile.setEmergencyContactPhone(trimToNull(request.getEmergencyContactPhone()));
-            profile.setEducationLevel(trimToNull(request.getEducationLevel()));
+            profile.setPhoneNumber(PatientProfileFieldValidator.normalizePhone(
+                    request.getPhoneNumber(),
+                    "Số điện thoại cá nhân",
+                    false));
+            profile.setEmergencyContactPhone(PatientProfileFieldValidator.normalizePhone(
+                    request.getEmergencyContactPhone(),
+                    "Số điện thoại người liên hệ khẩn cấp",
+                    false));
+            profile.setEducationLevel(PatientProfileFieldValidator.normalizeEducationLevel(request.getEducationLevel()));
             profile.setOccupation(trimToNull(request.getOccupation()));
-            profile.setRelationshipStatus(trimToNull(request.getRelationshipStatus()));
+            profile.setRelationshipStatus(PatientProfileFieldValidator.normalizeRelationshipStatus(request.getRelationshipStatus()));
             profile.setMedicalHistory(trimToNull(request.getMedicalHistory()));
             profile.setStatus(Status.STABLE);
             profile.setTaperingStage(TaperingStage.NONE);
@@ -280,7 +287,10 @@ public class AuthServiceImpl implements IAuthService {
         patientProfile.setAvatarIcon(firstNonBlank(guestProfile.getAvatarIcon(), "avatar_cat"));
         patientProfile.setAnonymousModeEnabled(true);
         patientProfile.setRealFullName(request.getRealFullName().trim());
-        patientProfile.setPhoneNumber(request.getPhoneNumber().trim());
+        patientProfile.setPhoneNumber(PatientProfileFieldValidator.normalizePhone(
+                request.getPhoneNumber(),
+                "Số điện thoại cá nhân",
+                true));
         patientProfile.setStatus(Status.STABLE);
         patientProfile.setTaperingStage(TaperingStage.NONE);
         patientProfile.setCurrentRiskScore(patientProfile.getCurrentRiskScore() != null ? patientProfile.getCurrentRiskScore() : 0);
