@@ -1,0 +1,77 @@
+Project ReConnectMindHealth_Identity {
+  database_type: "MySQL"
+  Note: "ERD theo module Tài khoản - Danh tính - Hồ sơ người dùng"
+}
+
+Enum user_role {
+  GUEST
+  PATIENT
+  THERAPIST
+  ADMIN
+}
+
+Enum therapist_approval_status {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+Table users {
+  id uuid [pk]
+  email varchar(255) [not null, unique]
+  username varchar(255)
+  password_hash varchar(255) [not null]
+  role user_role [not null]
+  is_anonymous bool [not null, default: false]
+  is_active bool [not null, default: true]
+  reset_password_token varchar(128)
+  reset_password_expires_at datetime
+  created_at datetime
+}
+
+Table guest_profiles {
+  user_id uuid [pk, ref: > users.id]
+  nickname varchar(255)
+  avatar_icon varchar(100)
+  lsas_demo_completed bool [not null, default: false]
+  pending_lsas_answers_json longtext
+  pending_lsas_total_score int
+  pending_lsas_submission_type varchar(50)
+  pending_lsas_completed_at datetime
+}
+
+Table therapist_profiles {
+  user_id uuid [pk, ref: > users.id]
+  full_name varchar(255) [not null]
+  specialization varchar(255)
+  bio text
+  hometown varchar(255)
+  birth_year int
+  voice_description text
+  therapy_style text
+  meeting_link varchar(500)
+  avatar_url varchar(500)
+  approval_status therapist_approval_status
+}
+
+Table patient_profiles {
+  user_id uuid [pk, ref: > users.id]
+  therapist_id uuid [ref: > therapist_profiles.user_id]
+  nickname varchar(255) [unique]
+  avatar_icon varchar(100)
+  anonymous_mode_enabled bool [not null, default: true]
+  real_full_name varchar(255)
+  date_of_birth date
+  gender varchar(20)
+  phone_number varchar(20)
+  emergency_contact_phone varchar(20)
+  education_level varchar(100)
+  occupation varchar(255)
+  relationship_status varchar(100)
+  medical_history text
+  medical_profile_completed bool [not null, default: false]
+  current_lsas_score int [not null, default: 0]
+  current_risk_score int [not null, default: 0]
+  is_red_flag_active bool [not null, default: false]
+  graduated_at datetime
+}
