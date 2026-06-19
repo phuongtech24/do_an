@@ -1,0 +1,41 @@
+Project ReConnectMindHealth_Auth {
+  database_type: "MySQL"
+  Note: "ERD Module Tài khoản & Xác thực"
+}
+
+Enum user_role {
+  GUEST
+  PATIENT
+  THERAPIST
+  ADMIN
+}
+
+Enum therapist_approval_status {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+Table users {
+  id uuid [pk]
+  role user_role [not null]
+}
+
+Table guest_profiles {
+  user_id uuid [pk, ref: > users.id]
+}
+
+Table therapist_profiles {
+  user_id uuid [pk, ref: > users.id]
+  approval_status therapist_approval_status
+}
+
+Table therapist_credentials {
+  id uuid [pk]
+  therapist_id uuid [not null, ref: > therapist_profiles.user_id]
+}
+
+Table patient_profiles {
+  user_id uuid [pk, ref: > users.id]
+  therapist_id uuid [ref: > therapist_profiles.user_id]
+}

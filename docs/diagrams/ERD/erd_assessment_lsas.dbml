@@ -1,0 +1,35 @@
+Project ReConnectMindHealth_Assessment {
+  database_type: "MySQL"
+  Note: "ERD Module Đánh giá LSAS"
+}
+
+Enum lsas_submission_type {
+  DEMO
+  BASELINE
+  RERATE
+}
+
+Table patient_profiles {
+  user_id uuid [pk]
+}
+
+Table lsas_submissions {
+  id uuid [pk]
+  patient_id uuid [not null, ref: > patient_profiles.user_id]
+  submission_type lsas_submission_type [not null]
+}
+
+Table lsas_situations {
+  id uuid [pk]
+}
+
+Table lsas_answers {
+  id uuid [pk]
+  submission_id uuid [not null, ref: > lsas_submissions.id]
+  situation_id uuid [not null, ref: > lsas_situations.id]
+}
+
+Table user_moods {
+  id uuid [pk]
+  patient_id uuid [ref: > patient_profiles.user_id]
+}

@@ -1,0 +1,45 @@
+Project ReConnectMindHealth_Scheduling {
+  database_type: "MySQL"
+  Note: "ERD Module Lịch & Buổi Bộ trợ"
+}
+
+Enum appointment_status {
+  BOOKED
+  COMPLETED
+  CANCELLED
+  MISSED
+}
+
+Enum appointment_purpose {
+  CBT_SESSION
+  INITIAL_ASSESSMENT
+  BEHAVIORAL_EXPERIMENT
+  BOOSTER
+  CRISIS
+}
+
+Table therapist_profiles {
+  user_id uuid [pk]
+}
+
+Table patient_profiles {
+  user_id uuid [pk]
+}
+
+Table appointments {
+  id uuid [pk]
+  patient_id uuid [not null, ref: > patient_profiles.user_id]
+  therapist_id uuid [not null, ref: > therapist_profiles.user_id]
+  status appointment_status [not null]
+  purpose appointment_purpose [not null]
+}
+
+Table therapist_schedule_slots {
+  id uuid [pk]
+  therapist_id uuid [not null, ref: > therapist_profiles.user_id]
+}
+
+Table therapist_weekly_schedule_slots {
+  id uuid [pk]
+  therapist_id uuid [not null, ref: > therapist_profiles.user_id]
+}
