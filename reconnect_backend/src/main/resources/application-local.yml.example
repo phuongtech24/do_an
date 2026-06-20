@@ -1,4 +1,4 @@
-spring:
+﻿spring:
   application:
     name: reconnect_backend
   mail:
@@ -16,6 +16,10 @@ spring:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:mindhealth_db}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: ${DB_USER:mindhealth_user}
     password: ${DB_PASSWORD:mindhealth_password}
+  flyway:
+    enabled: ${FLYWAY_ENABLED:false}
+    locations: classpath:db/migration
+    baseline-on-migrate: true
   jpa:
     hibernate:
       ddl-auto: update
@@ -56,3 +60,4 @@ app:
 # Local Mailpit defaults:
 # - SMTP: localhost:1025
 # - Web UI: http://localhost:8025
+

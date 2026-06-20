@@ -1,19 +1,6 @@
 Project ReConnectMindHealth_Identity {
   database_type: "MySQL"
-  Note: "ERD theo module Tài khoản - Danh tính - Hồ sơ người dùng"
-}
-
-Enum user_role {
-  GUEST
-  PATIENT
-  THERAPIST
-  ADMIN
-}
-
-Enum therapist_approval_status {
-  PENDING
-  APPROVED
-  REJECTED
+  Note: "Lược đồ CSDL module tài khoản, danh tính và hồ sơ người dùng"
 }
 
 Table users {
@@ -21,22 +8,23 @@ Table users {
   email varchar(255) [not null, unique]
   username varchar(255)
   password_hash varchar(255) [not null]
-  role user_role [not null]
-  is_anonymous bool [not null, default: false]
-  is_active bool [not null, default: true]
+  role varchar(32) [not null]
+  is_anonymous bool
+  is_active bool
   reset_password_token varchar(128)
   reset_password_expires_at datetime
   created_at datetime
+  updated_at datetime
 }
 
 Table guest_profiles {
   user_id uuid [pk, ref: > users.id]
   nickname varchar(255)
   avatar_icon varchar(100)
-  lsas_demo_completed bool [not null, default: false]
+  lsas_demo_completed bool
   pending_lsas_answers_json longtext
   pending_lsas_total_score int
-  pending_lsas_submission_type varchar(50)
+  pending_lsas_submission_type varchar(32)
   pending_lsas_completed_at datetime
 }
 
@@ -45,33 +33,41 @@ Table therapist_profiles {
   full_name varchar(255) [not null]
   specialization varchar(255)
   bio text
-  hometown varchar(255)
-  birth_year int
-  voice_description text
-  therapy_style text
+  region varchar(255)
+  years_experience int
   meeting_link varchar(500)
-  avatar_url varchar(500)
-  approval_status therapist_approval_status
+  approval_status varchar(32)
+  created_at datetime
+  updated_at datetime
+}
+
+Table therapist_credentials {
+  id uuid [pk]
+  therapist_id uuid [not null, ref: > therapist_profiles.user_id]
+  file_name varchar(255)
+  mime_type varchar(100)
+  storage_path varchar(500)
+  created_at datetime
 }
 
 Table patient_profiles {
   user_id uuid [pk, ref: > users.id]
   therapist_id uuid [ref: > therapist_profiles.user_id]
   nickname varchar(255) [unique]
+  anonymous_mode_enabled bool
   avatar_icon varchar(100)
-  anonymous_mode_enabled bool [not null, default: true]
   real_full_name varchar(255)
   date_of_birth date
-  gender varchar(20)
+  gender varchar(32)
   phone_number varchar(20)
   emergency_contact_phone varchar(20)
   education_level varchar(100)
   occupation varchar(255)
   relationship_status varchar(100)
   medical_history text
-  medical_profile_completed bool [not null, default: false]
-  current_lsas_score int [not null, default: 0]
-  current_risk_score int [not null, default: 0]
-  is_red_flag_active bool [not null, default: false]
-  graduated_at datetime
+  lsas_demo_completed bool
+  medical_profile_completed bool
+  psychoeducation_completed bool
+  created_at datetime
+  updated_at datetime
 }

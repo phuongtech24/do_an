@@ -1,4 +1,4 @@
-spring:
+﻿spring:
   application:
     name: reconnect_backend
   mail:
@@ -24,7 +24,7 @@ spring:
     password: ${DB_PASSWORD:123456}
     driver-class-name: com.mysql.cj.jdbc.Driver
   flyway:
-    enabled: ${FLYWAY_ENABLED:true}
+    enabled: ${FLYWAY_ENABLED:false}
     locations: classpath:db/migration
     baseline-on-migrate: true
   jpa:
@@ -79,3 +79,4 @@ app:
 encryption:
   key: ${ENCRYPTION_KEY:ReconnectMindH78}
   iv: ${ENCRYPTION_IV:MindHealthIv1234}
+

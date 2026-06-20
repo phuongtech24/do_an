@@ -1,0 +1,200 @@
+@startuml
+hide circle
+skinparam linetype ortho
+skinparam roundcorner 6
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam defaultFontName Arial
+skinparam entity {
+  BackgroundColor white
+  BorderColor #2F4F4F
+  ArrowColor #2F4F4F
+  HeaderBackgroundColor #DCEEFF
+}
+
+title ERD tổng quát ReConnect MindHealth - 19 bảng cốt lõi
+
+' =========================
+' IDENTITY / USER
+' =========================
+entity "users" as users {
+  * id : uuid <<PK>>
+  --
+  email : varchar(255)
+  role : varchar(32)
+}
+
+entity "guest_profiles" as guest_profiles {
+  * user_id : uuid <<PK, FK>>
+  --
+  nickname : varchar(255)
+}
+
+entity "therapist_profiles" as therapist_profiles {
+  * user_id : uuid <<PK, FK>>
+  --
+  full_name : varchar(255)
+  approval_status : varchar(32)
+}
+
+entity "patient_profiles" as patient_profiles {
+  * user_id : uuid <<PK, FK>>
+  --
+  therapist_id : uuid <<FK>>
+  nickname : varchar(255)
+  current_lsas_score : int
+  current_risk_score : int
+}
+
+entity "therapist_credentials" as therapist_credentials {
+  * id : uuid <<PK>>
+  --
+  therapist_id : uuid <<FK>>
+  file_name : varchar(255)
+}
+
+' =========================
+' ASSESSMENT / RISK
+' =========================
+entity "lsas_situations" as lsas_situations {
+  * id : uuid <<PK>>
+  --
+  situation_number : int
+}
+
+entity "lsas_submissions" as lsas_submissions {
+  * id : uuid <<PK>>
+  --
+  patient_id : uuid <<FK>>
+  submission_type : varchar(32)
+  total_score : int
+}
+
+entity "lsas_answers" as lsas_answers {
+  * id : uuid <<PK>>
+  --
+  submission_id : uuid <<FK>>
+  situation_id : uuid <<FK>>
+  fear_score : int
+  avoidance_score : int
+}
+
+entity "user_moods" as user_moods {
+  * id : uuid <<PK>>
+  --
+  patient_id : uuid <<FK>>
+  mood_score : int
+}
+
+entity "daily_risk_logs" as daily_risk_logs {
+  * id : uuid <<PK>>
+  --
+  patient_id : uuid <<FK>>
+  risk_score : int
+}
+
+entity "journals" as journals {
+  * id : uuid <<PK>>
+  --
+  patient_id : uuid <<FK>>
+  journal_type : varchar(32)
+}
+
+' =========================
+' CBT ROADMAP
+' =========================
+entity "patient_goals" as patient_goals {
+  * id : uuid <<PK>>
+  --
+  patient_id : uuid <<FK>>
+  goal_type : varchar(32)
+}
+
+entity "fear_ladder_items" as fear_ladder_items {
+  * id : uuid <<PK>>
+  --
+  patient_id : uuid <<FK>>
+  situation_id : uuid <<FK>>
+  status : varchar(32)
+}
+
+entity "behavioral_experiments" as behavioral_experiments {
+  * id : uuid <<PK>>
+  --
+  patient_id : uuid <<FK>>
+  fear_ladder_item_id : uuid <<FK>>
+  status : varchar(32)
+}
+
+entity "quest_templates" as quest_templates {
+  * id : uuid <<PK>>
+  --
+  module_code : varchar(100)
+  program_phase_code : varchar(100)
+}
+
+entity "patient_quests" as patient_quests {
+  * id : uuid <<PK>>
+  --
+  patient_id : uuid <<FK>>
+  quest_template_id : uuid <<FK>>
+  status : varchar(32)
+}
+
+' =========================
+' TELEHEALTH / BOOKING
+' =========================
+entity "appointments" as appointments {
+  * id : uuid <<PK>>
+  --
+  patient_id : uuid <<FK>>
+  therapist_id : uuid <<FK>>
+  purpose : varchar(50)
+  status : varchar(32)
+}
+
+entity "therapist_schedule_slots" as therapist_schedule_slots {
+  * id : uuid <<PK>>
+  --
+  therapist_id : uuid <<FK>>
+  slot_date : date
+}
+
+entity "therapist_weekly_schedule_slots" as therapist_weekly_schedule_slots {
+  * id : uuid <<PK>>
+  --
+  therapist_id : uuid <<FK>>
+  day_of_week : varchar(16)
+}
+
+' =========================
+' RELATIONSHIPS
+' =========================
+users ||--o| guest_profiles : "1-1"
+users ||--o| therapist_profiles : "1-1"
+users ||--o| patient_profiles : "1-1"
+
+therapist_profiles ||--o{ therapist_credentials : "1-N"
+therapist_profiles ||--o{ patient_profiles : "1-N phụ trách"
+therapist_profiles ||--o{ appointments : "1-N"
+therapist_profiles ||--o{ therapist_schedule_slots : "1-N"
+therapist_profiles ||--o{ therapist_weekly_schedule_slots : "1-N"
+
+patient_profiles ||--o{ lsas_submissions : "1-N"
+patient_profiles ||--o{ user_moods : "1-N"
+patient_profiles ||--o{ daily_risk_logs : "1-N"
+patient_profiles ||--o{ journals : "1-N"
+patient_profiles ||--o{ patient_goals : "1-N"
+patient_profiles ||--o{ fear_ladder_items : "1-N"
+patient_profiles ||--o{ behavioral_experiments : "1-N"
+patient_profiles ||--o{ patient_quests : "1-N"
+patient_profiles ||--o{ appointments : "1-N"
+
+lsas_submissions ||--|{ lsas_answers : "1-N"
+lsas_situations ||--o{ lsas_answers : "1-N"
+lsas_situations ||--o{ fear_ladder_items : "1-N"
+
+fear_ladder_items ||--o{ behavioral_experiments : "1-N"
+quest_templates ||--o{ patient_quests : "1-N"
+
+@enduml

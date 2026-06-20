@@ -1,0 +1,16 @@
+-- ReConnect MindHealth
+-- V7 - Behavioral experiment / fear ladder foundation
+--
+-- Mục đích:
+-- - Chuẩn bị nền Flyway cho flow Clark & Wells:
+--   setup -> experiment -> debrief.
+-- - Làm mốc cho các field schema như:
+--   prediction_belief_before, prediction_belief_after,
+--   outcome, learning, setup_completed_at, completed_at.
+--
+-- Các bảng/liên quan chính:
+-- - fear_ladder_items
+-- - behavioral_experiments
+--
+-- Batch hiện tại chỉ tạo marker migration an toàn.
+

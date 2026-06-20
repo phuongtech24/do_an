@@ -1,0 +1,127 @@
+﻿Project ReConnectMindHealth_Overview {
+  database_type: "MySQL"
+  Note: "Lược đồ CSDL tổng quát các bảng cốt lõi - chỉ giữ khóa chính, khóa ngoại và trường nhận diện"
+}
+
+Table users {
+  id uuid [pk]
+  role varchar(32)
+  email varchar(255)
+}
+
+Table guest_profiles {
+  user_id uuid [pk, ref: > users.id]
+  nickname varchar(255)
+}
+
+Table therapist_profiles {
+  user_id uuid [pk, ref: > users.id]
+  full_name varchar(255)
+  approval_status varchar(32)
+}
+
+Table patient_profiles {
+  user_id uuid [pk, ref: > users.id]
+  therapist_id uuid [ref: > therapist_profiles.user_id]
+  nickname varchar(255)
+  current_lsas_score int
+  current_risk_score int
+}
+
+Table lsas_submissions {
+  id uuid [pk]
+  patient_id uuid [not null, ref: > patient_profiles.user_id]
+  submission_type varchar(32)
+  total_score int
+}
+
+Table lsas_answers {
+  id uuid [pk]
+  submission_id uuid [not null, ref: > lsas_submissions.id]
+  situation_id uuid [not null, ref: > lsas_situations.id]
+  fear_score int
+  avoidance_score int
+}
+
+Table user_moods {
+  id uuid [pk]
+  patient_id uuid [ref: > patient_profiles.user_id]
+  mood_score int
+}
+
+Table daily_risk_logs {
+  id uuid [pk]
+  patient_id uuid [not null, ref: > patient_profiles.user_id]
+  risk_score int
+}
+
+Table journals {
+  id uuid [pk]
+  patient_id uuid [not null, ref: > patient_profiles.user_id]
+  journal_type varchar(32)
+}
+
+Table patient_goals {
+  id uuid [pk]
+  patient_id uuid [not null, ref: > patient_profiles.user_id]
+  goal_type varchar(32)
+}
+
+Table fear_ladder_items {
+  id uuid [pk]
+  patient_id uuid [not null, ref: > patient_profiles.user_id]
+  situation_id uuid [not null, ref: > lsas_situations.id]
+  status varchar(32)
+}
+
+Table behavioral_experiments {
+  id uuid [pk]
+  patient_id uuid [not null, ref: > patient_profiles.user_id]
+  fear_ladder_item_id uuid [not null, ref: > fear_ladder_items.id]
+  status varchar(32)
+}
+
+Table quest_templates {
+  id uuid [pk]
+  module_code varchar(100)
+  program_phase_code varchar(100)
+}
+
+Table patient_quests {
+  id uuid [pk]
+  patient_id uuid [not null, ref: > patient_profiles.user_id]
+  quest_template_id uuid [ref: > quest_templates.id]
+  status varchar(32)
+}
+
+Table appointments {
+  id uuid [pk]
+  patient_id uuid [not null, ref: > patient_profiles.user_id]
+  therapist_id uuid [not null, ref: > therapist_profiles.user_id]
+  purpose varchar(50)
+  status varchar(32)
+}
+
+Table therapist_credentials {
+  id uuid [pk]
+  therapist_id uuid [not null, ref: > therapist_profiles.user_id]
+  file_name varchar(255)
+}
+
+Table therapist_schedule_slots {
+  id uuid [pk]
+  therapist_id uuid [not null, ref: > therapist_profiles.user_id]
+  slot_date date
+}
+
+Table therapist_weekly_schedule_slots {
+  id uuid [pk]
+  therapist_id uuid [not null, ref: > therapist_profiles.user_id]
+  day_of_week varchar(16)
+}
+
+Table lsas_situations {
+  id uuid [pk]
+  situation_number int
+}
+

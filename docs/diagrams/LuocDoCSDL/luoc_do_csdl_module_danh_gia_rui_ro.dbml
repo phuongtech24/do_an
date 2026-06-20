@@ -1,43 +1,36 @@
 Project ReConnectMindHealth_AssessmentRisk {
   database_type: "MySQL"
-  Note: "ERD theo module LSAS - Daily Check-in - Thought Record - Red Flag"
-}
-
-Enum lsas_submission_type {
-  DEMO
-  BASELINE
-  RERATE
-}
-
-Enum journal_type {
-  THOUGHT_RECORD
-  FREE_JOURNAL
+  Note: "Lược đồ CSDL module LSAS, Daily Check-in, Thought Record và Red Flag"
 }
 
 Table patient_profiles {
   user_id uuid [pk]
   nickname varchar(255)
+  status varchar(32)
   current_lsas_score int
   current_risk_score int
   is_red_flag_active bool
+  safety_gate_completed bool
+  triage_required bool
+  triage_status varchar(32)
+  triage_priority int
+  triage_triggered_at datetime
 }
 
 Table lsas_situations {
   id uuid [pk]
-  code varchar(50)
-  title varchar(255)
-  description text
-  category varchar(100)
-  display_order int
+  situation_number int [not null, unique]
+  text varchar(1000) [not null]
+  situation_group varchar(100) [not null]
 }
 
 Table lsas_submissions {
   id uuid [pk]
   patient_id uuid [not null, ref: > patient_profiles.user_id]
-  submission_type lsas_submission_type [not null]
-  fear_total int [not null]
-  avoidance_total int [not null]
-  total_score int [not null]
+  submission_type varchar(32)
+  fear_total int
+  avoidance_total int
+  total_score int
   unlocked_at datetime
   created_at datetime
 }
@@ -46,9 +39,8 @@ Table lsas_answers {
   id uuid [pk]
   submission_id uuid [not null, ref: > lsas_submissions.id]
   situation_id uuid [not null, ref: > lsas_situations.id]
-  fear_score int [not null]
-  avoidance_score int [not null]
-  total_score int [not null]
+  fear_score int
+  avoidance_score int
 }
 
 Table user_moods {
@@ -56,38 +48,36 @@ Table user_moods {
   patient_id uuid [ref: > patient_profiles.user_id]
   mood_score int
   anxiety_score int
-  avoidance_urge_score int
   sadness_score int
+  avoidance_urge_score int
   anticipatory_anxiety_score int
-  post_event_rumination_score int
-  daily_agenda varchar(255)
-  safety_check_required bool
+  rumination_score int
   safety_response varchar(20)
-  safety_responded_at datetime
   created_at datetime
 }
 
 Table daily_risk_logs {
   id uuid [pk]
   patient_id uuid [not null, ref: > patient_profiles.user_id]
-  risk_date date [not null]
-  risk_score int [not null]
-  score_safety int [not null]
-  score_ai int [not null]
-  score_mood int [not null]
-  override_triggered bool [not null]
-  red_flag_active bool [not null]
-  calculated_at datetime [not null]
+  risk_date date
+  risk_score int
+  score_safety int
+  score_ai int
+  score_mood int
+  red_flag_triggered bool
+  recommended_action varchar(100)
+  created_at datetime
 }
 
 Table journals {
   id uuid [pk]
   patient_id uuid [not null, ref: > patient_profiles.user_id]
-  journal_type journal_type [not null]
-  content_encrypted text
+  journal_type varchar(32)
+  title varchar(255)
+  situation text
+  automatic_thought text
+  emotion_summary text
   ai_risk_score int
   severity_level varchar(50)
-  ai_risk_distortions_json text
-  ai_risk_reason text
   created_at datetime
 }
