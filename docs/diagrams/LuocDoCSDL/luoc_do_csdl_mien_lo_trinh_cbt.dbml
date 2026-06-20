@@ -1,6 +1,6 @@
-Project ReConnectMindHealth_CBT {
+Project ReConnectMindHealth_CbtRoadmapDomain {
   database_type: "MySQL"
-  Note: "Lược đồ CSDL module Goal Setting, Fear Ladder, Behavioral Experiment và kho CBT"
+  Note: "Lược đồ CSDL miền lộ trình CBT, fear ladder và behavioral experiment"
 }
 
 Table patient_profiles {
@@ -9,7 +9,6 @@ Table patient_profiles {
   current_program_week int
   current_cycle_start_date datetime
   therapy_program_started_at datetime
-  graduated_at datetime
 }
 
 Table patient_goals {

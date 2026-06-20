@@ -1,31 +1,13 @@
-Project ReConnectMindHealth_Identity {
+Project ReConnectMindHealth_ClinicalProfileDomain {
   database_type: "MySQL"
-  Note: "Lược đồ CSDL module tài khoản, danh tính và hồ sơ người dùng"
+  Note: "Lược đồ CSDL miền hồ sơ lâm sàng của bệnh nhân và bác sĩ"
 }
 
 Table users {
   id uuid [pk]
   email varchar(255) [not null, unique]
-  username varchar(255)
-  password_hash varchar(255) [not null]
   role varchar(32) [not null]
-  is_anonymous bool
   is_active bool
-  reset_password_token varchar(128)
-  reset_password_expires_at datetime
-  created_at datetime
-  updated_at datetime
-}
-
-Table guest_profiles {
-  user_id uuid [pk, ref: > users.id]
-  nickname varchar(255)
-  avatar_icon varchar(100)
-  lsas_demo_completed bool
-  pending_lsas_answers_json longtext
-  pending_lsas_total_score int
-  pending_lsas_submission_type varchar(32)
-  pending_lsas_completed_at datetime
 }
 
 Table therapist_profiles {
@@ -65,7 +47,6 @@ Table patient_profiles {
   occupation varchar(255)
   relationship_status varchar(100)
   medical_history text
-  lsas_demo_completed bool
   medical_profile_completed bool
   psychoeducation_completed bool
   created_at datetime

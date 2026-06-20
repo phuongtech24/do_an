@@ -1,0 +1,40 @@
+Project ReConnectMindHealth_LsasRoutingDomain {
+  database_type: "MySQL"
+  Note: "Lược đồ CSDL miền LSAS và phân luồng lâm sàng"
+}
+
+Table patient_profiles {
+  user_id uuid [pk]
+  nickname varchar(255)
+  status varchar(32)
+  current_lsas_score int
+  lsas_demo_completed bool
+  therapy_program_started_at datetime
+  current_program_week int
+}
+
+Table lsas_situations {
+  id uuid [pk]
+  situation_number int [not null, unique]
+  text varchar(1000) [not null]
+  situation_group varchar(100) [not null]
+}
+
+Table lsas_submissions {
+  id uuid [pk]
+  patient_id uuid [not null, ref: > patient_profiles.user_id]
+  submission_type varchar(32)
+  fear_total int
+  avoidance_total int
+  total_score int
+  unlocked_at datetime
+  created_at datetime
+}
+
+Table lsas_answers {
+  id uuid [pk]
+  submission_id uuid [not null, ref: > lsas_submissions.id]
+  situation_id uuid [not null, ref: > lsas_situations.id]
+  fear_score int
+  avoidance_score int
+}
