@@ -47,7 +47,7 @@ public class AdminDemoControlController {
             return ResponseEntity.ok(ApiResponse.success("OK",
                     adminDemoControlService.unlockLsas(patientId, admin.getId())));
         } catch (Exception e) {
-            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+            return ResponseEntity.ok(ApiResponse.error("Lá»—i: " + e.getMessage()));
         }
     }
 
@@ -58,7 +58,7 @@ public class AdminDemoControlController {
             return ResponseEntity.ok(ApiResponse.success("OK",
                     adminDemoControlService.triggerLsas(patientId, admin.getId())));
         } catch (Exception e) {
-            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+            return ResponseEntity.ok(ApiResponse.error("Lá»—i: " + e.getMessage()));
         }
     }
 
@@ -72,7 +72,7 @@ public class AdminDemoControlController {
             return ResponseEntity.ok(ApiResponse.success("OK",
                     adminDemoControlService.runDailyRoadmap(patientId, date, admin.getId())));
         } catch (Exception e) {
-            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+            return ResponseEntity.ok(ApiResponse.error("Lá»—i: " + e.getMessage()));
         }
     }
 
@@ -86,7 +86,7 @@ public class AdminDemoControlController {
             return ResponseEntity.ok(ApiResponse.success("OK",
                     adminDemoControlService.setRisk(patientId, score, redFlag, admin.getId())));
         } catch (Exception e) {
-            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+            return ResponseEntity.ok(ApiResponse.error("Lá»—i: " + e.getMessage()));
         }
     }
 
@@ -97,7 +97,7 @@ public class AdminDemoControlController {
             return ResponseEntity.ok(ApiResponse.success("OK",
                     adminDemoControlService.clearRisk(patientId, admin.getId())));
         } catch (Exception e) {
-            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+            return ResponseEntity.ok(ApiResponse.error("Lá»—i: " + e.getMessage()));
         }
     }
 
@@ -110,7 +110,7 @@ public class AdminDemoControlController {
             return ResponseEntity.ok(ApiResponse.success("OK",
                     adminDemoControlService.setLsasBand(patientId, band, admin.getId())));
         } catch (Exception e) {
-            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+            return ResponseEntity.ok(ApiResponse.error("Lá»—i: " + e.getMessage()));
         }
     }
 
@@ -125,7 +125,7 @@ public class AdminDemoControlController {
             return ResponseEntity.ok(ApiResponse.success("OK",
                     adminDemoControlService.setProgramWeek(patientId, effectiveWeek, admin.getId())));
         } catch (Exception e) {
-            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+            return ResponseEntity.ok(ApiResponse.error("Lá»—i: " + e.getMessage()));
         }
     }
 
@@ -140,7 +140,7 @@ public class AdminDemoControlController {
             return ResponseEntity.ok(ApiResponse.success("OK",
                     adminDemoControlService.setFearLadderMastery(patientId, effectiveCount, admin.getId())));
         } catch (Exception e) {
-            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+            return ResponseEntity.ok(ApiResponse.error("Lá»—i: " + e.getMessage()));
         }
     }
 
@@ -152,10 +152,21 @@ public class AdminDemoControlController {
             return ResponseEntity.ok(ApiResponse.success("OK",
                     adminDemoControlService.resetFearLadderProgress(patientId, admin.getId())));
         } catch (Exception e) {
-            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+            return ResponseEntity.ok(ApiResponse.error("Lá»—i: " + e.getMessage()));
         }
     }
 
+    @PostMapping("/patients/{patientId}/unlock-all-roadmap-content")
+    public ResponseEntity<ApiResponse<AdminDemoControlResultDto>> unlockAllRoadmapContent(
+            @PathVariable UUID patientId) {
+        try {
+            User admin = requireAdmin();
+            return ResponseEntity.ok(ApiResponse.success("OK",
+                    adminDemoControlService.unlockAllRoadmapContent(patientId, admin.getId())));
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+        }
+    }
     @PostMapping("/patients/{patientId}/seed-daily-checkin")
     public ResponseEntity<ApiResponse<AdminDemoControlResultDto>> seedDailyCheckin(
             @PathVariable UUID patientId,
@@ -165,7 +176,7 @@ public class AdminDemoControlController {
             return ResponseEntity.ok(ApiResponse.success("OK",
                     adminDemoControlService.seedDailyCheckin(patientId, mode, admin.getId())));
         } catch (Exception e) {
-            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+            return ResponseEntity.ok(ApiResponse.error("Lá»—i: " + e.getMessage()));
         }
     }
 
@@ -176,7 +187,7 @@ public class AdminDemoControlController {
             return ResponseEntity.ok(ApiResponse.success("OK",
                     adminDemoControlService.seedThoughtRecord(patientId, admin.getId())));
         } catch (Exception e) {
-            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+            return ResponseEntity.ok(ApiResponse.error("Lá»—i: " + e.getMessage()));
         }
     }
 
@@ -189,7 +200,7 @@ public class AdminDemoControlController {
             return ResponseEntity.ok(ApiResponse.success("OK",
                     adminDemoControlService.setTaperingStage(patientId, stage, admin.getId())));
         } catch (Exception e) {
-            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+            return ResponseEntity.ok(ApiResponse.error("Lá»—i: " + e.getMessage()));
         }
     }
 
@@ -200,7 +211,7 @@ public class AdminDemoControlController {
             return ResponseEntity.ok(ApiResponse.success("OK",
                     adminDemoControlService.markGraduated(patientId, admin.getId())));
         } catch (Exception e) {
-            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+            return ResponseEntity.ok(ApiResponse.error("Lá»—i: " + e.getMessage()));
         }
     }
 
@@ -211,7 +222,7 @@ public class AdminDemoControlController {
             return ResponseEntity.ok(ApiResponse.success("OK",
                     adminDemoControlService.resetGraduation(patientId, admin.getId())));
         } catch (Exception e) {
-            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+            return ResponseEntity.ok(ApiResponse.error("Lá»—i: " + e.getMessage()));
         }
     }
 
@@ -224,7 +235,7 @@ public class AdminDemoControlController {
             return ResponseEntity.ok(ApiResponse.success("OK",
                     adminDemoControlService.triggerBooster(patientId, purpose, admin.getId())));
         } catch (Exception e) {
-            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+            return ResponseEntity.ok(ApiResponse.error("Lá»—i: " + e.getMessage()));
         }
     }
 
@@ -241,14 +252,14 @@ public class AdminDemoControlController {
                     patientId, startDate, days, lsasScore);
             return ResponseEntity.ok(ApiResponse.success("OK", preview));
         } catch (Exception e) {
-            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+            return ResponseEntity.ok(ApiResponse.error("Lá»—i: " + e.getMessage()));
         }
     }
 
     private User requireAdmin() {
         User current = authContextService.requireCurrentUser();
         if (current.getRole() != Role.ADMIN) {
-            throw new SecurityException("Chỉ ADMIN mới có quyền dùng Demo Controls.");
+            throw new SecurityException("Chá»‰ ADMIN má»›i cÃ³ quyá»n dÃ¹ng Demo Controls.");
         }
         return current;
     }

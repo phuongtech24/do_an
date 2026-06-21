@@ -85,7 +85,7 @@ public class AdminDemoControlService {
         return snapshot(
                 patient,
                 "UNLOCK_LSAS",
-                "Đã mở khóa LSAS/re-rating. Bệnh nhân có thể vào app để làm lại đánh giá.");
+                "ÄÃ£ má»Ÿ khÃ³a LSAS/re-rating. Bá»‡nh nhÃ¢n cÃ³ thá»ƒ vÃ o app Ä‘á»ƒ lÃ m láº¡i Ä‘Ã¡nh giÃ¡.");
     }
 
     @Transactional
@@ -97,7 +97,7 @@ public class AdminDemoControlService {
         return snapshot(
                 patient,
                 "TRIGGER_LSAS",
-                "Đã kích hoạt LSAS/re-rating đột xuất cho demo. Bệnh nhân có thể làm ngay trên app.");
+                "ÄÃ£ kÃ­ch hoáº¡t LSAS/re-rating Ä‘á»™t xuáº¥t cho demo. Bá»‡nh nhÃ¢n cÃ³ thá»ƒ lÃ m ngay trÃªn app.");
     }
 
     @Transactional
@@ -109,8 +109,8 @@ public class AdminDemoControlService {
                 patient,
                 "RUN_DAILY_ROADMAP",
                 created.isEmpty()
-                        ? "Bệnh nhân đã có bài hệ thống trong ngày, không tạo trùng."
-                        : "Đã tạo bài hệ thống cho hôm nay.");
+                        ? "Bá»‡nh nhÃ¢n Ä‘Ã£ cÃ³ bÃ i há»‡ thá»‘ng trong ngÃ y, khÃ´ng táº¡o trÃ¹ng."
+                        : "ÄÃ£ táº¡o bÃ i há»‡ thá»‘ng cho hÃ´m nay.");
         result.setCreatedQuests(created.size());
         log.info("Admin demo control run daily roadmap adminId={}, patientId={}, date={}, created={}",
                 adminId, patientId, effectiveDate, created.size());
@@ -134,7 +134,7 @@ public class AdminDemoControlService {
 
         log.info("Admin demo control set risk adminId={}, patientId={}, score={}, redFlag={}",
                 adminId, patientId, normalizedScore, redFlag);
-        return snapshot(patient, "SET_RISK", "Đã cập nhật risk/red flag demo cho bệnh nhân.");
+        return snapshot(patient, "SET_RISK", "ÄÃ£ cáº­p nháº­t risk/red flag demo cho bá»‡nh nhÃ¢n.");
     }
 
     @Transactional
@@ -150,7 +150,7 @@ public class AdminDemoControlService {
         upsertRiskLog(patient);
 
         log.info("Admin demo control clear risk adminId={}, patientId={}", adminId, patientId);
-        return snapshot(patient, "CLEAR_RISK", "Đã tắt cảnh báo risk/red flag demo.");
+        return snapshot(patient, "CLEAR_RISK", "ÄÃ£ táº¯t cáº£nh bÃ¡o risk/red flag demo.");
     }
 
     @Transactional
@@ -162,7 +162,7 @@ public class AdminDemoControlService {
             case "SELF_HELP", "MILD", "BETWEEN_30_59" -> 45;
             case "THERAPIST_TRACK", "MODERATE", "BETWEEN_60_89" -> 72;
             case "URGENT_RED_FLAG", "SEVERE", "OVER_90" -> 104;
-            default -> throw new IllegalArgumentException("Band demo không hợp lệ: " + band);
+            default -> throw new IllegalArgumentException("Band demo khÃ´ng há»£p lá»‡: " + band);
         };
 
         patient.setCurrentLsasScore(score);
@@ -188,7 +188,7 @@ public class AdminDemoControlService {
 
         log.info("Admin demo control set LSAS band adminId={}, patientId={}, band={}, score={}",
                 adminId, patientId, normalizedBand, score);
-        return snapshot(patient, "SET_LSAS_BAND", "Đã chuyển bệnh nhân sang nhánh demo LSAS: " + normalizedBand + ".");
+        return snapshot(patient, "SET_LSAS_BAND", "ÄÃ£ chuyá»ƒn bá»‡nh nhÃ¢n sang nhÃ¡nh demo LSAS: " + normalizedBand + ".");
     }
 
     @Transactional
@@ -204,7 +204,7 @@ public class AdminDemoControlService {
 
         log.info("Admin demo control set program week adminId={}, patientId={}, week={}",
                 adminId, patientId, programWeek);
-        return snapshot(patient, "SET_PROGRAM_WEEK", "Đã đặt tuần trị liệu demo thành tuần " + programWeek + ".");
+        return snapshot(patient, "SET_PROGRAM_WEEK", "ÄÃ£ Ä‘áº·t tuáº§n trá»‹ liá»‡u demo thÃ nh tuáº§n " + programWeek + ".");
     }
 
     @Transactional
@@ -212,7 +212,7 @@ public class AdminDemoControlService {
         PatientProfile patient = getPatient(patientId);
         List<FearLadderItem> items = fearLadderItemRepository.findByPatientProfile_IdOrderByLadderOrderAsc(patientId);
         if (items.isEmpty()) {
-            throw new IllegalStateException("Bệnh nhân chưa có Fear Ladder để ép tiến độ demo.");
+            throw new IllegalStateException("Bá»‡nh nhÃ¢n chÆ°a cÃ³ Fear Ladder Ä‘á»ƒ Ã©p tiáº¿n Ä‘á»™ demo.");
         }
 
         int masteredCount = Math.max(0, Math.min(requestedMasteredCount == null ? 0 : requestedMasteredCount, items.size()));
@@ -234,9 +234,41 @@ public class AdminDemoControlService {
         return snapshot(
                 patient,
                 "SET_FEAR_LADDER_MASTERY",
-                "Đã cập nhật tiến độ Fear Ladder demo: " + masteredCount + "/" + items.size() + " bậc đã làm chủ.");
+                "ÄÃ£ cáº­p nháº­t tiáº¿n Ä‘á»™ Fear Ladder demo: " + masteredCount + "/" + items.size() + " báº­c Ä‘Ã£ lÃ m chá»§.");
     }
+    @Transactional
+    public AdminDemoControlResultDto unlockAllRoadmapContent(UUID patientId, UUID adminId) {
+        PatientProfile patient = getPatient(patientId);
+        List<FearLadderItem> items = fearLadderItemRepository.findByPatientProfile_IdOrderByLadderOrderAsc(patientId);
+        if (items.isEmpty()) {
+            throw new IllegalStateException("Bệnh nhân chưa có Fear Ladder để mở khóa toàn bộ.");
+        }
 
+        patient.setCurrentProgramWeek(14);
+        patient.setTherapyProgramStartedAt(LocalDateTime.now().minusDays((14 - 1) * 7L));
+        patient.setGraduatedAt(null);
+        patient.setTaperingStage(TaperingStage.NONE);
+        patientProfileRepository.save(patient);
+
+        for (FearLadderItem item : items) {
+            item.setStatus(FearLadderStatus.MASTERED);
+            item.setCurrentFearScore(0);
+            item.setCurrentAvoidanceScore(0);
+        }
+        fearLadderItemRepository.saveAll(items);
+        clearBehavioralExperiments(patientId);
+
+        List<PatientQuest> created = roadmapDailyAssignmentService.ensureDailySystemQuests(patient, LocalDate.now());
+        AdminDemoControlResultDto result = snapshot(
+                patient,
+                "UNLOCK_ALL_ROADMAP_CONTENT",
+                "Đã mở khóa toàn bộ roadmap demo: tuần 14, toàn bộ Fear Ladder đã làm chủ và bài hệ thống hôm nay đã sẵn sàng.");
+        result.setCreatedQuests(created.size());
+
+        log.info("Admin demo control unlock all roadmap content adminId={}, patientId={}, ladderCount={}, createdQuests={}",
+                adminId, patientId, items.size(), created.size());
+        return result;
+    }
     @Transactional
     public AdminDemoControlResultDto resetFearLadderProgress(UUID patientId, UUID adminId) {
         PatientProfile patient = getPatient(patientId);
@@ -248,7 +280,7 @@ public class AdminDemoControlService {
         clearBehavioralExperiments(patientId);
 
         log.info("Admin demo control reset fear ladder progress adminId={}, patientId={}", adminId, patientId);
-        return snapshot(patient, "RESET_FEAR_LADDER_PROGRESS", "Đã reset tiến độ Fear Ladder để demo lại từ đầu.");
+        return snapshot(patient, "RESET_FEAR_LADDER_PROGRESS", "ÄÃ£ reset tiáº¿n Ä‘á»™ Fear Ladder Ä‘á»ƒ demo láº¡i tá»« Ä‘áº§u.");
     }
 
     @Transactional
@@ -307,7 +339,7 @@ public class AdminDemoControlService {
                 patient.setIsRedFlagActive(true);
                 patient.setStatus(Status.WARNING);
             }
-            default -> throw new IllegalArgumentException("Mode daily check-in không hợp lệ: " + mode);
+            default -> throw new IllegalArgumentException("Mode daily check-in khÃ´ng há»£p lá»‡: " + mode);
         }
 
         userMood.setMoodScore(Math.max(0, 100 - userMood.getAnxietyScore()));
@@ -317,7 +349,7 @@ public class AdminDemoControlService {
 
         log.info("Admin demo control seed daily check-in adminId={}, patientId={}, mode={}",
                 adminId, patientId, normalizedMode);
-        return snapshot(patient, "SEED_DAILY_CHECKIN", "Đã tạo daily check-in demo: " + normalizedMode + ".");
+        return snapshot(patient, "SEED_DAILY_CHECKIN", "ÄÃ£ táº¡o daily check-in demo: " + normalizedMode + ".");
     }
 
     @Transactional
@@ -326,26 +358,26 @@ public class AdminDemoControlService {
         JournalDto dto = new JournalDto();
         dto.setPatientId(patientId);
         dto.setJournalType(JournalType.THOUGHT_RECORD);
-        dto.setSituation("Đang họp nhóm thì bị gọi phát biểu đột ngột.");
-        dto.setWorstPrediction("Mọi người sẽ nghĩ mình kém cỏi và run rẩy.");
-        dto.setAutomaticThought("Nếu mình nói vấp, họ sẽ đánh giá mình rất tệ.");
-        dto.setEmotion("Lo âu");
+        dto.setSituation("Äang há»p nhÃ³m thÃ¬ bá»‹ gá»i phÃ¡t biá»ƒu Ä‘á»™t ngá»™t.");
+        dto.setWorstPrediction("Má»i ngÆ°á»i sáº½ nghÄ© mÃ¬nh kÃ©m cá»i vÃ  run ráº©y.");
+        dto.setAutomaticThought("Náº¿u mÃ¬nh nÃ³i váº¥p, há» sáº½ Ä‘Ã¡nh giÃ¡ mÃ¬nh ráº¥t tá»‡.");
+        dto.setEmotion("Lo Ã¢u");
         dto.setEmotionScore(82);
-        dto.setBodySymptoms(List.of("Tim đập nhanh", "Tay run nhẹ"));
-        dto.setSafetyBehaviors(List.of("Nhìn xuống bàn", "Nói thật nhanh để kết thúc sớm"));
+        dto.setBodySymptoms(List.of("Tim Ä‘áº­p nhanh", "Tay run nháº¹"));
+        dto.setSafetyBehaviors(List.of("NhÃ¬n xuá»‘ng bÃ n", "NÃ³i tháº­t nhanh Ä‘á»ƒ káº¿t thÃºc sá»›m"));
         dto.setDistortions(List.of("MIND_READING", "CATASTROPHIZING"));
-        dto.setAdaptiveResponse("Mình có thể hồi hộp nhưng điều đó không có nghĩa là mình thất bại.");
-        dto.setSafetyBehaviorCommitment("Ngẩng đầu lên và nói chậm lại ít nhất 1 câu.");
+        dto.setAdaptiveResponse("MÃ¬nh cÃ³ thá»ƒ há»“i há»™p nhÆ°ng Ä‘iá»u Ä‘Ã³ khÃ´ng cÃ³ nghÄ©a lÃ  mÃ¬nh tháº¥t báº¡i.");
+        dto.setSafetyBehaviorCommitment("Ngáº©ng Ä‘áº§u lÃªn vÃ  nÃ³i cháº­m láº¡i Ã­t nháº¥t 1 cÃ¢u.");
         dto.setReRatedScore(46);
         dto.setReRatedBeliefScore(40);
-        dto.setBehavioralExperimentIdea("Thử phát biểu 1 ý ngắn trong cuộc họp tiếp theo.");
+        dto.setBehavioralExperimentIdea("Thá»­ phÃ¡t biá»ƒu 1 Ã½ ngáº¯n trong cuá»™c há»p tiáº¿p theo.");
         journalService.saveJournal(dto, patientId);
 
         log.info("Admin demo control seeded thought record adminId={}, patientId={}", adminId, patientId);
         return snapshot(
                 patient,
                 "SEED_THOUGHT_RECORD",
-                "Đã tạo một Thought Record mẫu để demo lịch sử nhật ký và therapist review.");
+                "ÄÃ£ táº¡o má»™t Thought Record máº«u Ä‘á»ƒ demo lá»‹ch sá»­ nháº­t kÃ½ vÃ  therapist review.");
     }
 
     @Transactional
@@ -360,7 +392,7 @@ public class AdminDemoControlService {
 
         log.info("Admin demo control set tapering stage adminId={}, patientId={}, stage={}",
                 adminId, patientId, taperingStage);
-        return snapshot(patient, "SET_TAPERING_STAGE", "Đã chuyển bệnh nhân sang trạng thái tapering: " + taperingStage + ".");
+        return snapshot(patient, "SET_TAPERING_STAGE", "ÄÃ£ chuyá»ƒn bá»‡nh nhÃ¢n sang tráº¡ng thÃ¡i tapering: " + taperingStage + ".");
     }
 
     @Transactional
@@ -371,7 +403,7 @@ public class AdminDemoControlService {
         patientProfileRepository.save(patient);
 
         log.info("Admin demo control mark graduated adminId={}, patientId={}", adminId, patientId);
-        return snapshot(patient, "MARK_GRADUATED", "Đã chuyển bệnh nhân sang giai đoạn duy trì / booster.");
+        return snapshot(patient, "MARK_GRADUATED", "ÄÃ£ chuyá»ƒn bá»‡nh nhÃ¢n sang giai Ä‘oáº¡n duy trÃ¬ / booster.");
     }
 
     @Transactional
@@ -385,14 +417,14 @@ public class AdminDemoControlService {
         return snapshot(
                 patient,
                 "RESET_GRADUATION",
-                "Đã reset trạng thái tốt nghiệp. Bệnh nhân quay lại luồng đang điều trị.");
+                "ÄÃ£ reset tráº¡ng thÃ¡i tá»‘t nghiá»‡p. Bá»‡nh nhÃ¢n quay láº¡i luá»“ng Ä‘ang Ä‘iá»u trá»‹.");
     }
 
     @Transactional
     public AdminDemoControlResultDto triggerBooster(UUID patientId, String purpose, UUID adminId) {
         PatientProfile patient = getPatient(patientId);
         if (patient.getTherapist() == null) {
-            throw new IllegalStateException("Bệnh nhân chưa có chuyên gia phụ trách để tạo booster demo.");
+            throw new IllegalStateException("Bá»‡nh nhÃ¢n chÆ°a cÃ³ chuyÃªn gia phá»¥ trÃ¡ch Ä‘á»ƒ táº¡o booster demo.");
         }
 
         AppointmentPurpose appointmentPurpose = AppointmentPurpose.valueOf(purpose.trim().toUpperCase());
@@ -429,12 +461,12 @@ public class AdminDemoControlService {
 
         log.info("Admin demo control trigger booster adminId={}, patientId={}, purpose={}",
                 adminId, patientId, appointmentPurpose);
-        return snapshot(patient, "TRIGGER_BOOSTER", "Đã tạo booster demo: " + appointmentPurpose + ".");
+        return snapshot(patient, "TRIGGER_BOOSTER", "ÄÃ£ táº¡o booster demo: " + appointmentPurpose + ".");
     }
 
     private PatientProfile getPatient(UUID patientId) {
         return patientProfileRepository.findById(patientId)
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy hồ sơ bệnh nhân: " + patientId));
+                .orElseThrow(() -> new EntityNotFoundException("KhÃ´ng tÃ¬m tháº¥y há»“ sÆ¡ bá»‡nh nhÃ¢n: " + patientId));
     }
 
     private void upsertRiskLog(PatientProfile patient) {

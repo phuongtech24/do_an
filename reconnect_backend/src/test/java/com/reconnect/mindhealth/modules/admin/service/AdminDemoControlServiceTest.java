@@ -33,6 +33,7 @@ import com.reconnect.mindhealth.modules.journal.service.IJournalService;
 import com.reconnect.mindhealth.modules.risk.entity.DailyRiskLog;
 import com.reconnect.mindhealth.modules.risk.repository.DailyRiskLogRepository;
 import com.reconnect.mindhealth.modules.roadmap.entity.FearLadderItem;
+import com.reconnect.mindhealth.modules.roadmap.entity.PatientQuest;
 import com.reconnect.mindhealth.modules.roadmap.enums.FearLadderStatus;
 import com.reconnect.mindhealth.modules.roadmap.repository.BehavioralExperimentRepository;
 import com.reconnect.mindhealth.modules.roadmap.repository.FearLadderItemRepository;
@@ -146,6 +147,44 @@ class AdminDemoControlServiceTest {
         assertEquals(3, result.getFearLadderUnlockedCount());
         assertEquals(2, result.getFearLadderMasteredCount());
         assertFalse(result.getGraduationReady());
+        verify(fearLadderItemRepository).saveAll(any());
+        verify(behavioralExperimentRepository).deleteByPatientProfile_Id(patientId);
+    }
+
+    @Test
+    void unlockAllRoadmapContent_setsWeek14_andMastersEntireLadder() {
+        UUID patientId = UUID.randomUUID();
+        PatientProfile patient = new PatientProfile();
+        patient.setId(patientId);
+        patient.setTaperingStage(TaperingStage.QUARTERLY);
+        patient.setGraduatedAt(LocalDateTime.now());
+
+        FearLadderItem item1 = new FearLadderItem();
+        item1.setLadderOrder(1);
+        FearLadderItem item2 = new FearLadderItem();
+        item2.setLadderOrder(2);
+
+        when(patientProfileRepository.findById(patientId)).thenReturn(Optional.of(patient));
+        when(patientProfileRepository.save(any(PatientProfile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(fearLadderItemRepository.findByPatientProfile_IdOrderByLadderOrderAsc(patientId))
+                .thenReturn(List.of(item1, item2));
+        when(roadmapDailyAssignmentService.ensureDailySystemQuests(any(PatientProfile.class), any(LocalDate.class)))
+                .thenReturn(List.of(new PatientQuest()));
+        when(roadmapProgramStateService.resolveProgramWeek(any(PatientProfile.class))).thenReturn(14);
+        when(roadmapProgramStateService.resolvePhase(anyInt()))
+                .thenReturn(new ProgramPhase("DEEP_COGNITIVE_MEMORY", "Tuần 9-14"));
+
+        AdminDemoControlResultDto result =
+                adminDemoControlService.unlockAllRoadmapContent(patientId, UUID.randomUUID());
+
+        assertEquals(14, patient.getCurrentProgramWeek());
+        assertEquals(TaperingStage.NONE, patient.getTaperingStage());
+        assertEquals(FearLadderStatus.MASTERED, item1.getStatus());
+        assertEquals(FearLadderStatus.MASTERED, item2.getStatus());
+        assertEquals("UNLOCK_ALL_ROADMAP_CONTENT", result.getAction());
+        assertEquals(2, result.getFearLadderMasteredCount());
+        assertTrue(Boolean.TRUE.equals(result.getGraduationReady()));
+        assertEquals(1, result.getCreatedQuests());
         verify(fearLadderItemRepository).saveAll(any());
         verify(behavioralExperimentRepository).deleteByPatientProfile_Id(patientId);
     }

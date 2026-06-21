@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,6 +52,10 @@ public class BoosterServiceImpl implements IBoosterService {
 
     private static final Logger log = LoggerFactory.getLogger(BoosterServiceImpl.class);
     private static final List<Integer> ALLOWED_DURATIONS = List.of(45, 50, 60, 90);
+    private static final String THERAPIST_SLOT_TAKEN_MESSAGE =
+            "Khung giờ này vừa được đặt. Vui lòng chọn khung giờ khác.";
+    private static final String PATIENT_SLOT_CONFLICT_MESSAGE =
+            "Bạn đã có lịch khác trùng giờ này. Vui lòng chọn khung giờ khác.";
     private static final List<LocalTime> DEFAULT_SLOTS = List.of(
             LocalTime.of(9, 0),
             LocalTime.of(10, 0),
@@ -87,7 +92,8 @@ public class BoosterServiceImpl implements IBoosterService {
         }
 
         PatientProfile patient = patientProfileRepository.findById(request.getPatientId())
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy bệnh nhân với ID: " + request.getPatientId()));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Không tìm thấy bệnh nhân với ID: " + request.getPatientId()));
 
         TherapistProfile therapist = patient.getTherapist();
         if (therapist == null) {
@@ -98,10 +104,12 @@ public class BoosterServiceImpl implements IBoosterService {
         if (startAt.isBefore(LocalDateTime.now())) {
             throw new IllegalArgumentException("Chỉ được đặt lịch từ thời điểm hiện tại trở đi.");
         }
+
         int durationMinutes = request.getDurationMinutes() == null ? 50 : request.getDurationMinutes();
         if (!ALLOWED_DURATIONS.contains(durationMinutes)) {
             throw new IllegalArgumentException("Duration chỉ hỗ trợ 45, 50, 60 hoặc 90 phút.");
         }
+
         AppointmentPurpose purpose = resolveAppointmentPurpose(request.getPurpose(), durationMinutes);
         validatePurposeForPatient(patient, purpose, durationMinutes);
         String carePhaseCode = normalizeCarePhaseCode(request.getCarePhaseCode(), patient);
@@ -110,7 +118,10 @@ public class BoosterServiceImpl implements IBoosterService {
                 patient.getId(), therapist.getId(), startAt, durationMinutes, purpose);
 
         if (appointmentRepository.existsByTherapistProfile_IdAndStartAt(therapist.getId(), startAt)) {
-            throw new IllegalStateException("Khung giờ này đã được đặt. Vui lòng chọn khung giờ khác.");
+            throw new IllegalStateException(THERAPIST_SLOT_TAKEN_MESSAGE);
+        }
+        if (appointmentRepository.existsByPatientProfile_IdAndStartAt(patient.getId(), startAt)) {
+            throw new IllegalStateException(PATIENT_SLOT_CONFLICT_MESSAGE);
         }
 
         LocalDate slotDate = startAt.toLocalDate();
@@ -121,19 +132,37 @@ public class BoosterServiceImpl implements IBoosterService {
             throw new IllegalStateException("Chuyên gia đã đóng khung giờ này. Vui lòng chọn khung giờ khác.");
         }
 
-        Appointment appt = new Appointment();
-        appt.setPatientProfile(patient);
-        appt.setTherapistProfile(therapist);
-        appt.setStartAt(startAt);
-        appt.setEndAt(startAt.plusMinutes(durationMinutes));
-        appt.setIsAnonymous(Boolean.TRUE.equals(patient.getAnonymousModeEnabled()));
-        appt.setMeetingLink(therapist.getMeetingLink());
-        appt.setPurpose(purpose);
-        appt.setClinicalPurposeCode(purpose.name());
-        appt.setCarePhaseCode(carePhaseCode);
+        Appointment appointment = new Appointment();
+        appointment.setPatientProfile(patient);
+        appointment.setTherapistProfile(therapist);
+        appointment.setStartAt(startAt);
+        appointment.setEndAt(startAt.plusMinutes(durationMinutes));
+        appointment.setIsAnonymous(Boolean.TRUE.equals(patient.getAnonymousModeEnabled()));
+        appointment.setMeetingLink(therapist.getMeetingLink());
+        appointment.setPurpose(purpose);
+        appointment.setClinicalPurposeCode(purpose.name());
+        appointment.setCarePhaseCode(carePhaseCode);
 
-        Appointment saved = appointmentRepository.save(appt);
-        return new AppointmentDto(saved);
+        try {
+            Appointment saved = appointmentRepository.save(appointment);
+            return new AppointmentDto(saved);
+        } catch (DataIntegrityViolationException ex) {
+            throw new IllegalStateException(resolveBookingIntegrityMessage(ex), ex);
+        }
+    }
+
+    private String resolveBookingIntegrityMessage(DataIntegrityViolationException ex) {
+        String rawMessage = ex.getMostSpecificCause() != null
+                ? ex.getMostSpecificCause().getMessage()
+                : ex.getMessage();
+        String normalized = rawMessage == null ? "" : rawMessage.toLowerCase();
+        if (normalized.contains("uq_appointments_patient_start_at")) {
+            return PATIENT_SLOT_CONFLICT_MESSAGE;
+        }
+        if (normalized.contains("uq_appointments_therapist_start_at")) {
+            return THERAPIST_SLOT_TAKEN_MESSAGE;
+        }
+        return THERAPIST_SLOT_TAKEN_MESSAGE;
     }
 
     private AppointmentPurpose resolveAppointmentPurpose(String rawPurpose, int durationMinutes) {
@@ -162,17 +191,20 @@ public class BoosterServiceImpl implements IBoosterService {
             }
             case BEHAVIORAL_EXPERIMENT, INTENSIVE_EXPOSURE -> {
                 if (durationMinutes != 90) {
-                    throw new IllegalArgumentException("Thử nghiệm hành vi hoặc can thiệp cường độ cao cần thời lượng 90 phút.");
+                    throw new IllegalArgumentException(
+                            "Thử nghiệm hành vi hoặc can thiệp cường độ cao cần thời lượng 90 phút.");
                 }
             }
             case BOOSTER_3M, BOOSTER_6M, BOOSTER_12M -> {
                 if (patient.getGraduatedAt() == null) {
-                    throw new IllegalStateException("Booster session chỉ áp dụng sau khi kết thúc điều trị chính.");
+                    throw new IllegalStateException(
+                            "Booster session chỉ áp dụng sau khi kết thúc điều trị chính.");
                 }
             }
             case CRISIS -> {
                 if (!isRedFlagPatient(patient)) {
-                    throw new IllegalStateException("Lịch khẩn cấp chỉ áp dụng cho ca cờ đỏ hoặc nguy cơ cao.");
+                    throw new IllegalStateException(
+                            "Lịch khẩn cấp chỉ áp dụng cho ca cờ đỏ hoặc nguy cơ cao.");
                 }
             }
             default -> {

@@ -363,6 +363,12 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
                     onTap: () => Navigator.pop(context, 'set-fear-ladder-mastery:999'),
                   ),
                   _DemoActionTile(
+                    icon: Icons.all_inclusive_outlined,
+                    title: 'Mở khóa toàn bộ roadmap demo',
+                    subtitle: 'Đẩy nhanh lên tuần 14, mở tối đa ladder và tạo bài hệ thống hôm nay.',
+                    onTap: () => Navigator.pop(context, 'unlock-all-roadmap-content'),
+                  ),
+                  _DemoActionTile(
                     icon: Icons.restart_alt,
                     title: 'Reset tiến độ Fear Ladder',
                     subtitle: 'Xóa tiến độ bậc đã làm chủ để demo lại từ đầu.',

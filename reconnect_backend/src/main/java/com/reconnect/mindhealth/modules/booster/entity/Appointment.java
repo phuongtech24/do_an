@@ -13,12 +13,34 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 
 @Entity
-@Table(name = "appointments")
+@Table(
+        name = "appointments",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uq_appointments_therapist_start_at",
+                        columnNames = {"therapist_id", "start_at"}),
+                @UniqueConstraint(
+                        name = "uq_appointments_patient_start_at",
+                        columnNames = {"patient_id", "start_at"})
+        },
+        indexes = {
+                @Index(
+                        name = "idx_appointments_therapist_start_at",
+                        columnList = "therapist_id, start_at"),
+                @Index(
+                        name = "idx_appointments_patient_start_at",
+                        columnList = "patient_id, start_at"),
+                @Index(
+                        name = "idx_appointments_therapist_status_start_at",
+                        columnList = "therapist_id, status, start_at")
+        })
 public class Appointment extends BaseObject {
 
     @ManyToOne(fetch = FetchType.LAZY)
