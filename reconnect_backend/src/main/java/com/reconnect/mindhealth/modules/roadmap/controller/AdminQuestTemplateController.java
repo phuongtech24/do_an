@@ -32,6 +32,9 @@ import jakarta.persistence.EntityNotFoundException;
 @RequestMapping("/api/admin/quest-templates")
 public class AdminQuestTemplateController {
 
+    private static final String QUEST_TEMPLATE_WRITE_BLOCK_MESSAGE =
+            "Admin không có quyền tạo mới hoặc xóa kho nội dung CBT lõi. Chỉ được xem và cập nhật cấu hình module hiện có.";
+
     private final AuthContextService authContextService;
     private final QuestTemplateRepository questTemplateRepository;
 
@@ -80,36 +83,7 @@ public class AdminQuestTemplateController {
     public ResponseEntity<ApiResponse<QuestTemplateDto>> create(@RequestBody QuestTemplateDto dto) {
         try {
             requireAdmin();
-            if (dto == null) {
-                throw new IllegalArgumentException("Thiếu payload.");
-            }
-            if (dto.getTitle() == null || dto.getTitle().trim().isEmpty()) {
-                throw new IllegalArgumentException("Thiếu title.");
-            }
-            if (dto.getDescription() == null || dto.getDescription().trim().isEmpty()) {
-                throw new IllegalArgumentException("Thiếu description.");
-            }
-            if (dto.getCategory() == null) {
-                throw new IllegalArgumentException("Thiếu category.");
-            }
-
-            QuestTemplate qt = new QuestTemplate();
-            qt.setTitle(dto.getTitle().trim());
-            qt.setDescription(dto.getDescription().trim());
-            qt.setCategory(dto.getCategory());
-            if (dto.getDifficulty() != null) {
-                qt.setDifficulty(dto.getDifficulty());
-            }
-            qt.setModuleCode(dto.getModuleCode());
-            qt.setProgramWeek(dto.getProgramWeek());
-            qt.setProgramPhaseCode(QuestTemplatePhaseCodeNormalizer.normalize(dto.getProgramPhaseCode()));
-            qt.setInterventionType(dto.getInterventionType());
-            qt.setPrerequisiteCodesJson(dto.getPrerequisiteCodesJson());
-            qt.setTherapistOnlyAssignable(Boolean.TRUE.equals(dto.getTherapistOnlyAssignable()));
-            qt.setHardLocked(Boolean.TRUE.equals(dto.getHardLocked()));
-
-            QuestTemplate saved = questTemplateRepository.save(qt);
-            return ResponseEntity.ok(ApiResponse.success("OK", new QuestTemplateDto(saved)));
+            return ResponseEntity.ok(ApiResponse.error(QUEST_TEMPLATE_WRITE_BLOCK_MESSAGE));
         } catch (Exception e) {
             return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
         }
@@ -157,10 +131,7 @@ public class AdminQuestTemplateController {
     public ResponseEntity<ApiResponse<Object>> delete(@PathVariable UUID id) {
         try {
             requireAdmin();
-            QuestTemplate qt = questTemplateRepository.findById(id)
-                    .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy quest template: " + id));
-            questTemplateRepository.delete(qt);
-            return ResponseEntity.ok(ApiResponse.success("OK", null));
+            return ResponseEntity.ok(ApiResponse.error(QUEST_TEMPLATE_WRITE_BLOCK_MESSAGE));
         } catch (Exception e) {
             return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
         }

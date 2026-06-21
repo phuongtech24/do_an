@@ -68,33 +68,34 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
     }).toList();
   }
 
-  Future<void> _openEditor({QuestTemplateModel? item}) async {
+  Future<void> _openEditor({required QuestTemplateModel item}) async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final token = auth.token;
     if (token == null || token.isEmpty) return;
 
-    final titleCtrl = TextEditingController(text: item?.title ?? '');
-    final descCtrl = TextEditingController(text: item?.description ?? '');
-    final moduleCodeCtrl = TextEditingController(text: item?.moduleCode ?? '');
-    final programWeekCtrl =
-        TextEditingController(text: item?.programWeek != null ? '${item!.programWeek}' : '');
+    final titleCtrl = TextEditingController(text: item.title);
+    final descCtrl = TextEditingController(text: item.description);
+    final moduleCodeCtrl = TextEditingController(text: item.moduleCode);
+    final programWeekCtrl = TextEditingController(
+      text: item.programWeek != null ? '${item.programWeek}' : '',
+    );
 
-    String category = item?.category ?? 'BEHAVIORAL';
-    String difficulty = item?.difficulty ?? 'EASY';
-    String programPhaseCode = item?.programPhaseCode.isNotEmpty == true
-        ? item!.programPhaseCode
+    String category = item.category;
+    String difficulty = item.difficulty;
+    String programPhaseCode = item.programPhaseCode.isNotEmpty
+        ? item.programPhaseCode
         : 'MAP_AND_BELIEF_BREAK';
-    String interventionType = item?.interventionType.isNotEmpty == true
-        ? item!.interventionType
+    String interventionType = item.interventionType.isNotEmpty
+        ? item.interventionType
         : 'BEHAVIORAL_EXPERIMENT';
-    bool therapistOnlyAssignable = item?.therapistOnlyAssignable ?? false;
-    bool hardLocked = item?.hardLocked ?? false;
+    bool therapistOnlyAssignable = item.therapistOnlyAssignable;
+    bool hardLocked = item.hardLocked;
 
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: Text(item == null ? 'Thêm module CBT' : 'Chỉnh sửa module CBT'),
+          title: const Text('Chỉnh sửa module CBT'),
           content: SizedBox(
             width: 560,
             child: SingleChildScrollView(
@@ -138,12 +139,26 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
                             border: OutlineInputBorder(),
                           ),
                           items: const [
-                            DropdownMenuItem(value: 'BEHAVIORAL', child: Text('BEHAVIORAL')),
-                            DropdownMenuItem(value: 'COGNITIVE', child: Text('COGNITIVE')),
-                            DropdownMenuItem(value: 'EMOTIONAL', child: Text('EMOTIONAL')),
-                            DropdownMenuItem(value: 'SOCIAL', child: Text('SOCIAL')),
+                            DropdownMenuItem(
+                              value: 'BEHAVIORAL',
+                              child: Text('BEHAVIORAL'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'COGNITIVE',
+                              child: Text('COGNITIVE'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'EMOTIONAL',
+                              child: Text('EMOTIONAL'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'SOCIAL',
+                              child: Text('SOCIAL'),
+                            ),
                           ],
-                          onChanged: (val) => setDialogState(() => category = val ?? category),
+                          onChanged: (val) => setDialogState(
+                            () => category = val ?? category,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -156,10 +171,15 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
                           ),
                           items: const [
                             DropdownMenuItem(value: 'EASY', child: Text('EASY')),
-                            DropdownMenuItem(value: 'MEDIUM', child: Text('MEDIUM')),
+                            DropdownMenuItem(
+                              value: 'MEDIUM',
+                              child: Text('MEDIUM'),
+                            ),
                             DropdownMenuItem(value: 'HARD', child: Text('HARD')),
                           ],
-                          onChanged: (val) => setDialogState(() => difficulty = val ?? difficulty),
+                          onChanged: (val) => setDialogState(
+                            () => difficulty = val ?? difficulty,
+                          ),
                         ),
                       ),
                     ],
@@ -201,7 +221,8 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
                             ),
                           ],
                           onChanged: (val) => setDialogState(
-                            () => programPhaseCode = val ?? programPhaseCode,
+                            () =>
+                                programPhaseCode = val ?? programPhaseCode,
                           ),
                         ),
                       ),
@@ -228,27 +249,41 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
                         child: Text('VIDEO_FEEDBACK'),
                       ),
                       DropdownMenuItem(value: 'SURVEY', child: Text('SURVEY')),
-                      DropdownMenuItem(value: 'THEN_VS_NOW', child: Text('THEN_VS_NOW')),
+                      DropdownMenuItem(
+                        value: 'THEN_VS_NOW',
+                        child: Text('THEN_VS_NOW'),
+                      ),
                       DropdownMenuItem(
                         value: 'IMAGERY_RESCRIPTING',
                         child: Text('IMAGERY_RESCRIPTING'),
                       ),
-                      DropdownMenuItem(value: 'THOUGHT_RECORD', child: Text('THOUGHT_RECORD')),
+                      DropdownMenuItem(
+                        value: 'THOUGHT_RECORD',
+                        child: Text('THOUGHT_RECORD'),
+                      ),
                     ],
-                    onChanged: (val) => setDialogState(() => interventionType = val ?? interventionType),
+                    onChanged: (val) => setDialogState(
+                      () => interventionType = val ?? interventionType,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Chỉ bác sĩ được giao'),
-                    subtitle: const Text('Dùng cho module chỉ nên xuất hiện khi therapist chủ động giao bài.'),
+                    subtitle: const Text(
+                      'Dùng cho module chỉ nên xuất hiện khi therapist chủ động giao bài.',
+                    ),
                     value: therapistOnlyAssignable,
-                    onChanged: (val) => setDialogState(() => therapistOnlyAssignable = val),
+                    onChanged: (val) => setDialogState(
+                      () => therapistOnlyAssignable = val,
+                    ),
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Khóa cứng theo phase'),
-                    subtitle: const Text('Chỉ mở khi đúng phase hoặc đủ điều kiện tiên quyết lâm sàng.'),
+                    subtitle: const Text(
+                      'Chỉ mở khi đúng phase hoặc đủ điều kiện tiên quyết lâm sàng.',
+                    ),
                     value: hardLocked,
                     onChanged: (val) => setDialogState(() => hardLocked = val),
                   ),
@@ -264,7 +299,10 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Lưu', style: TextStyle(color: Colors.white)),
+              child: const Text(
+                'Lưu',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         ),
@@ -286,85 +324,26 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
     });
 
     try {
-      if (item == null) {
-        final created = await _repo.create(
-          token: token,
-          input: QuestTemplateModel(
-            id: '',
-            title: title,
-            description: description,
-            category: category,
-            difficulty: difficulty,
-            moduleCode: moduleCode,
-            programWeek: programWeek,
-            programPhaseCode: programPhaseCode,
-            interventionType: interventionType,
-            therapistOnlyAssignable: therapistOnlyAssignable,
-            hardLocked: hardLocked,
-          ),
-        );
-        if (!mounted) return;
-        setState(() => _items = [created, ..._items]);
-      } else {
-        final updated = await _repo.update(
-          token: token,
-          id: item.id,
-          input: item.copyWith(
-            title: title,
-            description: description,
-            category: category,
-            difficulty: difficulty,
-            moduleCode: moduleCode,
-            programWeek: programWeek,
-            programPhaseCode: programPhaseCode,
-            interventionType: interventionType,
-            therapistOnlyAssignable: therapistOnlyAssignable,
-            hardLocked: hardLocked,
-          ),
-        );
-        if (!mounted) return;
-        setState(() => _items = _items.map((x) => x.id == item.id ? updated : x).toList());
-      }
-    } catch (e) {
+      final updated = await _repo.update(
+        token: token,
+        id: item.id,
+        input: item.copyWith(
+          title: title,
+          description: description,
+          category: category,
+          difficulty: difficulty,
+          moduleCode: moduleCode,
+          programWeek: programWeek,
+          programPhaseCode: programPhaseCode,
+          interventionType: interventionType,
+          therapistOnlyAssignable: therapistOnlyAssignable,
+          hardLocked: hardLocked,
+        ),
+      );
       if (!mounted) return;
-      setState(() => _error = e.toString().replaceAll('Exception: ', ''));
-      await _load();
-    } finally {
-      if (!mounted) return;
-      setState(() => _loading = false);
-    }
-  }
-
-  Future<void> _deleteItem(QuestTemplateModel item) async {
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final token = auth.token;
-    if (token == null || token.isEmpty) return;
-
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Xóa module CBT?'),
-        content: Text('Bạn chắc chắn muốn xóa: "${item.title}"'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.alert),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Xóa', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
-
-    setState(() {
-      _loading = true;
-      _error = '';
-    });
-    try {
-      await _repo.delete(token: token, id: item.id);
-      if (!mounted) return;
-      setState(() => _items = _items.where((x) => x.id != item.id).toList());
+      setState(() {
+        _items = _items.map((x) => x.id == item.id ? updated : x).toList();
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = e.toString().replaceAll('Exception: ', ''));
@@ -388,25 +367,32 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
             ),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
-              icon: const Icon(Icons.add, color: Colors.white),
-              label: const Text('THÊM', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              onPressed: _loading ? null : () => _openEditor(),
+            IconButton(
+              onPressed: _loading ? null : _load,
+              icon: const Icon(Icons.refresh),
             ),
-            const SizedBox(width: 8),
-            IconButton(onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh)),
           ],
         ),
         const SizedBox(height: 8),
         const Text(
-          'Quản trị kho module/phác đồ 14 tuần. Đây là thư viện nội dung CBT dùng để giao bài, không phải Fear Ladder cá nhân hóa của từng bệnh nhân.',
+          'Admin chỉ quản lý cấu hình thư viện module CBT 14 tuần ở mức hệ thống.',
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Therapist và hệ thống mới là bên dùng kho này để giao/phân phối bài thực tế cho từng bệnh nhân.',
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Kho này không phải danh sách bài thực hành cá nhân hóa của bệnh nhân.',
           style: TextStyle(color: AppColors.textSecondary),
         ),
         const SizedBox(height: 16),
         TextField(
           decoration: InputDecoration(
-            hintText: 'Tìm theo tên module, mã module, phase, loại can thiệp...',
+            hintText:
+                'Tìm theo tên module, mã module, phase, loại can thiệp...',
             prefixIcon: const Icon(Icons.search, color: Colors.grey),
             filled: true,
             fillColor: Colors.white,
@@ -442,8 +428,14 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
                     itemBuilder: (context, index) {
                       final it = _filtered[index];
                       return ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        title: Text(it.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        title: Text(
+                          it.title,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                         subtitle: Text(
                           '${it.category} • ${it.difficulty}'
                           '${it.moduleCode.isNotEmpty ? ' • ${it.moduleCode}' : ''}'
@@ -455,20 +447,15 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
                           '${it.hardLocked ? ' • Hard lock' : ''}',
                         ),
                         isThreeLine: true,
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              tooltip: 'Sửa',
-                              icon: const Icon(Icons.edit, color: AppColors.primary),
-                              onPressed: _loading ? null : () => _openEditor(item: it),
-                            ),
-                            IconButton(
-                              tooltip: 'Xóa',
-                              icon: const Icon(Icons.delete_outline, color: AppColors.alert),
-                              onPressed: _loading ? null : () => _deleteItem(it),
-                            ),
-                          ],
+                        trailing: IconButton(
+                          tooltip: 'Sửa',
+                          icon: const Icon(
+                            Icons.edit,
+                            color: AppColors.primary,
+                          ),
+                          onPressed: _loading
+                              ? null
+                              : () => _openEditor(item: it),
                         ),
                       );
                     },
