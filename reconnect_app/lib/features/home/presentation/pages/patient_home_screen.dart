@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -113,7 +113,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           ],
         ),
         content: const Text(
-          'Điểm LSAS/Fear Ladder của bạn đang cải thiện. Bạn có nhận thấy mình đã bớt né tránh và dám thử các tình huống xã hội hơn không?',
+          'Kết quả kiểm tra và bài thực hành tiếp xúc của bạn đang cải thiện. Bạn có nhận thấy mình đã bớt né tránh và dám thử các tình huống xã hội hơn không?',
           style: TextStyle(height: 1.5),
         ),
         actions: [
@@ -149,7 +149,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
-                    'Hãy check-in nhanh 5 chỉ số để theo dõi cảm xúc hôm nay. Nếu hệ thống thấy mức căng thẳng quá cao, app sẽ ưu tiên hỏi về an toàn trước khi gợi ý bài tập CBT.',
+                    'Hãy ghi nhanh 5 chỉ số để theo dõi cảm xúc hôm nay. Nếu hệ thống thấy mức căng thẳng quá cao, app sẽ ưu tiên hỏi về an toàn trước khi gợi ý bài tập CBT.',
                     style: TextStyle(color: Colors.black54, height: 1.45),
                   ),
                   const SizedBox(height: 12),
@@ -445,16 +445,16 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           children: [
             Text(
               shouldOpenThoughtRecord
-                  ? 'Check-in cho thấy lo âu dự kiến hoặc nhai lại của bạn đang khá cao. Đây là lúc phù hợp để vào thẳng nhật ký suy nghĩ 6 bước.'
+                  ? 'Ghi nhận cho thấy lo âu dự kiến hoặc nhai lại của bạn đang khá cao. Đây là lúc phù hợp để vào thẳng nhật ký suy nghĩ 6 bước.'
                   : (isChoiceMode
                       ? 'MindHealth nhận thấy bạn đang có chút bận tâm và lo âu nhẹ. Bạn muốn đọc nhanh một Thẻ đối phó để củng cố tinh thần, hay muốn dành 3 phút viết Nhật ký suy nghĩ để giải tỏa sâu hơn?'
-                      : 'Check-in của bạn đang ở mức ổn định 0-3. Hệ thống sẽ không mở Thought Record lúc này mà chuyển sang chế độ bảo dưỡng để bạn lưu lại các suy nghĩ cân bằng khi đầu óc còn sáng rõ.'),
+                      : 'Ghi nhận của bạn đang ở mức ổn định 0-3. Hệ thống sẽ không mở nhật ký suy nghĩ lúc này mà chuyển sang chế độ bảo dưỡng để bạn lưu lại các suy nghĩ cân bằng khi đầu óc còn sáng rõ.'),
               style: const TextStyle(height: 1.5),
             ),
             const SizedBox(height: 12),
             TherapyGuideCard(
               title: shouldOpenThoughtRecord
-                  ? 'Gợi ý Thought Record'
+                  ? 'Gợi ý Nhật ký suy nghĩ'
                   : (isChoiceMode ? 'Chế độ cảnh giác nhẹ' : 'Thư viện Thẻ Đối Phó'),
               message: shouldOpenThoughtRecord
                   ? 'Nhật ký 6 bước sẽ giúp bạn đi từ tình huống, cảm xúc, hành vi an toàn đến phản hồi cân bằng và cam kết hành động.'
@@ -531,7 +531,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                     }
                   },
                   child: Text(
-                    shouldOpenThoughtRecord ? 'Viết Thought Record' : 'Mở thư viện thẻ đối phó',
+                    shouldOpenThoughtRecord ? 'Viết nhật ký suy nghĩ' : 'Mở thư viện thẻ đối phó',
                     style: const TextStyle(color: Colors.white),
                   ),
                 ),
@@ -563,12 +563,12 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
       actions: [
         IconButton(
           icon: const Icon(Icons.emoji_events_outlined, color: Colors.amber),
-          tooltip: 'Demo: chúc mừng phục hồi',
+        tooltip: 'Chúc mừng tiến bộ',
           onPressed: _showRecoveryCongratsDialog,
         ),
         IconButton(
           icon: const Icon(Icons.bolt, color: Colors.amber),
-          tooltip: 'Demo: bật/tắt cảnh báo bác sĩ',
+          tooltip: 'Cảnh báo từ bác sĩ',
           onPressed: () => setState(() => _hasBoosterAlert = !_hasBoosterAlert),
         ),
       ],
@@ -619,7 +619,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           const SizedBox(height: 28),
           _buildSectionHeader(
             title: 'Theo dõi tiến triển',
-            subtitle: 'Nhìn lại LSAS, Fear Ladder và các chỉ số hồi phục theo chu kỳ.',
+            subtitle: 'Nhìn lại bài kiểm tra, bài thực hành tiếp xúc và các chỉ số hồi phục theo chu kỳ.',
           ),
           const SizedBox(height: 12),
           Container(
@@ -632,7 +632,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             child: Column(
               children: [
                 FeatureCard(
-                  title: 'Re-rating LSAS định kỳ',
+                  title: 'Đánh giá lại lo âu định kỳ',
                   subtitle: 'Cập nhật mức sợ và né tránh mỗi 14 ngày',
                   icon: Icons.analytics_outlined,
                   onTap: () => context.go('/lsas'),
@@ -640,7 +640,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                 const SizedBox(height: 12),
                 FeatureCard(
                   title: 'Tiến triển hồi phục',
-                  subtitle: 'Theo dõi LSAS và Fear Ladder theo thời gian',
+                  subtitle: 'Theo dõi bài kiểm tra và bài thực hành tiếp xúc theo thời gian',
                   icon: Icons.trending_up,
                   onTap: () => context.push('/progress'),
                 ),
@@ -681,7 +681,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
               const SizedBox(width: 12),
               const Expanded(
                 child: Text(
-                  'Bác sĩ yêu cầu Booster Session',
+                  'Bác sĩ yêu cầu buổi ôn tập',
                   style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.alert),
                 ),
               ),
@@ -845,7 +845,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             ),
             icon: const Icon(Icons.edit_outlined),
-            label: const Text('Cập nhật check-in'),
+            label: const Text('Cập nhật cảm xúc hôm nay'),
           ),
         ],
       ),

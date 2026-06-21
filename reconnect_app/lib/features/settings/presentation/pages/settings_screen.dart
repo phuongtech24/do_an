@@ -97,7 +97,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _SettingTile(
             icon: Icons.summarize_outlined,
             title: 'Nhận tổng kết hằng tuần',
-            subtitle: 'Nhắc bạn xem lại LSAS, thang sợ và tiến triển trị liệu mỗi tuần.',
+            subtitle: 'Nhắc bạn xem lại kết quả kiểm tra, bài thực hành tiếp xúc và tiến triển trị liệu mỗi tuần.',
             value: weeklySummary,
             onChanged: (value) => setState(() => weeklySummary = value),
           ),

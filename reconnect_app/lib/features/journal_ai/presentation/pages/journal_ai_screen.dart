@@ -47,7 +47,7 @@ class _JournalAiScreenState extends State<JournalAiScreen> {
     final token = auth.loginResponse?.token;
 
     return MindHealthScaffold(
-      title: 'Nhật ký & Trợ lý AI CBT',
+      title: 'Nhật ký & Trợ lý AI',
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/thought-record'),
         backgroundColor: AppColors.primary,
@@ -651,7 +651,7 @@ class _PaginationSection extends StatelessWidget {
       child: Row(
         children: [
           Text(
-            '$totalElements bản ghi',
+            '$totalElements mục',
             style: const TextStyle(
               color: AppColors.textSecondary,
               fontWeight: FontWeight.w700,

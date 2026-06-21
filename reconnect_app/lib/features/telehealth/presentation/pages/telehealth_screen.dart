@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -48,7 +48,7 @@ class _TelehealthScreenState extends State<TelehealthScreen> {
               ? 'Chuyên gia đồng hành hiện tại: $therapistName'
               : (telehealth.assignmentMessage.isNotEmpty
                     ? telehealth.assignmentMessage
-                    : 'Bạn cần chọn chuyên gia trước khi đặt lịch CBT.');
+                    : 'Bạn cần chọn chuyên gia trước khi đặt lịch tư vấn.');
 
           return ListView(
             padding: const EdgeInsets.only(bottom: 20),
@@ -72,7 +72,7 @@ class _TelehealthScreenState extends State<TelehealthScreen> {
                 _ActionCard(
                   icon: Icons.menu_book_rounded,
                   title: 'Viết nhật ký suy nghĩ',
-                  subtitle: 'Đi thẳng vào Thought Record 6 bước để bóc tách suy nghĩ tự động và tự điều chỉnh.',
+                  subtitle: 'Đi thẳng vào nhật ký suy nghĩ 6 bước để bóc tách suy nghĩ tự động và tự điều chỉnh.',
                   accent: AppColors.primary,
                   onTap: () => context.push('/thought-record'),
                 ),
@@ -95,8 +95,8 @@ class _TelehealthScreenState extends State<TelehealthScreen> {
                 const SizedBox(height: 14),
                 _ActionCard(
                   icon: Icons.wb_sunny_outlined,
-                  title: 'Check-in hôm nay',
-                  subtitle: 'Quay về Trang chủ để làm Daily Check-in, theo dõi lo âu và nhận điều hướng CBT phù hợp.',
+                  title: 'Ghi nhận cảm xúc hôm nay',
+                  subtitle: 'Quay về Trang chủ để ghi nhận cảm xúc hàng ngày và nhận điều hướng CBT phù hợp.',
                   accent: const Color(0xFFF0A34A),
                   onTap: () => context.go('/home'),
                 ),
@@ -204,7 +204,7 @@ class _TelehealthHero extends StatelessWidget {
         : reassuranceMode
             ? 'Theo dõi và an tâm'
             : assigned
-                ? 'Telehealth đã sẵn sàng'
+                ? 'Sẵn sàng tư vấn trực tuyến'
                 : 'Sẵn sàng chọn chuyên gia';
 
     return Container(

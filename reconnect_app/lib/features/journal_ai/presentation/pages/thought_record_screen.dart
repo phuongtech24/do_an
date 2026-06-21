@@ -360,15 +360,15 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
     final aiRisk = savedJournal?.aiRiskScore;
     final severity = savedJournal?.severityLevel;
     final riskLine = aiRisk == null
-        ? 'AI Risk: chưa có dữ liệu.'
+        ? 'Đánh giá rủi ro: chưa có dữ liệu.'
         : aiRisk >= 70
-            ? 'AI Risk: $aiRisk/100 - hệ thống đã ưu tiên theo dõi.'
-            : 'AI Risk: $aiRisk/100.';
-    final severityLine = severity == null || severity.isEmpty ? '' : '\nMức AI: $severity.';
+            ? 'Đánh giá rủi ro: $aiRisk/100 - hệ thống đã ưu tiên theo dõi.'
+            : 'Đánh giá rủi ro: $aiRisk/100.';
+    final severityLine = severity == null || severity.isEmpty ? '' : '\nMức độ: $severity.';
     final baseMessage = _saveAsCopingCard
-        ? 'Bạn đã hoàn thành Thought Record 6 bước. Phản hồi cân bằng này có thể dùng lại như một thẻ đối phó.'
-        : 'Bạn đã hoàn thành Thought Record 6 bước và có thêm một góc nhìn thực tế hơn.';
-    return '$baseMessage\n\nGợi ý lỗi tư duy được xử lý riêng ở Bước 5; AI Risk chỉ được chấm khi bạn bấm lưu cuối phiên.\n\n$riskLine$severityLine';
+        ? 'Bạn đã hoàn thành nhật ký suy nghĩ 6 bước. Phản hồi cân bằng này có thể dùng lại như một thẻ đối phó.'
+        : 'Bạn đã hoàn thành nhật ký suy nghĩ 6 bước và có thêm một góc nhìn thực tế hơn.';
+    return '$baseMessage\n\nCác lỗi tư duy được xử lý ở Bước 5; đánh giá rủi ro chỉ được tính khi bạn lưu.\n\n$riskLine$severityLine';
   }
 
   String _distortionLabel(String code) {
@@ -751,7 +751,7 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: const Text(
-                    'Đang phân tích suy nghĩ của bạn để gợi ý lỗi tư duy phù hợp...',
+                    'Đang phân tích suy nghĩ của bạn...',
                     style: TextStyle(
                       color: AppColors.textPrimary,
                       height: 1.45,
@@ -883,7 +883,7 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
                 Padding(
                   padding: const EdgeInsets.only(top: 14),
                   child: Text(
-                    'AI gợi ý đang tạm lỗi: ${provider.errorMessage}',
+                    'Tính năng AI đang tạm thời gián đoạn: ${provider.errorMessage}',
                     style: const TextStyle(color: AppColors.alert),
                   ),
                 ),
@@ -924,7 +924,7 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
-                    'AI gợi câu hỏi đang tạm lỗi: ${provider.errorMessage}',
+                    'Tính năng AI đang tạm thời gián đoạn: ${provider.errorMessage}',
                     style: const TextStyle(color: AppColors.alert),
                   ),
                 ),
