@@ -14,6 +14,8 @@ import com.reconnect.mindhealth.modules.ai.dto.CognitiveDistortionRequestDto;
 import com.reconnect.mindhealth.modules.ai.dto.CognitiveDistortionResponseDto;
 import com.reconnect.mindhealth.modules.ai.dto.GuidedDiscoveryRequestDto;
 import com.reconnect.mindhealth.modules.ai.dto.GuidedDiscoveryResponseDto;
+import com.reconnect.mindhealth.modules.ai.dto.GuideChatRequestDto;
+import com.reconnect.mindhealth.modules.ai.dto.GuideChatResponseDto;
 import com.reconnect.mindhealth.modules.ai.service.IAiAssistantService;
 
 @RestController
@@ -53,6 +55,13 @@ public class AiController {
         log.info("AI cognitive distortions response: suggestions={}, hasHint={}",
                 result.getDistortions() != null ? result.getDistortions().size() : 0,
                 result.getHint() != null && !result.getHint().isBlank());
+        return ResponseEntity.ok(ApiResponse.success("OK", result));
+    }
+
+    @PostMapping("/guide-chat")
+    public ResponseEntity<ApiResponse<GuideChatResponseDto>> guideChat(
+            @Validated @RequestBody GuideChatRequestDto request) {
+        GuideChatResponseDto result = aiAssistantService.guideChat(request);
         return ResponseEntity.ok(ApiResponse.success("OK", result));
     }
 }

@@ -63,6 +63,7 @@ class ApiConstants {
   // AI Endpoints
   static const String guidedDiscovery = '$baseUrl/ai/guided-discovery';
   static const String cognitiveDistortions = '$baseUrl/ai/cognitive-distortions';
+  static const String guideChat = '$baseUrl/ai/guide-chat';
 
   // Telehealth / Booster Endpoints
   static const String getAvailableSlots = '$baseUrl/booster/slots';

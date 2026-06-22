@@ -563,13 +563,18 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
       actions: [
         IconButton(
           icon: const Icon(Icons.emoji_events_outlined, color: Colors.amber),
-        tooltip: 'Chúc mừng tiến bộ',
+          tooltip: 'Chúc mừng tiến bộ',
           onPressed: _showRecoveryCongratsDialog,
         ),
         IconButton(
           icon: const Icon(Icons.bolt, color: Colors.amber),
           tooltip: 'Cảnh báo từ bác sĩ',
           onPressed: () => setState(() => _hasBoosterAlert = !_hasBoosterAlert),
+        ),
+        IconButton(
+          icon: const Icon(Icons.smart_toy_rounded, color: AppColors.primary),
+          tooltip: 'Trợ lý đồng hành',
+          onPressed: () => context.push('/cbt-chat?screen=home'),
         ),
       ],
       body: ListView(
@@ -986,3 +991,4 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     );
   }
 }
+

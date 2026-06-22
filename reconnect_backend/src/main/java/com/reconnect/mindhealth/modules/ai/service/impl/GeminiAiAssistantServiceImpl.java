@@ -1,12 +1,20 @@
 package com.reconnect.mindhealth.modules.ai.service.impl;
 
+import java.io.InputStream;
 import java.time.Duration;
+import java.text.Normalizer;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Locale;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -17,6 +25,9 @@ import com.reconnect.mindhealth.modules.ai.dto.CognitiveDistortionRequestDto;
 import com.reconnect.mindhealth.modules.ai.dto.CognitiveDistortionResponseDto;
 import com.reconnect.mindhealth.modules.ai.dto.GuidedDiscoveryRequestDto;
 import com.reconnect.mindhealth.modules.ai.dto.GuidedDiscoveryResponseDto;
+import com.reconnect.mindhealth.modules.ai.dto.GuideChatRequestDto;
+import com.reconnect.mindhealth.modules.ai.dto.GuideChatResponseDto;
+import com.reconnect.mindhealth.modules.ai.dto.GuideChatSuggestedActionDto;
 import com.reconnect.mindhealth.modules.ai.dto.JournalAiRiskResultDto;
 import com.reconnect.mindhealth.modules.ai.service.IAiAssistantService;
 import com.reconnect.mindhealth.modules.ai.service.RuleBasedCognitiveDistortionDetector;
@@ -38,6 +49,8 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
     private final RuleBasedJournalRiskScorer ruleBasedJournalRiskScorer;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final Map<String, GuideChatResponseDto> guideChatCache = new ConcurrentHashMap<>();
+    private List<GuideKnowledgeCard> guideKnowledgeCards = List.of();
 
     public GeminiAiAssistantServiceImpl(
             AiProperties aiProperties,
@@ -46,6 +59,18 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
         this.aiProperties = aiProperties;
         this.ruleBasedCognitiveDistortionDetector = ruleBasedCognitiveDistortionDetector;
         this.ruleBasedJournalRiskScorer = ruleBasedJournalRiskScorer;
+    }
+
+    @PostConstruct
+    void loadGuideKnowledgeCards() {
+        try (InputStream input = new ClassPathResource("ai/guide-knowledge-cards.json").getInputStream()) {
+            guideKnowledgeCards = objectMapper.readValue(input, new TypeReference<List<GuideKnowledgeCard>>() {
+            });
+            log.info("Loaded guide knowledge cards: {}", guideKnowledgeCards.size());
+        } catch (Exception exception) {
+            guideKnowledgeCards = List.of();
+            log.warn("Unable to load guide knowledge cards. {}", exception.getMessage());
+        }
     }
 
     @Override
@@ -188,6 +213,309 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
                 out.size(),
                 hint != null && !hint.isBlank());
         return new CognitiveDistortionResponseDto(out, hint);
+    }
+
+    @Override
+    public GuideChatResponseDto guideChat(GuideChatRequestDto request) {
+        if (shouldEscalateSafety(request)) {
+            return buildSafetyGuideResponse(request);
+        }
+
+        String intent = detectGuideIntent(request);
+        List<GuideKnowledgeCard> matchedCards = retrieveGuideKnowledge(request);
+        GuideKnowledgeCard primaryCard = matchedCards.isEmpty() ? null : matchedCards.get(0);
+        String cacheKey = buildGuideCacheKey(request, intent, primaryCard);
+        GuideChatResponseDto cached = guideChatCache.get(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
+
+        boolean useFallbackOnly = shouldUseFallbackOnly(request, matchedCards);
+        GuideChatResponseDto response = useFallbackOnly
+                ? buildGuideFallbackResponse(request, intent, primaryCard)
+                : buildGeminiGuideResponse(request, intent, matchedCards, primaryCard);
+
+        guideChatCache.put(cacheKey, response);
+        return response;
+    }
+
+    private boolean shouldEscalateSafety(GuideChatRequestDto request) {
+        int riskScore = request.getCurrentRiskScore() != null ? request.getCurrentRiskScore() : 0;
+        return request.isRedFlagActive() || riskScore >= 70;
+    }
+
+    private GuideChatResponseDto buildSafetyGuideResponse(GuideChatRequestDto request) {
+        return new GuideChatResponseDto(
+                "Mình sẽ ưu tiên an toàn cho bạn trước. Hiện hệ thống đang thấy mức rủi ro cao hoặc có cờ đỏ, nên mình không tiếp tục hỗ trợ trị liệu mở ở đây. Nếu được, bạn hãy mở hỗ trợ an toàn hoặc xem ngay mục tham vấn từ xa để kết nối với chuyên gia phù hợp.",
+                List.of(
+                        new GuideChatSuggestedActionDto("Mở hỗ trợ an toàn", "/safety-support"),
+                        new GuideChatSuggestedActionDto("Xem tham vấn từ xa", "/telehealth")),
+                "SAFETY_ESCALATION",
+                true,
+                true,
+                true);
+    }
+
+    private String detectGuideIntent(GuideChatRequestDto request) {
+        String normalized = normalizeText(request.getUserMessage());
+        if (containsAny(normalized, "khong an toan", "cap cuu", "khan cap", "nguy hiem", "co do")) {
+            return "SAFETY_ESCALATION";
+        }
+        if (containsAny(normalized, "lam gi tiep", "tiep theo", "bat dau tu dau", "nen lam gi")) {
+            return "NEXT_STEP";
+        }
+        if (containsAny(normalized, "giai thich", "tai sao", "y nghia", "co che")) {
+            return "FEATURE_EXPLAINER";
+        }
+        if (containsAny(normalized, "toi dang lo", "toi lo", "ho tro nhe", "tran an", "binh tinh")) {
+            return "CBT_SUPPORT_LIGHT";
+        }
+        return "APP_GUIDE";
+    }
+
+    private List<GuideKnowledgeCard> retrieveGuideKnowledge(GuideChatRequestDto request) {
+        String screenContext = normalizeText(request.getScreenContext());
+        String route = normalizeText(request.getPatientRoute());
+        String phase = normalizeText(request.getProgramPhaseCode());
+        String message = normalizeText(request.getUserMessage());
+
+        return guideKnowledgeCards.stream()
+                .map(card -> Map.entry(card, scoreGuideCard(card, screenContext, route, phase, message)))
+                .filter(entry -> entry.getValue() > 0)
+                .sorted((left, right) -> Integer.compare(right.getValue(), left.getValue()))
+                .limit(3)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+    }
+
+    private int scoreGuideCard(
+            GuideKnowledgeCard card,
+            String screenContext,
+            String route,
+            String phase,
+            String message) {
+        int score = 0;
+        if (matchesScope(card.getScreenScope(), screenContext)) {
+            score += 5;
+        }
+        if (matchesScope(card.getRouteScope(), route)) {
+            score += 4;
+        }
+        if (matchesScope(card.getPhaseScope(), phase)) {
+            score += 2;
+        }
+        if (card.getKeywords() != null) {
+            for (String keyword : card.getKeywords()) {
+                if (message.contains(normalizeText(keyword))) {
+                    score += 3;
+                }
+            }
+        }
+        return score;
+    }
+
+    private boolean matchesScope(List<String> values, String actual) {
+        if (values == null || values.isEmpty()) {
+            return false;
+        }
+        if (actual == null || actual.isBlank()) {
+            return false;
+        }
+        return values.stream().map(this::normalizeText).anyMatch(actual::equals);
+    }
+
+    private boolean shouldUseFallbackOnly(GuideChatRequestDto request, List<GuideKnowledgeCard> matchedCards) {
+        if (!aiProperties.isEnabled()) {
+            return true;
+        }
+        String normalized = normalizeText(request.getUserMessage());
+        boolean quickFaq = containsAny(
+                normalized,
+                "man nay la gi",
+                "dung de lam gi",
+                "toi nen lam gi tiep",
+                "giai thich bai tap nay",
+                "bat dau tu dau");
+        return quickFaq;
+    }
+
+    private GuideChatResponseDto buildGuideFallbackResponse(
+            GuideChatRequestDto request,
+            String intent,
+            GuideKnowledgeCard primaryCard) {
+        List<GuideChatSuggestedActionDto> actions = buildSuggestedActions(primaryCard, request.getScreenContext());
+        String topicCode = primaryCard != null ? primaryCard.getTopicCode() : "GENERAL_GUIDE";
+        String answer;
+
+        if (primaryCard == null) {
+            answer = "Mình là trợ lý đồng hành giúp bạn hiểu màn hiện tại, biết nên làm gì tiếp theo và giải thích các công cụ CBT mức nhẹ. Nếu bạn muốn, hãy thử hỏi theo kiểu: màn này dùng để làm gì, tôi nên làm gì tiếp theo, hoặc giải thích bài tập này.";
+        } else if ("NEXT_STEP".equals(intent)) {
+            answer = primaryCard.getContent() + " Bước tiếp theo phù hợp nhất lúc này là chọn một thao tác nhỏ, rõ ràng thay vì cố làm mọi thứ cùng lúc.";
+        } else if ("CBT_SUPPORT_LIGHT".equals(intent)) {
+            answer = primaryCard.getContent() + " Nếu đang thấy lo, bạn chỉ cần bắt đầu bằng một bước ngắn và trung thực với cảm xúc hiện tại của mình.";
+        } else {
+            answer = primaryCard.getContent();
+        }
+
+        return new GuideChatResponseDto(
+                answer,
+                actions,
+                topicCode,
+                true,
+                false,
+                false);
+    }
+
+    private GuideChatResponseDto buildGeminiGuideResponse(
+            GuideChatRequestDto request,
+            String intent,
+            List<GuideKnowledgeCard> matchedCards,
+            GuideKnowledgeCard primaryCard) {
+        String prompt = buildGuideChatPrompt(request, intent, matchedCards);
+        String raw = generateContent(prompt, 512, 0.2, guideChatResponseSchema());
+        GuideChatResponseDto parsed = parseGuideChatJson(raw);
+
+        if (parsed.getAnswer() == null || parsed.getAnswer().isBlank()) {
+            return buildGuideFallbackResponse(request, intent, primaryCard);
+        }
+
+        if (parsed.getSuggestedActions() == null || parsed.getSuggestedActions().isEmpty()) {
+            parsed.setSuggestedActions(buildSuggestedActions(primaryCard, request.getScreenContext()));
+        }
+        if (parsed.getRelatedTopicCode() == null || parsed.getRelatedTopicCode().isBlank()) {
+            parsed.setRelatedTopicCode(primaryCard != null ? primaryCard.getTopicCode() : "GENERAL_GUIDE");
+        }
+        parsed.setUsedFallback(false);
+        return parsed;
+    }
+
+    private String buildGuideChatPrompt(
+            GuideChatRequestDto request,
+            String intent,
+            List<GuideKnowledgeCard> matchedCards) {
+        String knowledgeBlock = matchedCards.isEmpty()
+                ? "Không có tri thức khớp hoàn toàn. Chỉ trả lời ở mức hướng dẫn sử dụng app và CBT nhẹ."
+                : matchedCards.stream()
+                        .limit(3)
+                        .map(card -> "- " + card.getTopicCode() + ": " + card.getContent())
+                        .collect(Collectors.joining("\n"));
+
+        String route = request.getPatientRoute() != null ? request.getPatientRoute() : "";
+        String phase = request.getProgramPhaseCode() != null ? request.getProgramPhaseCode() : "";
+        String week = request.getProgramWeek() != null ? String.valueOf(request.getProgramWeek()) : "";
+
+        return ""
+                + "Bạn là AI Bạn Đồng Hành của ứng dụng ReConnect MindHealth.\n"
+                + "Vai trò: hướng dẫn sử dụng app, giải thích CBT ở mức nhẹ, gợi ý bước tiếp theo cho người có lo âu xã hội.\n"
+                + "Không chẩn đoán. Không kê thuốc. Không thay thế bác sĩ hay nhà trị liệu. Không nói sang trầm cảm như một bệnh lý chính.\n"
+                + "Chỉ trả lời dựa trên tri thức nội bộ bên dưới và bối cảnh màn hình hiện tại.\n"
+                + "Câu trả lời dài khoảng 80-180 từ. Tối đa 2 gợi ý hành động.\n"
+                + "Trả về DUY NHẤT một JSON object hợp lệ theo schema.\n"
+                + "Tri thức nội bộ:\n"
+                + knowledgeBlock + "\n\n"
+                + "Ngữ cảnh:\n"
+                + "- screenContext: " + request.getScreenContext() + "\n"
+                + "- patientRoute: " + route + "\n"
+                + "- programWeek: " + week + "\n"
+                + "- programPhaseCode: " + phase + "\n"
+                + "- intent: " + intent + "\n"
+                + "Câu hỏi người dùng: " + request.getUserMessage();
+    }
+
+    private Map<String, Object> guideChatResponseSchema() {
+        return Map.of(
+                "type", "OBJECT",
+                "properties", Map.of(
+                        "answer", Map.of("type", "STRING"),
+                        "relatedTopicCode", Map.of("type", "STRING"),
+                        "suggestedActions", Map.of(
+                                "type", "ARRAY",
+                                "items", Map.of(
+                                        "type", "OBJECT",
+                                        "properties", Map.of(
+                                                "label", Map.of("type", "STRING"),
+                                                "route", Map.of("type", "STRING")),
+                                        "required", List.of("label", "route")))),
+                "required", List.of("answer", "relatedTopicCode", "suggestedActions"));
+    }
+
+    private GuideChatResponseDto parseGuideChatJson(String text) {
+        try {
+            String json = extractFirstJsonObject(text);
+            if (json.isBlank()) {
+                return new GuideChatResponseDto();
+            }
+            JsonNode node = objectMapper.readTree(json);
+            String answer = node.path("answer").asText("");
+            String relatedTopicCode = node.path("relatedTopicCode").asText("");
+            List<GuideChatSuggestedActionDto> actions = new ArrayList<>();
+            JsonNode array = node.path("suggestedActions");
+            if (array.isArray()) {
+                for (JsonNode item : array) {
+                    String label = item.path("label").asText("").trim();
+                    String route = item.path("route").asText("").trim();
+                    if (!label.isBlank() && !route.isBlank()) {
+                        actions.add(new GuideChatSuggestedActionDto(label, route));
+                    }
+                }
+            }
+            return new GuideChatResponseDto(answer, actions, relatedTopicCode, false, false, false);
+        } catch (Exception exception) {
+            return new GuideChatResponseDto();
+        }
+    }
+
+    private List<GuideChatSuggestedActionDto> buildSuggestedActions(GuideKnowledgeCard primaryCard, String screenContext) {
+        if (primaryCard != null && primaryCard.getSuggestedActions() != null && !primaryCard.getSuggestedActions().isEmpty()) {
+            return primaryCard.getSuggestedActions().stream()
+                    .limit(2)
+                    .map(action -> new GuideChatSuggestedActionDto(action.getLabel(), action.getRoute()))
+                    .collect(Collectors.toList());
+        }
+
+        String normalizedScreen = normalizeText(screenContext);
+        if ("roadmap".equals(normalizedScreen)) {
+            return List.of(
+                    new GuideChatSuggestedActionDto("Xem lộ trình", "/roadmap"),
+                    new GuideChatSuggestedActionDto("Viết nhật ký suy nghĩ", "/thought-record"));
+        }
+        if ("thought-record".equals(normalizedScreen) || "journal".equals(normalizedScreen)) {
+            return List.of(
+                    new GuideChatSuggestedActionDto("Mở nhật ký suy nghĩ", "/thought-record"),
+                    new GuideChatSuggestedActionDto("Quay lại nhật ký", "/journal"));
+        }
+        return List.of(
+                new GuideChatSuggestedActionDto("Mở trang chủ", "/home"),
+                new GuideChatSuggestedActionDto("Xem lộ trình", "/roadmap"));
+    }
+
+    private String buildGuideCacheKey(GuideChatRequestDto request, String intent, GuideKnowledgeCard card) {
+        return String.join("|",
+                normalizeText(request.getScreenContext()),
+                normalizeText(request.getPatientRoute()),
+                normalizeText(intent),
+                normalizeText(card != null ? card.getTopicCode() : "general"),
+                normalizeText(request.getUserMessage()));
+    }
+
+    private String normalizeText(String value) {
+        if (value == null) {
+            return "";
+        }
+        String normalized = Normalizer.normalize(value, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .replace('đ', 'd')
+                .replace('Đ', 'D');
+        return normalized.toLowerCase(Locale.ROOT).trim();
+    }
+
+    private boolean containsAny(String normalized, String... keywords) {
+        for (String keyword : keywords) {
+            if (normalized.contains(keyword)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private String buildGuidedDiscoveryPrompt(GuidedDiscoveryRequestDto r) {
@@ -496,5 +824,92 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
             return t.substring(0, maxLength) + "...";
         }
         return t;
+    }
+
+    public static class GuideKnowledgeCard {
+        private String topicCode;
+        private List<String> screenScope = List.of();
+        private List<String> routeScope = List.of();
+        private List<String> phaseScope = List.of();
+        private List<String> keywords = List.of();
+        private String content;
+        private List<GuideActionCard> suggestedActions = List.of();
+
+        public String getTopicCode() {
+            return topicCode;
+        }
+
+        public void setTopicCode(String topicCode) {
+            this.topicCode = topicCode;
+        }
+
+        public List<String> getScreenScope() {
+            return screenScope;
+        }
+
+        public void setScreenScope(List<String> screenScope) {
+            this.screenScope = screenScope;
+        }
+
+        public List<String> getRouteScope() {
+            return routeScope;
+        }
+
+        public void setRouteScope(List<String> routeScope) {
+            this.routeScope = routeScope;
+        }
+
+        public List<String> getPhaseScope() {
+            return phaseScope;
+        }
+
+        public void setPhaseScope(List<String> phaseScope) {
+            this.phaseScope = phaseScope;
+        }
+
+        public List<String> getKeywords() {
+            return keywords;
+        }
+
+        public void setKeywords(List<String> keywords) {
+            this.keywords = keywords;
+        }
+
+        public String getContent() {
+            return content;
+        }
+
+        public void setContent(String content) {
+            this.content = content;
+        }
+
+        public List<GuideActionCard> getSuggestedActions() {
+            return suggestedActions;
+        }
+
+        public void setSuggestedActions(List<GuideActionCard> suggestedActions) {
+            this.suggestedActions = suggestedActions;
+        }
+    }
+
+    public static class GuideActionCard {
+        private String label;
+        private String route;
+
+        public String getLabel() {
+            return label;
+        }
+
+        public void setLabel(String label) {
+            this.label = label;
+        }
+
+        public String getRoute() {
+            return route;
+        }
+
+        public void setRoute(String route) {
+            this.route = route;
+        }
     }
 }

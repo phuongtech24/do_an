@@ -209,7 +209,9 @@ class AppRouter {
         path: '/cbt-chat',
         name: 'cbt-chat',
         redirect: _patientOnlyRedirect,
-        builder: (context, state) => const CbtChatScreen(),
+        builder: (context, state) => CbtChatScreen(
+          screenContext: state.uri.queryParameters['screen'] ?? 'home',
+        ),
       ),
       GoRoute(
         path: '/risk-index',

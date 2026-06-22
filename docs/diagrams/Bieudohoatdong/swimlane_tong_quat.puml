@@ -1,0 +1,68 @@
+@startuml
+skinparam dpi 300
+title Biểu đồ làn bơi tổng quát hệ thống ReConnect MindHealth
+
+|Bệnh nhân / Khách|
+start
+:Tải ứng dụng;
+:Chọn trải nghiệm khách;
+:Tạo biệt danh và hình đại diện ẩn danh;
+
+|Hệ thống (Ứng dụng / Máy chủ / AI)|
+:Cung cấp bài đánh giá LSAS 24 tình huống;
+
+|Bệnh nhân / Khách|
+:Hoàn thành bài LSAS dùng thử;
+:Liên kết email, mật khẩu và hồ sơ tối thiểu;
+
+|Hệ thống (Ứng dụng / Máy chủ / AI)|
+:Tính điểm LSAS;
+:Phân luồng lâm sàng tự động;
+
+if (LSAS < 30?) then (Có)
+  |Bệnh nhân / Khách|
+  :Nhận nhánh an tâm;
+  :Xem thông điệp trấn an và mẹo chăm sóc tinh thần cơ bản;
+else (Không)
+  |Hệ thống (Ứng dụng / Máy chủ / AI)|
+  if (LSAS 30-59?) then (Có)
+    |Bệnh nhân / Khách|
+    :Vào nhánh tự trị liệu có hướng dẫn;
+  else (Không)
+    |Hệ thống (Ứng dụng / Máy chủ / AI)|
+    if (LSAS 60-89?) then (Có)
+      |Bệnh nhân / Khách|
+      :Vào lộ trình CBT 14 tuần có chuyên gia đồng hành;
+    else (Không)
+      |Hệ thống (Ứng dụng / Máy chủ / AI)|
+      :Kích hoạt Cờ đỏ;
+      |Bác sĩ / Quản trị viên lâm sàng|
+      :Nhận cảnh báo ưu tiên trên bảng điều khiển;
+      :Đánh giá nguy cơ ban đầu;
+      :Điều phối hoặc ghép cặp bác sĩ phù hợp;
+    endif
+  endif
+endif
+
+|Bệnh nhân / Khách|
+:Điểm danh cảm xúc hằng ngày;
+:Viết nhật ký suy nghĩ;
+:Thực hiện thử nghiệm hành vi theo thang sợ hãi;
+
+|Hệ thống (Ứng dụng / Máy chủ / AI)|
+:AI gợi ý câu hỏi phản biện;
+:AI hỗ trợ nhận diện lỗi tư duy;
+:Hệ thống chấm tín hiệu rủi ro nội dung;
+:Hệ thống mở khóa mô-đun và bài tập theo tiến độ;
+
+|Bác sĩ / Quản trị viên lâm sàng|
+:Xem rà soát trước phiên;
+:Thực hiện tham vấn từ xa;
+:Cá nhân hóa bài tập hoặc can thiệp;
+
+|Hệ thống (Ứng dụng / Máy chủ / AI)|
+:Theo dõi tiến triển điều trị;
+:Chuyển sang tốt nghiệp, duy trì hoặc buổi tăng cường khi đủ điều kiện;
+
+stop
+@enduml

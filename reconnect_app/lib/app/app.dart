@@ -6,6 +6,7 @@ import '../features/assessment/presentation/providers/assessment_provider.dart';
 import '../features/journal_ai/presentation/providers/journal_provider.dart';
 import '../features/journal_ai/presentation/providers/guided_discovery_provider.dart';
 import '../features/journal_ai/presentation/providers/cognitive_distortions_provider.dart';
+import '../features/journal_ai/presentation/providers/guide_chat_provider.dart';
 import '../features/onboarding/presentation/providers/onboarding_provider.dart';
 import '../features/roadmap/presentation/providers/roadmap_provider.dart';
 import '../features/telehealth/presentation/providers/telehealth_provider.dart';
@@ -29,6 +30,7 @@ class MindHealthApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => JournalProvider()),
         ChangeNotifierProvider(create: (_) => GuidedDiscoveryProvider()),
         ChangeNotifierProvider(create: (_) => CognitiveDistortionsProvider()),
+        ChangeNotifierProvider(create: (_) => GuideChatProvider()),
         ChangeNotifierProvider(create: (_) => OnboardingProvider()),
         ChangeNotifierProvider(create: (_) => RoadmapProvider()),
         ChangeNotifierProvider(create: (_) => TelehealthProvider()),
