@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 import com.reconnect.mindhealth.common.domain.BaseObject;
 import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
 import com.reconnect.mindhealth.modules.roadmap.enums.BehavioralExperimentStatus;
-import com.reconnect.mindhealth.modules.roadmap.enums.QuestSourceType;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -27,10 +26,6 @@ public class BehavioralExperiment extends BaseObject {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "fear_ladder_item_id", nullable = false)
     private FearLadderItem fearLadderItem;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "source_type", nullable = false)
-    private QuestSourceType sourceType = QuestSourceType.SYSTEM;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
@@ -94,8 +89,6 @@ public class BehavioralExperiment extends BaseObject {
     public void setPatientProfile(PatientProfile patientProfile) { this.patientProfile = patientProfile; }
     public FearLadderItem getFearLadderItem() { return fearLadderItem; }
     public void setFearLadderItem(FearLadderItem fearLadderItem) { this.fearLadderItem = fearLadderItem; }
-    public QuestSourceType getSourceType() { return sourceType; }
-    public void setSourceType(QuestSourceType sourceType) { this.sourceType = sourceType; }
     public BehavioralExperimentStatus getStatus() { return status; }
     public void setStatus(BehavioralExperimentStatus status) { this.status = status; }
     public String getPrediction() { return prediction; }

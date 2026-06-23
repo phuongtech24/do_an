@@ -5,6 +5,7 @@ import '../../core/auth/auth_provider.dart';
 import '../../features/admin/data/models/quest_template_model.dart';
 import '../../features/admin/data/repositories/admin_quest_template_repository.dart';
 import '../../theme/app_colors.dart';
+import '../../shared/widgets/pagination_bar.dart';
 
 class AdminQuestsScreen extends StatefulWidget {
   const AdminQuestsScreen({super.key});
@@ -19,6 +20,10 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
   bool _loading = false;
   String _error = '';
   String _query = '';
+  int _pageIndex = 1;
+  int _pageSize = 10;
+  int _totalPages = 0;
+  int _totalElements = 0;
   List<QuestTemplateModel> _items = [];
 
   @override
@@ -66,6 +71,20 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
           it.interventionType.toLowerCase().contains(q) ||
           it.id.toLowerCase().contains(q);
     }).toList();
+  }
+
+  List<QuestTemplateModel> get _paged {
+    final list = _filtered;
+    _totalElements = list.length;
+    _totalPages = (_totalElements / _pageSize).ceil();
+    if (_pageIndex < 1) _pageIndex = 1;
+    if (_pageIndex > _totalPages && _totalPages > 0) _pageIndex = _totalPages;
+
+    final start = (_pageIndex - 1) * _pageSize;
+    var end = start + _pageSize;
+    if (start >= list.length) return [];
+    if (end > list.length) end = list.length;
+    return list.sublist(start, end);
   }
 
   String _cat(String c) {
@@ -442,52 +461,70 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
             child: Text(_error, style: const TextStyle(color: Colors.red)),
           ),
         Expanded(
-          child: Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: Colors.grey[300]!),
-            ),
-            child: _loading && _items.isEmpty
-                ? const Center(child: CircularProgressIndicator())
-                : ListView.separated(
-                    itemCount: _filtered.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final it = _filtered[index];
-                      return ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        title: Text(
-                          it.title,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Text(
-                          '${_cat(it.category)} • ${_diff(it.difficulty)}'
-                          '${it.moduleCode.isNotEmpty ? ' • ${it.moduleCode}' : ''}'
-                          '${it.programWeek != null ? ' • Tuần ${it.programWeek}' : ''}'
-                          '${it.programPhaseCode.isNotEmpty ? ' • ${_phase(it.programPhaseCode)}' : ''}'
-                          '\n${it.description}'
-                          '${it.interventionType.isNotEmpty ? '\nCan thiệp: ${_interv(it.interventionType)}' : ''}'
-                          '${it.therapistOnlyAssignable ? '\nChỉ bác sĩ giao' : ''}'
-                          '${it.hardLocked ? ' • Khóa cứng' : ''}',
-                        ),
-                        isThreeLine: true,
-                        trailing: IconButton(
-                          tooltip: 'Sửa',
-                          icon: const Icon(
-                            Icons.edit,
-                            color: AppColors.primary,
-                          ),
-                          onPressed: _loading
-                              ? null
-                              : () => _openEditor(item: it),
-                        ),
-                      );
-                    },
+          child: Column(
+            children: [
+              Expanded(
+                child: Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: Colors.grey[300]!),
                   ),
+                  child: _loading && _items.isEmpty
+                      ? const Center(child: CircularProgressIndicator())
+                      : ListView.separated(
+                          itemCount: _paged.length,
+                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final it = _paged[index];
+                            return ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              title: Text(
+                                it.title,
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              subtitle: Text(
+                                '${_cat(it.category)} • ${_diff(it.difficulty)}'
+                                '${it.moduleCode.isNotEmpty ? ' • ${it.moduleCode}' : ''}'
+                                '${it.programWeek != null ? ' • Tuần ${it.programWeek}' : ''}'
+                                '${it.programPhaseCode.isNotEmpty ? ' • ${_phase(it.programPhaseCode)}' : ''}'
+                                '\n${it.description}'
+                                '${it.interventionType.isNotEmpty ? '\nCan thiệp: ${_interv(it.interventionType)}' : ''}'
+                                '${it.therapistOnlyAssignable ? '\nChỉ bác sĩ giao' : ''}'
+                                '${it.hardLocked ? ' • Khóa cứng' : ''}',
+                              ),
+                              isThreeLine: true,
+                              trailing: IconButton(
+                                tooltip: 'Sửa',
+                                icon: const Icon(
+                                  Icons.edit,
+                                  color: AppColors.primary,
+                                ),
+                                onPressed: _loading
+                                    ? null
+                                    : () => _openEditor(item: it),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ),
+              if (_totalPages > 1 || _totalElements > 0)
+                PaginationBar(
+                  pageIndex: _pageIndex,
+                  totalPages: _totalPages,
+                  totalElements: _totalElements,
+                  pageSize: _pageSize,
+                  onPageChanged: (v) => setState(() => _pageIndex = v),
+                  onPageSizeChanged: (v) => setState(() {
+                    _pageSize = v;
+                    _pageIndex = 1;
+                  }),
+                ),
+            ],
           ),
         ),
       ],

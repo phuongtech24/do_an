@@ -79,6 +79,20 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
     }).toList();
   }
 
+  List<TherapistApplicantModel> get _paged {
+    final list = _filtered;
+    _totalElements = list.length;
+    _totalPages = (_totalElements / _pageSize).ceil();
+    if (_pageIndex < 1) _pageIndex = 1;
+    if (_pageIndex > _totalPages && _totalPages > 0) _pageIndex = _totalPages;
+
+    final start = (_pageIndex - 1) * _pageSize;
+    var end = start + _pageSize;
+    if (start >= list.length) return [];
+    if (end > list.length) end = list.length;
+    return list.sublist(start, end);
+  }
+
   Future<void> _setApproval(TherapistApplicantModel item, String status) async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final token = auth.token;
@@ -494,7 +508,7 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: const [
                 Text(
-                  'Quản lý Bác sĩ/Chuyên gia (Approval)',
+                  'Hồ sơ Bác sĩ',
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 8),
@@ -549,55 +563,58 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
             child: Text(_error, style: const TextStyle(color: Colors.red)),
           ),
         Expanded(
-          child: Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: Colors.grey[300]!),
-            ),
-            child: _loading && _items.isEmpty
-                ? const Center(child: CircularProgressIndicator())
-                : ListView.separated(
-                    itemCount: _filtered.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final doc = _filtered[index];
-                      final isPending = doc.approvalStatus == 'PENDING';
-                      final color = _statusColor(doc.approvalStatus);
-                      return ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        leading: CircleAvatar(
-                          radius: 24,
-                          backgroundColor: color.withOpacity(0.15),
-                          child: Icon(Icons.medical_services, color: color),
-                        ),
-                        title: Row(
-                          children: [
-                            Expanded(
-                              child: Text(doc.fullName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: color.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(6),
+          child: Column(
+            children: [
+              Expanded(
+                child: Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: Colors.grey[300]!),
+                  ),
+                  child: _loading && _items.isEmpty
+                      ? const Center(child: CircularProgressIndicator())
+                      : ListView.separated(
+                          itemCount: _paged.length,
+                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final doc = _paged[index];
+                            final isPending = doc.approvalStatus == 'PENDING';
+                            final color = _statusColor(doc.approvalStatus);
+                            return ListTile(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              leading: CircleAvatar(
+                                radius: 24,
+                                backgroundColor: color.withOpacity(0.15),
+                                child: Icon(Icons.medical_services, color: color),
                               ),
-                              child: Text(
-                                _statusLabel(doc.approvalStatus),
-                                style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12),
+                              title: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(doc.fullName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: color.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      _statusLabel(doc.approvalStatus),
+                                      style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ],
-                        ),
-                        subtitle: Text(
-                          'Email: ${doc.email}'
-                          '${doc.specialization == null || doc.specialization!.isEmpty ? '' : ' • ${doc.specialization}'}'
-                          '${doc.hometown == null || doc.hometown!.isEmpty ? '' : ' • ${doc.hometown}'}'
-                          ' • Chứng chỉ: ${doc.credentialCount}',
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
+                              subtitle: Text(
+                                'Email: ${doc.email}'
+                                '${doc.specialization == null || doc.specialization!.isEmpty ? '' : ' • ${doc.specialization}'}'
+                                '${doc.hometown == null || doc.hometown!.isEmpty ? '' : ' • ${doc.hometown}'}'
+                                ' • Chứng chỉ: ${doc.credentialCount}',
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
                             OutlinedButton(
                               onPressed: _loading ? null : () => _showCredentialsDialog(doc),
                               child: const Text('Xem chứng chỉ'),
@@ -643,6 +660,21 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
                       );
                     },
                   ),
+                ),
+              ),
+              if (_totalPages > 1 || _totalElements > 0)
+                PaginationBar(
+                  pageIndex: _pageIndex,
+                  totalPages: _totalPages,
+                  totalElements: _totalElements,
+                  pageSize: _pageSize,
+                  onPageChanged: (v) => setState(() => _pageIndex = v),
+                  onPageSizeChanged: (v) => setState(() {
+                    _pageSize = v;
+                    _pageIndex = 1;
+                  }),
+                ),
+            ],
           ),
         ),
       ],

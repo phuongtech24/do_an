@@ -1,28 +1,19 @@
-package com.reconnect.mindhealth.modules.roadmap.service;
+﻿package com.reconnect.mindhealth.modules.roadmap.service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
-import com.reconnect.mindhealth.modules.roadmap.dto.PatientQuestDto;
 import com.reconnect.mindhealth.modules.roadmap.dto.RoadmapProgramModuleDto;
 import com.reconnect.mindhealth.modules.roadmap.dto.RoadmapProgramStateDto;
-import com.reconnect.mindhealth.modules.roadmap.entity.QuestTemplate;
-import com.reconnect.mindhealth.modules.roadmap.enums.QuestStatus;
-import com.reconnect.mindhealth.modules.roadmap.repository.PatientQuestRepository;
-import com.reconnect.mindhealth.modules.roadmap.repository.QuestTemplateRepository;
 
 import jakarta.persistence.EntityNotFoundException;
 
@@ -32,30 +23,20 @@ public class RoadmapProgramStateService {
     private static final int MAX_PROGRAM_WEEK = 14;
 
     private final PatientProfileRepository patientProfileRepository;
-    private final QuestTemplateRepository questTemplateRepository;
-    private final PatientQuestRepository patientQuestRepository;
-    private final ObjectMapper objectMapper;
 
-    public RoadmapProgramStateService(
-            PatientProfileRepository patientProfileRepository,
-            QuestTemplateRepository questTemplateRepository,
-            PatientQuestRepository patientQuestRepository,
-            ObjectMapper objectMapper) {
+    public RoadmapProgramStateService(PatientProfileRepository patientProfileRepository) {
         this.patientProfileRepository = patientProfileRepository;
-        this.questTemplateRepository = questTemplateRepository;
-        this.patientQuestRepository = patientQuestRepository;
-        this.objectMapper = objectMapper;
     }
 
     @Transactional
-    public RoadmapProgramStateDto getProgramState(UUID patientId, List<PatientQuestDto> todayAssignments) {
+    public RoadmapProgramStateDto getProgramState(UUID patientId) {
         PatientProfile patient = patientProfileRepository.findById(patientId)
                 .orElseThrow(() -> new EntityNotFoundException("Patient profile not found: " + patientId));
-        return buildProgramState(patient, todayAssignments);
+        return buildProgramState(patient);
     }
 
     @Transactional
-    public RoadmapProgramStateDto buildProgramState(PatientProfile patient, List<PatientQuestDto> todayAssignments) {
+    public RoadmapProgramStateDto buildProgramState(PatientProfile patient) {
         initializeProgramIfNeeded(patient);
 
         int programWeek = resolveProgramWeek(patient);
@@ -63,19 +44,12 @@ public class RoadmapProgramStateService {
         List<RoadmapProgramModuleDto> unlocked = new ArrayList<>();
         List<RoadmapProgramModuleDto> locked = new ArrayList<>();
 
-        List<QuestTemplate> clinicalTemplates = questTemplateRepository.findAll().stream()
-                .filter(template -> template.getModuleCode() != null && !template.getModuleCode().isBlank())
-                .sorted(Comparator
-                        .comparing((QuestTemplate template) -> Optional.ofNullable(template.getProgramWeek()).orElse(99))
-                        .thenComparing(QuestTemplate::getTitle))
-                .toList();
-
-        for (QuestTemplate template : clinicalTemplates) {
-            RoadmapProgramModuleDto moduleDto = toModuleDto(template, phase, programWeek, patient);
-            if (Boolean.TRUE.equals(moduleDto.getUnlocked())) {
-                unlocked.add(moduleDto);
+        for (ProgramModule module : defaultModules()) {
+            RoadmapProgramModuleDto dto = toModuleDto(module, patient, programWeek);
+            if (Boolean.TRUE.equals(dto.getUnlocked())) {
+                unlocked.add(dto);
             } else {
-                locked.add(moduleDto);
+                locked.add(dto);
             }
         }
 
@@ -90,7 +64,6 @@ public class RoadmapProgramStateService {
         dto.setNextRerateAt(resolveNextRerateAt(patient));
         dto.setUnlockedModules(unlocked);
         dto.setLockedModules(locked);
-        dto.setTodayAssignments(todayAssignments != null ? todayAssignments : List.of());
         return dto;
     }
 
@@ -146,93 +119,54 @@ public class RoadmapProgramStateService {
             return new ProgramPhase("MAP_AND_BELIEF_BREAK", "Tuần 1-3: Lập bản đồ và phá niềm tin");
         }
         if (programWeek >= 4 && programWeek <= 8) {
-            return new ProgramPhase("REAL_WORLD_EXPERIMENTS", "Tuần 4-8: Thử nghiệm thực tế và khảo sát");
+            return new ProgramPhase("REAL_WORLD_EXPERIMENTS", "Tuần 4-8: Thử nghiệm thực tế");
         }
-        return new ProgramPhase("DEEP_COGNITIVE_MEMORY", "Tuần 9-14: Can thiệp nhận thức sâu và ký ức");
+        return new ProgramPhase("DEEP_COGNITIVE_MEMORY", "Tuần 9-14: Can thiệp nhận thức sâu");
     }
 
-    private RoadmapProgramModuleDto toModuleDto(
-            QuestTemplate template,
-            ProgramPhase currentPhase,
-            int currentWeek,
-            PatientProfile patient) {
+    private RoadmapProgramModuleDto toModuleDto(ProgramModule module, PatientProfile patient, int currentWeek) {
         RoadmapProgramModuleDto dto = new RoadmapProgramModuleDto();
-        dto.setModuleCode(template.getModuleCode());
-        dto.setTitle(template.getTitle());
-        dto.setProgramPhaseCode(template.getProgramPhaseCode());
-        dto.setProgramPhaseLabel(resolvePhaseLabel(template.getProgramPhaseCode()));
-        dto.setWeekFrom(template.getProgramWeek());
-        dto.setWeekTo(resolveWeekTo(template.getModuleCode(), template.getProgramWeek()));
-        dto.setInterventionType(template.getInterventionType());
-        dto.setPrerequisiteCodesJson(template.getPrerequisiteCodesJson());
-        dto.setHardLocked(Boolean.TRUE.equals(template.getHardLocked()));
-        dto.setTherapistOnlyAssignable(Boolean.TRUE.equals(template.getTherapistOnlyAssignable()));
-        dto.setExpectedUnlockAt(resolveExpectedUnlockAt(patient, template.getProgramWeek()));
-
-        boolean weekUnlocked = template.getProgramWeek() == null || currentWeek >= template.getProgramWeek();
-        List<String> prerequisites = readPrerequisites(template.getPrerequisiteCodesJson());
-        boolean prerequisitesMet = prerequisites.stream().allMatch(code -> isModuleCompleted(patient.getId(), code));
-        boolean unlocked = weekUnlocked && prerequisitesMet;
+        dto.setModuleCode(module.code());
+        dto.setTitle(module.title());
+        dto.setProgramPhaseCode(module.phaseCode());
+        dto.setProgramPhaseLabel(resolvePhaseLabel(module.phaseCode()));
+        dto.setWeekFrom(module.weekFrom());
+        dto.setWeekTo(module.weekTo());
+        dto.setInterventionType(module.interventionType());
+        dto.setHardLocked(false);
+        dto.setTherapistOnlyAssignable(false);
+        dto.setExpectedUnlockAt(resolveExpectedUnlockAt(patient, module.weekFrom()));
+        boolean unlocked = currentWeek >= module.weekFrom();
         dto.setUnlocked(unlocked);
-
-        if (!weekUnlocked) {
-            dto.setUnlockType("TIME");
-            dto.setLockReason("Mở từ tuần " + template.getProgramWeek() + " của lộ trình.");
-        } else if (!prerequisitesMet) {
-            dto.setUnlockType("PREREQUISITE");
-            dto.setLockReason("Cần hoàn thành module tiên quyết trước.");
-        } else if (!currentPhase.code().equalsIgnoreCase(template.getProgramPhaseCode())
-                && Boolean.TRUE.equals(template.getHardLocked())) {
-            dto.setUnlockType("HARD_LOCK");
-            dto.setLockReason("Kỹ thuật nâng cao chỉ mở đúng phase lâm sàng.");
-        } else if (Boolean.TRUE.equals(template.getTherapistOnlyAssignable()) && !unlocked) {
-            dto.setUnlockType("THERAPIST_ASSIGNMENT");
-            dto.setLockReason("Đang chờ bác sĩ giao bài phù hợp.");
-        } else {
-            dto.setUnlockType(unlocked ? "UNLOCKED" : "TIME");
-            dto.setLockReason("");
-        }
+        dto.setUnlockType(unlocked ? "UNLOCKED" : "TIME");
+        dto.setLockReason(unlocked ? "" : "Mở từ tuần " + module.weekFrom() + " của lộ trình.");
         return dto;
     }
 
-    private boolean isModuleCompleted(UUID patientId, String moduleCode) {
-        if (moduleCode == null || moduleCode.isBlank()) {
-            return true;
-        }
-        return !patientQuestRepository.findByPatientAndModuleCodeAndStatus(patientId, moduleCode, QuestStatus.DONE).isEmpty();
-    }
-
-    private List<String> readPrerequisites(String rawJson) {
-        if (rawJson == null || rawJson.isBlank()) {
-            return List.of();
-        }
-        try {
-            return objectMapper.readValue(rawJson, new TypeReference<List<String>>() {
-            });
-        } catch (Exception ignored) {
-            return List.of();
-        }
+    private List<ProgramModule> defaultModules() {
+        return List.of(
+                new ProgramModule("MAP_SOCIAL_ANXIETY", "Hiểu vòng lặp lo âu xã hội", "MAP_AND_BELIEF_BREAK", 1, 1, "PSYCHOEDUCATION"),
+                new ProgramModule("SAFETY_BEHAVIOR_DROP", "Giảm hành vi an toàn", "MAP_AND_BELIEF_BREAK", 1, 3, "CBT"),
+                new ProgramModule("FEAR_LADDER_EXPOSURE", "Thang sợ hãi và thử nghiệm hành vi", "REAL_WORLD_EXPERIMENTS", 4, 8, "BEHAVIORAL_EXPERIMENT"),
+                new ProgramModule("REVIEW_AND_MAINTENANCE", "Tổng kết tiến triển và duy trì", "DEEP_COGNITIVE_MEMORY", 9, 14, "MAINTENANCE"));
     }
 
     private String resolveNextRecommendedIntervention(int week) {
-        if (week <= 1) {
-            return "Hoàn tất bản đồ vòng lặp lo âu và nhận diện suy nghĩ - triệu chứng - hành vi an toàn.";
+        if (week <= 0) {
+            return "Hoàn thành LSAS và chọn mục tiêu trị liệu để bắt đầu lộ trình phù hợp.";
         }
         if (week <= 3) {
-            return "Ưu tiên các bài vứt bỏ hành vi an toàn và so sánh trải nghiệm trước/sau.";
+            return "Ưu tiên hiểu vòng lặp lo âu và giảm hành vi an toàn.";
         }
         if (week <= 8) {
-            return "Ưu tiên Video Feedback hoặc Survey để kiểm chứng lỗi đọc suy nghĩ.";
+            return "Ưu tiên thực hiện thử nghiệm hành vi trên các nấc Fear Ladder đang mở.";
         }
-        return "Ưu tiên Then vs Now và Imagery Rescripting để xử lý tầng ký ức sâu hơn.";
+        return "Ưu tiên tổng kết bài học, duy trì tiến triển và chuẩn bị giai đoạn booster.";
     }
 
     private LocalDateTime resolveNextRerateAt(PatientProfile patient) {
         LocalDateTime cycleStart = patient.getCurrentCycleStartDate();
-        if (cycleStart == null) {
-            return null;
-        }
-        return cycleStart.plusDays(14);
+        return cycleStart == null ? null : cycleStart.plusDays(14);
     }
 
     private LocalDateTime resolveWeekStartDate(PatientProfile patient, int programWeek) {
@@ -245,10 +179,7 @@ public class RoadmapProgramStateService {
 
     private LocalDateTime resolveWeekEndDate(PatientProfile patient, int programWeek) {
         LocalDateTime weekStart = resolveWeekStartDate(patient, programWeek);
-        if (weekStart == null) {
-            return null;
-        }
-        return weekStart.plusDays(6);
+        return weekStart == null ? null : weekStart.plusDays(6);
     }
 
     private LocalDateTime resolveExpectedUnlockAt(PatientProfile patient, Integer targetWeek) {
@@ -258,33 +189,18 @@ public class RoadmapProgramStateService {
         return patient.getTherapyProgramStartedAt().plusDays(Math.max(0, (targetWeek - 1) * 7L));
     }
 
-    private Integer resolveWeekTo(String moduleCode, Integer weekFrom) {
-        if (weekFrom == null) {
-            return null;
-        }
-        return switch (moduleCode != null ? moduleCode : "") {
-            case "VICIOUS_CYCLE" -> 1;
-            case "SAFETY_BEHAVIOR_DROP" -> 3;
-            case "VIDEO_FEEDBACK" -> 5;
-            case "SURVEYS" -> 8;
-            case "THEN_VS_NOW" -> 10;
-            case "IMAGERY_RESCRIPTING" -> 14;
-            default -> weekFrom;
-        };
-    }
-
     private String resolvePhaseLabel(String phaseCode) {
         if (phaseCode == null) {
             return "";
         }
         return switch (phaseCode) {
             case "MAP_AND_BELIEF_BREAK" -> "Tuần 1-3: Lập bản đồ và phá niềm tin";
-            case "REAL_WORLD_EXPERIMENTS" -> "Tuần 4-8: Thử nghiệm thực tế và khảo sát";
-            case "DEEP_COGNITIVE_MEMORY" -> "Tuần 9-14: Can thiệp nhận thức sâu và ký ức";
+            case "REAL_WORLD_EXPERIMENTS" -> "Tuần 4-8: Thử nghiệm thực tế";
+            case "DEEP_COGNITIVE_MEMORY" -> "Tuần 9-14: Can thiệp nhận thức sâu";
             default -> phaseCode;
         };
     }
 
-    public record ProgramPhase(String code, String label) {
-    }
+    public record ProgramPhase(String code, String label) {}
+    private record ProgramModule(String code, String title, String phaseCode, int weekFrom, int weekTo, String interventionType) {}
 }

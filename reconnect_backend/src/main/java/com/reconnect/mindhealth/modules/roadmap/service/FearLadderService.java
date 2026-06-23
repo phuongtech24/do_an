@@ -15,7 +15,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reconnect.mindhealth.modules.assessment.entity.LsasAnswer;
-import com.reconnect.mindhealth.modules.assessment.enums.LsasSituationGroup;
 import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
 import com.reconnect.mindhealth.modules.roadmap.dto.BehavioralExperimentDebriefRequestDto;
@@ -33,7 +32,6 @@ import com.reconnect.mindhealth.modules.roadmap.enums.FearLadderBucket;
 import com.reconnect.mindhealth.modules.roadmap.enums.FearLadderStatus;
 import com.reconnect.mindhealth.modules.roadmap.enums.PatientGoalStatus;
 import com.reconnect.mindhealth.modules.roadmap.enums.PatientGoalType;
-import com.reconnect.mindhealth.modules.roadmap.enums.QuestSourceType;
 import com.reconnect.mindhealth.modules.roadmap.repository.BehavioralExperimentRepository;
 import com.reconnect.mindhealth.modules.roadmap.repository.FearLadderItemRepository;
 import com.reconnect.mindhealth.modules.roadmap.repository.PatientGoalRepository;
@@ -67,17 +65,12 @@ public class FearLadderService {
     @Transactional
     public List<FearLadderItemDto> rebuildFromBaseline(PatientProfile patient, List<LsasAnswer> answers) {
         fearLadderItemRepository.deleteByPatientProfile_Id(patient.getId());
-        PatientGoalType primaryGoalType = resolvePrimaryGoalType(patient.getId());
         List<LsasAnswer> scored = answers.stream()
                 .filter(answer -> answer.getTotalScore() != null && answer.getTotalScore() > 0)
                 .sorted(Comparator
-                        .comparing((LsasAnswer answer) -> !matchesGoal(answer.getSituation().getSituationGroup(), primaryGoalType))
-                        .thenComparing(LsasAnswer::getTotalScore)
+                        .comparing(LsasAnswer::getTotalScore)
                         .thenComparing(answer -> answer.getSituation().getSituationNumber()))
                 .toList();
-        long goalMatchedCount = scored.stream()
-                .filter(answer -> matchesGoal(answer.getSituation().getSituationGroup(), primaryGoalType))
-                .count();
 
         int order = 1;
         for (LsasAnswer answer : scored) {
@@ -95,13 +88,8 @@ public class FearLadderService {
             item.setStatus(FearLadderStatus.ACTIVE);
             fearLadderItemRepository.save(item);
         }
-        log.info(
-                "Fear ladder rebuilt patientId={}, primaryGoalType={}, totalLsasAnswers={}, scoredItems={}, goalMatchedItems={}",
-                patient.getId(),
-                primaryGoalType,
-                answers.size(),
-                scored.size(),
-                goalMatchedCount);
+        log.info("Fear ladder rebuilt patientId={}, totalLsasAnswers={}, scoredItems={}",
+                patient.getId(), answers.size(), scored.size());
         return getFearLadder(patient.getId());
     }
 
@@ -109,13 +97,12 @@ public class FearLadderService {
     public List<FearLadderItemDto> getFearLadder(UUID patientId) {
         requirePatient(patientId);
         List<FearLadderItem> items = fearLadderItemRepository.findByPatientProfile_IdOrderByLadderOrderAsc(patientId);
-        PatientGoalType primaryGoalType = resolvePrimaryGoalType(patientId);
         int unlockedUntilIndex = resolveUnlockedUntilIndex(items);
         List<FearLadderItemDto> dtos = new ArrayList<>();
         for (int index = 0; index < items.size(); index++) {
             FearLadderItem item = items.get(index);
             FearLadderItemDto dto = new FearLadderItemDto(item);
-            dto.setGoalMatch(matchesGoal(item.getSituation().getSituationGroup(), primaryGoalType));
+            dto.setGoalMatch(true);
             dto.setUnlocked(index <= unlockedUntilIndex);
             dto.setMasteredAt(item.getStatus() == FearLadderStatus.MASTERED ? item.getModifyDate() : null);
             dtos.add(dto);
@@ -160,15 +147,16 @@ public class FearLadderService {
     public PatientGoalDto saveGoal(PatientGoalDto dto) {
         PatientProfile patient = requirePatient(dto.getPatientId());
         if (dto.getGoalType() == null) {
-            throw new IllegalArgumentException("Thiáº¿u goalType.");
+            throw new IllegalArgumentException("Thi?u goalType.");
         }
 
         String description = dto.getDescription();
         if (description == null || description.isBlank()) {
             description = switch (dto.getGoalType()) {
-                case SOCIAL_INTERACTION -> "Káº¿t báº¡n/má»Ÿ rá»™ng quan há»‡";
-                case PERFORMANCE -> "CÃ´ng viá»‡c/há»c táº­p/trÃ¬nh bÃ y";
-                case GENERAL -> "Tá»± tin trong má»i tÃ¬nh huá»‘ng";
+                case COGNITIVE -> "Nh?n di?n v? ?i?u ch?nh suy ngh? lo ?u x? h?i";
+                case EMOTIONAL -> "?n ??nh c?m x?c khi ??i di?n t?nh hu?ng x? h?i";
+                case BEHAVIORAL -> "Gi?m n? tr?nh v? h?nh vi an to?n";
+                case SOCIAL -> "T? tin h?n trong t??ng t?c x? h?i";
             };
         }
 
@@ -341,7 +329,6 @@ public class FearLadderService {
         BehavioralExperiment experiment = new BehavioralExperiment();
         experiment.setPatientProfile(patient);
         experiment.setFearLadderItem(item);
-        experiment.setSourceType(QuestSourceType.SYSTEM);
         experiment.setStatus(BehavioralExperimentStatus.PLANNED);
         experiment.setAssignedAt(LocalDateTime.now());
         experiment.setDueDate(LocalDateTime.now().plusDays(2));
@@ -379,15 +366,6 @@ public class FearLadderService {
                 .orElseThrow(() -> new EntityNotFoundException("KhÃ´ng tÃ¬m tháº¥y Behavioral Experiment: " + experimentId));
     }
 
-    private PatientGoalType resolvePrimaryGoalType(UUID patientId) {
-        return patientGoalRepository
-                .findByPatientProfile_IdAndStatusOrderByCreateDateDesc(patientId, PatientGoalStatus.ACTIVE)
-                .stream()
-                .findFirst()
-                .map(PatientGoal::getGoalType)
-                .orElse(PatientGoalType.GENERAL);
-    }
-
     private int resolveUnlockedUntilIndex(List<FearLadderItem> items) {
         for (int index = 0; index < items.size(); index++) {
             if (items.get(index).getStatus() != FearLadderStatus.MASTERED) {
@@ -404,15 +382,10 @@ public class FearLadderService {
         if (total <= 4) {
             return FearLadderBucket.MEDIUM;
         }
-        return FearLadderBucket.HARD;
-    }
-
-    private boolean matchesGoal(LsasSituationGroup group, PatientGoalType goalType) {
-        return switch (goalType) {
-            case PERFORMANCE -> group == LsasSituationGroup.PERFORMANCE;
-            case SOCIAL_INTERACTION -> group == LsasSituationGroup.SOCIAL_INTERACTION;
-            case GENERAL -> true;
-        };
+        if (total == 5) {
+            return FearLadderBucket.HARD;
+        }
+        return FearLadderBucket.EXTREME;
     }
 
     private int normalizeScore(Integer score) {

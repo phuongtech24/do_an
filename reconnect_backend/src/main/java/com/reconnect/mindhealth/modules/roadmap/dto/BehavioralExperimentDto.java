@@ -5,13 +5,11 @@ import java.util.UUID;
 
 import com.reconnect.mindhealth.modules.roadmap.entity.BehavioralExperiment;
 import com.reconnect.mindhealth.modules.roadmap.enums.BehavioralExperimentStatus;
-import com.reconnect.mindhealth.modules.roadmap.enums.QuestSourceType;
 
 public class BehavioralExperimentDto {
     private UUID id;
     private UUID patientId;
     private FearLadderItemDto ladderItem;
-    private QuestSourceType sourceType;
     private BehavioralExperimentStatus status;
     private String prediction;
     private Integer predictionBelief;
@@ -39,7 +37,6 @@ public class BehavioralExperimentDto {
         this.id = entity.getId();
         this.patientId = entity.getPatientProfile().getId();
         this.ladderItem = new FearLadderItemDto(entity.getFearLadderItem());
-        this.sourceType = entity.getSourceType();
         this.status = entity.getStatus();
         this.prediction = entity.getPrediction();
         this.predictionBelief = entity.getPredictionBelief();
@@ -67,8 +64,6 @@ public class BehavioralExperimentDto {
     public void setPatientId(UUID patientId) { this.patientId = patientId; }
     public FearLadderItemDto getLadderItem() { return ladderItem; }
     public void setLadderItem(FearLadderItemDto ladderItem) { this.ladderItem = ladderItem; }
-    public QuestSourceType getSourceType() { return sourceType; }
-    public void setSourceType(QuestSourceType sourceType) { this.sourceType = sourceType; }
     public BehavioralExperimentStatus getStatus() { return status; }
     public void setStatus(BehavioralExperimentStatus status) { this.status = status; }
     public String getPrediction() { return prediction; }

@@ -24,7 +24,7 @@ public class PatientGoal extends BaseObject {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "goal_type", nullable = false)
-    private PatientGoalType goalType = PatientGoalType.GENERAL;
+    private PatientGoalType goalType = PatientGoalType.SOCIAL;
 
     @Column(name = "description", nullable = false, columnDefinition = "text")
     private String description;

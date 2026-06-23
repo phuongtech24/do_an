@@ -509,6 +509,70 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
     await _runDemoAction(item, action);
   }
 
+  void _showPatientDetails(AdminPatientProfileModel it) {
+    final risk = it.currentRiskScore ?? 0;
+    final red = it.redFlagActive == true;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Chi tiết hồ sơ bệnh án', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: SizedBox(
+          width: 500,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Thông tin lâm sàng', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 8),
+                Text('Điểm LSAS: ${it.currentLsasScore ?? 0}'),
+                Text('Rủi ro (Risk Score): $risk'),
+                Text('Cờ đỏ (Red flag): ${red ? 'Có' : 'Không'}'),
+                if ((it.emergencyContactPhone ?? '').isNotEmpty)
+                  Text('Liên hệ khẩn cấp: ${it.emergencyContactPhone}'),
+                const Divider(height: 24),
+                const Text('Tiến trình điều trị', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 8),
+                Text('Giãn cách (Tapering): ${it.taperingStage == 'NONE' ? 'Không' : it.taperingStage ?? 'Không'}'),
+                Text('Tốt nghiệp: ${it.graduatedAt != null ? 'Đã tốt nghiệp' : 'Chưa'}'),
+                Text('Chế độ ẩn danh: ${it.anonymousModeEnabled ? 'Đang bật' : 'Đang tắt'}'),
+                if (it.triageRequired) ...[
+                  const Divider(height: 24),
+                  const Text('Xử lý khẩn (Triage)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.alert)),
+                  const SizedBox(height: 8),
+                  Text('Trạng thái: ${it.triageStatus == 'PENDING' ? 'Chờ xử lý' : it.triageStatus ?? 'Chờ xử lý'}'),
+                  Text('Mức ưu tiên: ${it.triagePriority ?? risk}'),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      OutlinedButton(
+                        onPressed: _loading ? null : () { Navigator.pop(context); _runTriageAction(it, 'claim'); },
+                        child: const Text('Nhận xử lý'),
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton(
+                        onPressed: _loading ? null : () { Navigator.pop(context); _runTriageAction(it, 'mark-called'); },
+                        child: const Text('Đã gọi'),
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton(
+                        onPressed: _loading ? null : () { Navigator.pop(context); _runTriageAction(it, 'close'); },
+                        child: const Text('Đóng'),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Đóng')),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -592,12 +656,11 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
                             separatorBuilder: (_, __) => const Divider(height: 1),
                             itemBuilder: (context, i) {
                               final it = _items[i];
-                              final risk = it.currentRiskScore ?? 0;
-                              final red = it.redFlagActive == true;
                               return Container(
                                 color: Colors.white,
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                 child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     Expanded(
                                       child: Column(
@@ -605,7 +668,7 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
                                         children: [
                                           Text(
                                             it.nickname?.isNotEmpty == true ? it.nickname! : (it.email ?? it.patientId),
-                                            style: const TextStyle(fontWeight: FontWeight.bold),
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
@@ -617,30 +680,14 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
                                             'Chuyên gia: ${it.therapistName ?? 'Chưa gán'}',
                                             style: const TextStyle(color: Colors.black54),
                                           ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            'Điểm LSAS: ${it.currentLsasScore ?? 0} • Giãn cách: ${it.taperingStage == 'NONE' ? 'Không' : it.taperingStage ?? 'Không'} • Ẩn danh: ${it.anonymousModeEnabled ? 'Đang bật' : 'Đang tắt'}',
-                                            style: const TextStyle(color: Colors.black54),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            'Rủi ro: $risk • Cờ đỏ: ${red ? 'Có' : 'Không'} • Tốt nghiệp: ${it.graduatedAt != null ? 'Đã tốt nghiệp' : 'Chưa'}',
-                                            style: const TextStyle(color: Colors.black54),
-                                          ),
-                                          if (it.triageRequired) ...[
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              'Xử lý khẩn (Triage): ${it.triageStatus == 'PENDING' ? 'Chờ xử lý' : it.triageStatus ?? 'Chờ xử lý'} • Mức ưu tiên: ${it.triagePriority ?? risk}',
-                                              style: const TextStyle(color: AppColors.alert, fontWeight: FontWeight.w600),
+                                          const SizedBox(height: 6),
+                                          InkWell(
+                                            onTap: () => _showPatientDetails(it),
+                                            child: const Text(
+                                              'Xem chi tiết hồ sơ bệnh án',
+                                              style: TextStyle(color: AppColors.primary, decoration: TextDecoration.underline),
                                             ),
-                                          ],
-                                          if ((it.emergencyContactPhone ?? '').isNotEmpty) ...[
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              'Liên hệ khẩn cấp: ${it.emergencyContactPhone}',
-                                              style: const TextStyle(color: Colors.black54),
-                                            ),
-                                          ],
+                                          ),
                                         ],
                                       ),
                                     ),
@@ -652,7 +699,7 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
                                           onChanged: _loading ? null : (v) => _toggleActive(it, v),
                                           activeColor: AppColors.success,
                                         ),
-                                        const Text('Hoạt động'),
+                                        const Text('Hoạt động', style: TextStyle(fontSize: 12)),
                                       ],
                                     ),
                                     const SizedBox(width: 8),
@@ -665,17 +712,7 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
                                       const SizedBox(width: 8),
                                       OutlinedButton(
                                         onPressed: _loading ? null : () => _runTriageAction(it, 'claim'),
-                                        child: const Text('Nhận xử lý'),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      OutlinedButton(
-                                        onPressed: _loading ? null : () => _runTriageAction(it, 'mark-called'),
-                                        child: const Text('Đã gọi'),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      OutlinedButton(
-                                        onPressed: _loading ? null : () => _runTriageAction(it, 'close'),
-                                        child: const Text('Đóng triage'),
+                                        child: const Text('Triage', style: TextStyle(color: AppColors.alert)),
                                       ),
                                     ],
                                     const SizedBox(width: 8),
