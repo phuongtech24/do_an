@@ -1,50 +1,68 @@
 @startuml
 left to right direction
-skinparam packageStyle rectangle
 skinparam actorStyle awesome
 skinparam defaultFontName Arial
+skinparam usecase {
+  BackgroundColor White
+  BorderColor Black
+}
+
+title Biểu đồ phân rã use case Quản trị viên
 
 actor "Quản trị viên" as Admin
 
-rectangle "Chức năng của Quản trị viên" {
+usecase "Quản lý tài khoản,\nhồ sơ và danh tính ẩn danh" as A_ACC
+usecase "Cảnh báo Cờ đỏ\nvà điều phối lâm sàng" as A_RISK
+usecase "Theo dõi lộ trình trị liệu\nvà cấu hình module CBT" as A_CBT
+usecase "Sử dụng demo/override" as A_DEMO
 
-  package "Quản lý người dùng" {
-    usecase "Xem danh sách người dùng\nvà hồ sơ bệnh nhân" as A1
-    usecase "Lọc, tìm kiếm\nvà phân trang" as A2
-    usecase "Duyệt tài khoản bác sĩ" as A3
-    usecase "Kích hoạt hoặc vô hiệu hóa\n tài khoản bác sĩ" as A4
-  }
+usecase "Đăng nhập" as A1
+usecase "Đăng xuất" as A2
+usecase "Quản lý người dùng" as A3
+usecase "Tìm kiếm, lọc\nvà phân trang" as A4
+usecase "Quản lý hồ sơ Bệnh nhân" as A5
+usecase "Quản lý tài khoản Bác sĩ" as A6
+usecase "Duyệt tài khoản Bác sĩ" as A7
+usecase "Kích hoạt tài khoản Bác sĩ" as A8
+usecase "Vô hiệu hóa tài khoản Bác sĩ" as A9
 
-  package "Điều phối lâm sàng" {
-    usecase "Ghi đè ghép cặp\nbác sĩ - bệnh nhân" as A5
-    usecase "Xử lý hàng chờ phân loại lâm sàng" as A6
-    usecase "Ưu tiên xử lý ca Cờ Đỏ" as A7
-  }
+usecase "Theo dõi Cờ đỏ" as A10
+usecase "Xử lý hàng chờ\nphân loại lâm sàng" as A11
+usecase "Điều phối lâm sàng" as A12
+usecase "Ghi đè ghép cặp\nBác sĩ - Bệnh nhân" as A13
 
-  package "Quản trị điều trị" {
-    usecase "Quản lý kho bài tập CBT" as A8
-    usecase "Kích hoạt trạng thái tốt nghiệp" as A9
-    usecase "Theo dõi giai đoạn duy trì\nvà tái khám" as A10
-  }
+usecase "Xem thư viện module CBT" as A14
+usecase "Cập nhật cấu hình\nmodule CBT" as A15
 
-  package "Theo dõi hệ thống" {
-    usecase "Xem bảng điều khiển ưu tiên" as A11
-    usecase "Theo dõi cảnh báo và nhắc nhở" as A12
-  }
-}
+usecase "Ép nhánh LSAS demo" as A16
+usecase "Mở khóa tiến trình demo" as A17
+usecase "Reset dữ liệu demo" as A18
 
-Admin --> A1
-Admin --> A2
-Admin --> A3
-Admin --> A4
-Admin --> A5
-Admin --> A6
-Admin --> A7
-Admin --> A8
-Admin --> A9
-Admin --> A10
-Admin --> A11
-Admin --> A12
+Admin --> A_ACC
+Admin --> A_RISK
+Admin --> A_CBT
+Admin --> A_DEMO
 
-A1 --> A2 : <<bao gồm>>
+A_ACC ..> A1 : <<include>>
+A_ACC ..> A2 : <<include>>
+A_ACC ..> A3 : <<include>>
+A_ACC ..> A5 : <<include>>
+A_ACC ..> A6 : <<include>>
+A3 ..> A4 : <<include>>
+A6 ..> A7 : <<extend>>
+A6 ..> A8 : <<extend>>
+A6 ..> A9 : <<extend>>
+
+A_RISK ..> A10 : <<include>>
+A_RISK ..> A11 : <<include>>
+A_RISK ..> A12 : <<include>>
+A12 ..> A13 : <<extend>>
+
+A_CBT ..> A14 : <<include>>
+A_CBT ..> A15 : <<include>>
+
+A_DEMO ..> A16 : <<include>>
+A_DEMO ..> A17 : <<include>>
+A_DEMO ..> A18 : <<include>>
+
 @enduml

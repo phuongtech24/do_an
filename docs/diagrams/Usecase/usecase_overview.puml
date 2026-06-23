@@ -4,36 +4,28 @@ skinparam packageStyle rectangle
 skinparam actorStyle awesome
 skinparam defaultFontName Arial
 
-actor "Khách vãng lai" as Guest
+actor "Khách" as Guest
 actor "Bệnh nhân" as Patient
-
-rectangle "Hệ thống ReConnect MindHealth" {
-  usecase "Liên kết tài khoản\nvà quản lý ẩn danh" as UC1
-  usecase "Thực hiện LSAS\nvà nhận phân luồng" as UC2
-  usecase "Theo lộ trình CBT\nvà thực hiện thử nghiệm hành vi" as UC3
-  usecase "Điểm danh cảm xúc\nvà viết nhật ký suy nghĩ" as UC4
-  usecase "Đặt lịch và tham gia\n tư vấn từ xa" as UC5
-  usecase "Quản lý người dùng\nvà điều phối lâm sàng" as UC6
-  usecase "Quản lý Cờ Đỏ\nvà nhắc nhở hệ thống" as UC7
-}
-
 actor "Bác sĩ" as Therapist
 actor "Quản trị viên" as Admin
+actor "Hệ thống" as System
 
-Guest --> UC1
-Guest --> UC2
+rectangle "Hệ thống ReConnect MindHealth" {
+  usecase "Chức năng của Khách" as UC_Guest
+  usecase "Chức năng của Bệnh nhân" as UC_Patient
+  usecase "Chức năng của Bác sĩ" as UC_Therapist
+  usecase "Chức năng của Quản trị viên" as UC_Admin
+  usecase "Chức năng tự động\ncủa hệ thống" as UC_System
+}
 
-Patient --> UC1
-Patient --> UC2
-Patient --> UC3
-Patient --> UC4
-Patient --> UC5
-Patient --> UC7
+Guest --> UC_Guest
+Patient --> UC_Patient
+Therapist --> UC_Therapist
+Admin --> UC_Admin
+System --> UC_System
 
-Therapist --> UC3
-Therapist --> UC5
-Therapist --> UC7
-
-Admin --> UC6
-Admin --> UC7
+UC_Guest ..> UC_Patient : <<chuyển đổi vai trò>>
+UC_Patient ..> UC_System : <<kích hoạt dữ liệu>>
+UC_Therapist ..> UC_System : <<sử dụng kết quả>>
+UC_Admin ..> UC_System : <<giám sát/ghi đè>>
 @enduml

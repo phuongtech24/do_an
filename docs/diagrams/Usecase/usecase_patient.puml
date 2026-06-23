@@ -1,76 +1,102 @@
 @startuml
 left to right direction
-skinparam packageStyle rectangle
 skinparam actorStyle awesome
 skinparam defaultFontName Arial
+skinparam usecase {
+  BackgroundColor White
+  BorderColor Black
+}
+
+title Biểu đồ phân rã use case Bệnh nhân
 
 actor "Bệnh nhân" as Patient
 
-rectangle "Chức năng của Bệnh nhân" {
+usecase "Quản lý tài khoản,\nhồ sơ và danh tính ẩn danh" as P_ACC
+usecase "Đánh giá LSAS và\nphân luồng lâm sàng" as P_LSAS
+usecase "Theo dõi lộ trình trị liệu\nvà thực hành bài tập CBT" as P_CBT
+usecase "Điểm danh cảm xúc" as P_MOOD
+usecase "Viết Nhật ký suy nghĩ" as P_JOURNAL
+usecase "Sử dụng Trợ lý AI\nvà hỗ trợ nhận thức" as P_AI
+usecase "Đặt lịch và tư vấn từ xa" as P_TELE
 
-  package "Tài khoản và hồ sơ" {
-    usecase "Đăng nhập" as P1
-    usecase "Đăng xuất" as P2
-    usecase "Quên mật khẩu" as P3
-    usecase "Bật chế độ ẩn danh" as P4
-    usecase "Quản lý hồ sơ cá nhân" as P5
-  }
+usecase "Đăng ký tài khoản" as P1
+usecase "Đăng nhập" as P2
+usecase "Đăng xuất" as P3
+usecase "Quên mật khẩu" as P4
+usecase "Quản lý hồ sơ cá nhân" as P5
+usecase "Quản lý hồ sơ y tế" as P6
+usecase "Bật/tắt chế độ ẩn danh" as P7
 
-  package "Đánh giá và phân luồng" {
-    usecase "Thực hiện LSAS" as P6
-    usecase "Xem kết quả LSAS" as P7
-    usecase "Thiết lập mục tiêu trị liệu" as P8
-    usecase "Chọn bác sĩ phù hợp" as P9
-  }
+usecase "Thực hiện LSAS" as P8
+usecase "Xem kết quả phân luồng" as P9
+usecase "Thiết lập mục tiêu trị liệu" as P10
+usecase "Lựa chọn Bác sĩ phù hợp" as P11
 
-  package "Lộ trình điều trị" {
-    usecase "Xem lộ trình CBT 14 tuần" as P10
-    usecase "Xem thang sợ hãi" as P11
-    usecase "Thực hiện thử nghiệm hành vi" as P12
-    usecase "Nhận bài tập từ hệ thống\nhoặc từ bác sĩ" as P13
-  }
+usecase "Xem lộ trình trị liệu CBT" as P12
+usecase "Xem Thang sợ hãi" as P13
+usecase "Thực hiện bài tập CBT" as P14
+usecase "Thực hiện Thử nghiệm hành vi" as P15
+usecase "Thiết lập dự đoán" as P16
+usecase "Tổng kết bài học" as P17
 
-  package "Điểm danh và nhật ký" {
-    usecase "Điểm danh cảm xúc hằng ngày" as P14
-    usecase "Xác nhận trạng thái an toàn" as P15
-    usecase "Viết nhật ký suy nghĩ 6 bước" as P16
-    usecase "Xem thẻ đối phó" as P17
-  }
+usecase "Điểm danh cảm xúc hằng ngày" as P18
+usecase "Xác nhận trạng thái an toàn" as P19
 
-  package "Tư vấn từ xa và duy trì" {
-    usecase "Xem khung giờ trống" as P18
-    usecase "Đặt lịch tư vấn từ xa" as P19
-    usecase "Xem lịch hẹn của tôi" as P20
-    usecase "Tham gia buổi tư vấn" as P21
-    usecase "Nhận nhắc lịch duy trì" as P22
-  }
-}
+usecase "Viết Nhật ký suy nghĩ 6 bước" as P20
+usecase "Xem Thẻ đối phó" as P21
 
-Patient --> P1
-Patient --> P2
-Patient --> P3
-Patient --> P4
-Patient --> P5
-Patient --> P6
-Patient --> P7
-Patient --> P8
-Patient --> P9
-Patient --> P10
-Patient --> P11
-Patient --> P12
-Patient --> P13
-Patient --> P14
-Patient --> P15
-Patient --> P16
-Patient --> P17
-Patient --> P18
-Patient --> P19
-Patient --> P20
-Patient --> P21
-Patient --> P22
+usecase "Hỏi cách sử dụng ứng dụng" as P22
+usecase "Nhận gợi ý bước tiếp theo" as P23
+usecase "Nhận hỗ trợ CBT mức nhẹ" as P24
 
-P6 --> P7 : <<bao gồm>>
-P7 --> P8 : <<bao gồm>>
-P8 --> P9 : <<bao gồm>>
-P15 --> P14 : <<mở rộng>>
+usecase "Xem khung giờ trống" as P25
+usecase "Đặt lịch tư vấn từ xa" as P26
+usecase "Xem lịch hẹn" as P27
+usecase "Tham gia tư vấn từ xa" as P28
+usecase "Nhận nhắc nhở điều trị" as P29
+
+Patient --> P_ACC
+Patient --> P_LSAS
+Patient --> P_CBT
+Patient --> P_MOOD
+Patient --> P_JOURNAL
+Patient --> P_AI
+Patient --> P_TELE
+
+P_ACC ..> P1 : <<include>>
+P_ACC ..> P2 : <<include>>
+P_ACC ..> P3 : <<include>>
+P_ACC ..> P5 : <<include>>
+P_ACC ..> P6 : <<include>>
+P_ACC ..> P7 : <<include>>
+P4 ..> P2 : <<extend>>
+
+P_LSAS ..> P8 : <<include>>
+P8 ..> P9 : <<include>>
+P9 ..> P10 : <<include>>
+P10 ..> P11 : <<include>>
+
+P_CBT ..> P12 : <<include>>
+P_CBT ..> P13 : <<include>>
+P_CBT ..> P14 : <<include>>
+P_CBT ..> P15 : <<include>>
+P15 ..> P16 : <<include>>
+P15 ..> P17 : <<include>>
+
+P_MOOD ..> P18 : <<include>>
+P19 ..> P18 : <<extend>>
+
+P_JOURNAL ..> P20 : <<include>>
+P_JOURNAL ..> P21 : <<extend>>
+
+P_AI ..> P22 : <<include>>
+P_AI ..> P23 : <<include>>
+P_AI ..> P24 : <<include>>
+
+P_TELE ..> P25 : <<include>>
+P_TELE ..> P26 : <<include>>
+P_TELE ..> P27 : <<include>>
+P_TELE ..> P28 : <<include>>
+P_TELE ..> P29 : <<include>>
+
 @enduml

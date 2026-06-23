@@ -1,59 +1,74 @@
 @startuml
 left to right direction
-skinparam packageStyle rectangle
 skinparam actorStyle awesome
 skinparam defaultFontName Arial
+skinparam usecase {
+  BackgroundColor White
+  BorderColor Black
+}
+
+title Biểu đồ phân rã use case Bác sĩ
 
 actor "Bác sĩ" as Therapist
 
-rectangle "Chức năng của Bác sĩ" {
+usecase "Theo dõi lộ trình trị liệu\nvà thực hành bài tập CBT" as T_CBT
+usecase "Đặt lịch và tư vấn từ xa" as T_TELE
+usecase "Cảnh báo Cờ đỏ\nvà điều phối lâm sàng" as T_RISK
+usecase "Quản lý phiên đăng nhập" as T_AUTH
 
-  package "Quản lý bệnh nhân" {
-    usecase "Xem danh sách bệnh nhân\nđược phân công" as T1
-    usecase "Xem bảng điều khiển lâm sàng" as T2
-    usecase "Xem ca Cờ Đỏ" as T3
-  }
+usecase "Đăng nhập" as T1
+usecase "Đăng xuất" as T2
 
-  package "Theo dõi lâm sàng" {
-    usecase "Xem tổng hợp trước buổi tư vấn" as T4
-    usecase "Xem xu hướng LSAS" as T5
-    usecase "Xem thang sợ hãi" as T6
-    usecase "Xem nhật ký suy nghĩ" as T7
-    usecase "Xem dữ liệu điểm danh cảm xúc" as T8
-  }
+usecase "Xem danh sách Bệnh nhân\nđược phân công" as T3
+usecase "Xem hồ sơ lâm sàng" as T4
+usecase "Xem kết quả LSAS" as T5
+usecase "Xem Thang sợ hãi" as T6
+usecase "Xem Nhật ký suy nghĩ" as T7
+usecase "Xem tiến độ điều trị" as T8
+usecase "Giao bài tập CBT" as T9
+usecase "Giao Thử nghiệm hành vi" as T10
 
-  package "Can thiệp điều trị" {
-    usecase "Giao bài tập CBT" as T9
-    usecase "Giao thử nghiệm hành vi" as T10
-    usecase "Thêm ghi chú lâm sàng" as T11
-    usecase "Kích hoạt trạng thái tốt nghiệp" as T12
-  }
+usecase "Xem lịch hẹn sắp tới" as T11
+usecase "Xem trước phiên tư vấn" as T12
+usecase "Tham gia tư vấn từ xa" as T13
+usecase "Thêm ghi chú lâm sàng" as T14
+usecase "Kích hoạt tốt nghiệp điều trị" as T15
 
-  package "Tư vấn từ xa" {
-    usecase "Quản lý lịch làm việc" as T13
-    usecase "Xem lịch hẹn sắp tới" as T14
-    usecase "Tham gia buổi tư vấn từ xa" as T15
-  }
-}
+usecase "Xem dashboard ưu tiên" as T16
+usecase "Xem ca Cờ đỏ" as T17
+usecase "Theo dõi bệnh nhân nguy cơ cao" as T18
 
-Therapist --> T1
-Therapist --> T2
-Therapist --> T3
-Therapist --> T4
-Therapist --> T5
-Therapist --> T6
-Therapist --> T7
-Therapist --> T8
-Therapist --> T9
-Therapist --> T10
-Therapist --> T11
-Therapist --> T12
-Therapist --> T13
-Therapist --> T14
-Therapist --> T15
+Therapist --> T_AUTH
+Therapist --> T_CBT
+Therapist --> T_TELE
+Therapist --> T_RISK
 
-T4 --> T5 : <<bao gồm>>
-T4 --> T6 : <<bao gồm>>
-T4 --> T7 : <<bao gồm>>
-T4 --> T8 : <<bao gồm>>
+T_AUTH ..> T1 : <<include>>
+T_AUTH ..> T2 : <<include>>
+
+T_CBT ..> T3 : <<include>>
+T_CBT ..> T4 : <<include>>
+T_CBT ..> T5 : <<include>>
+T_CBT ..> T6 : <<include>>
+T_CBT ..> T7 : <<include>>
+T_CBT ..> T8 : <<include>>
+T_CBT ..> T9 : <<include>>
+T_CBT ..> T10 : <<include>>
+T10 ..> T6 : <<include>>
+
+T_TELE ..> T11 : <<include>>
+T_TELE ..> T12 : <<include>>
+T_TELE ..> T13 : <<include>>
+T_TELE ..> T14 : <<include>>
+T_TELE ..> T15 : <<include>>
+T12 ..> T4 : <<include>>
+T12 ..> T5 : <<include>>
+T12 ..> T6 : <<include>>
+T12 ..> T7 : <<include>>
+T15 ..> T8 : <<include>>
+
+T_RISK ..> T16 : <<include>>
+T_RISK ..> T17 : <<include>>
+T_RISK ..> T18 : <<include>>
+
 @enduml
