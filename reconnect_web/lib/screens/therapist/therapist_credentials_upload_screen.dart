@@ -107,7 +107,7 @@ class _TherapistCredentialsUploadScreenState extends State<TherapistCredentialsU
         await _loadAll();
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Upload chứng chỉ thành công. Vui lòng chờ Admin duyệt.')),
+          const SnackBar(content: Text('Tải lên chứng chỉ thành công. Vui lòng chờ phê duyệt.')),
         );
       } catch (e) {
         if (!mounted) return;
@@ -140,6 +140,13 @@ class _TherapistCredentialsUploadScreenState extends State<TherapistCredentialsU
     }
   }
 
+  String _mapStatus(String s) {
+    if (s == 'PENDING') return 'Chờ duyệt';
+    if (s == 'ACTIVE') return 'Đang hoạt động';
+    if (s == 'REJECTED') return 'Từ chối';
+    return s;
+  }
+
   @override
   Widget build(BuildContext context) {
     final status = _status;
@@ -166,7 +173,7 @@ class _TherapistCredentialsUploadScreenState extends State<TherapistCredentialsU
                 children: [
                   const Expanded(
                     child: Text(
-                      'Upload chứng chỉ hành nghề',
+                      'Tải lên chứng chỉ hành nghề',
                       style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                     ),
                   ),
@@ -197,7 +204,7 @@ class _TherapistCredentialsUploadScreenState extends State<TherapistCredentialsU
                   spacing: 12,
                   runSpacing: 8,
                   children: [
-                    _pill('Trạng thái', status.approvalStatus),
+                    _pill('Trạng thái', _mapStatus(status.approvalStatus)),
                     _pill('Số chứng chỉ', status.credentialCount.toString()),
                   ],
                 ),
@@ -207,7 +214,7 @@ class _TherapistCredentialsUploadScreenState extends State<TherapistCredentialsU
                   ElevatedButton.icon(
                     onPressed: _loading ? null : _pickAndUpload,
                     icon: const Icon(Icons.upload_file, color: Colors.white),
-                    label: Text(_loading ? 'ĐANG UPLOAD...' : 'CHỌN FILE & UPLOAD', style: const TextStyle(color: Colors.white)),
+                    label: Text(_loading ? 'ĐANG TẢI LÊN...' : 'CHỌN FILE & TẢI LÊN', style: const TextStyle(color: Colors.white)),
                     style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
                   ),
                   const SizedBox(width: 12),

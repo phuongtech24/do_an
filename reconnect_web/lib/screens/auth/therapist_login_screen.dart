@@ -89,15 +89,15 @@ class _TherapistLoginScreenState extends State<TherapistLoginScreen> {
               const Icon(Icons.medication, size: 80, color: AppColors.primary),
               const SizedBox(height: 24),
               const Text(
-                'Re-Connect CMS',
+                'Hệ thống Quản trị ReConnect',
                 style: TextStyle(
-                  fontSize: 28,
+                  fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: AppColors.textPrimary,
                 ),
               ),
               const SizedBox(height: 8),
-              const Text('Cổng thông tin Chuyên gia', style: TextStyle(color: AppColors.textSecondary)),
+              const Text('Cổng đăng nhập dành cho Chuyên gia & Quản trị viên', style: TextStyle(color: AppColors.textSecondary)),
               const SizedBox(height: 48),
               TextField(
                 controller: _emailController,
@@ -138,11 +138,7 @@ class _TherapistLoginScreenState extends State<TherapistLoginScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Tài khoản bác sĩ hoặc quản trị viên',
-                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-              )
+
             ],
           ),
         ),

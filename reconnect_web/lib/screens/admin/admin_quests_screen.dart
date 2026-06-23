@@ -68,6 +68,39 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
     }).toList();
   }
 
+  String _cat(String c) {
+    if (c == 'BEHAVIORAL') return 'Hành vi';
+    if (c == 'COGNITIVE') return 'Nhận thức';
+    if (c == 'EMOTIONAL') return 'Cảm xúc';
+    if (c == 'SOCIAL') return 'Xã hội';
+    return c;
+  }
+
+  String _diff(String d) {
+    if (d == 'EASY') return 'Dễ';
+    if (d == 'MEDIUM') return 'Trung bình';
+    if (d == 'HARD') return 'Khó';
+    return d;
+  }
+
+  String _phase(String p) {
+    if (p == 'MAP_AND_BELIEF_BREAK') return 'GĐ1: Bản đồ vòng lặp';
+    if (p == 'REAL_WORLD_EXPERIMENTS') return 'GĐ2: Thử nghiệm thực tế';
+    if (p == 'DEEP_COGNITIVE_MEMORY') return 'GĐ3: Tái cấu trúc';
+    return p;
+  }
+
+  String _interv(String i) {
+    if (i == 'BEHAVIORAL_EXPERIMENT') return 'Thử nghiệm hành vi';
+    if (i == 'VICIOUS_CYCLE_MAP') return 'Bản đồ vòng lặp';
+    if (i == 'VIDEO_FEEDBACK') return 'Phản hồi qua video';
+    if (i == 'SURVEY') return 'Khảo sát';
+    if (i == 'THEN_VS_NOW') return 'Kỹ thuật Xưa & Nay';
+    if (i == 'IMAGERY_RESCRIPTING') return 'Kịch bản tưởng tượng';
+    if (i == 'THOUGHT_RECORD') return 'Nhật ký suy nghĩ';
+    return i;
+  }
+
   Future<void> _openEditor({required QuestTemplateModel item}) async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final token = auth.token;
@@ -141,19 +174,19 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
                           items: const [
                             DropdownMenuItem(
                               value: 'BEHAVIORAL',
-                              child: Text('BEHAVIORAL'),
+                              child: Text('Hành vi'),
                             ),
                             DropdownMenuItem(
                               value: 'COGNITIVE',
-                              child: Text('COGNITIVE'),
+                              child: Text('Nhận thức'),
                             ),
                             DropdownMenuItem(
                               value: 'EMOTIONAL',
-                              child: Text('EMOTIONAL'),
+                              child: Text('Cảm xúc'),
                             ),
                             DropdownMenuItem(
                               value: 'SOCIAL',
-                              child: Text('SOCIAL'),
+                              child: Text('Xã hội'),
                             ),
                           ],
                           onChanged: (val) => setDialogState(
@@ -170,12 +203,12 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
                             border: OutlineInputBorder(),
                           ),
                           items: const [
-                            DropdownMenuItem(value: 'EASY', child: Text('EASY')),
+                            DropdownMenuItem(value: 'EASY', child: Text('Dễ')),
                             DropdownMenuItem(
                               value: 'MEDIUM',
-                              child: Text('MEDIUM'),
+                              child: Text('Trung bình'),
                             ),
-                            DropdownMenuItem(value: 'HARD', child: Text('HARD')),
+                            DropdownMenuItem(value: 'HARD', child: Text('Khó')),
                           ],
                           onChanged: (val) => setDialogState(
                             () => difficulty = val ?? difficulty,
@@ -209,15 +242,15 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
                           items: const [
                             DropdownMenuItem(
                               value: 'MAP_AND_BELIEF_BREAK',
-                              child: Text('MAP_AND_BELIEF_BREAK'),
+                              child: Text('GĐ1: Bản đồ vòng lặp'),
                             ),
                             DropdownMenuItem(
                               value: 'REAL_WORLD_EXPERIMENTS',
-                              child: Text('REAL_WORLD_EXPERIMENTS'),
+                              child: Text('GĐ2: Thử nghiệm thực tế'),
                             ),
                             DropdownMenuItem(
                               value: 'DEEP_COGNITIVE_MEMORY',
-                              child: Text('DEEP_COGNITIVE_MEMORY'),
+                              child: Text('GĐ3: Tái cấu trúc'),
                             ),
                           ],
                           onChanged: (val) => setDialogState(
@@ -238,28 +271,28 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
                     items: const [
                       DropdownMenuItem(
                         value: 'BEHAVIORAL_EXPERIMENT',
-                        child: Text('BEHAVIORAL_EXPERIMENT'),
+                        child: Text('Thử nghiệm hành vi'),
                       ),
                       DropdownMenuItem(
                         value: 'VICIOUS_CYCLE_MAP',
-                        child: Text('VICIOUS_CYCLE_MAP'),
+                        child: Text('Bản đồ vòng lặp'),
                       ),
                       DropdownMenuItem(
                         value: 'VIDEO_FEEDBACK',
-                        child: Text('VIDEO_FEEDBACK'),
+                        child: Text('Phản hồi qua video'),
                       ),
-                      DropdownMenuItem(value: 'SURVEY', child: Text('SURVEY')),
+                      DropdownMenuItem(value: 'SURVEY', child: Text('Khảo sát')),
                       DropdownMenuItem(
                         value: 'THEN_VS_NOW',
-                        child: Text('THEN_VS_NOW'),
+                        child: Text('Kỹ thuật Xưa & Nay'),
                       ),
                       DropdownMenuItem(
                         value: 'IMAGERY_RESCRIPTING',
-                        child: Text('IMAGERY_RESCRIPTING'),
+                        child: Text('Kịch bản tưởng tượng'),
                       ),
                       DropdownMenuItem(
                         value: 'THOUGHT_RECORD',
-                        child: Text('THOUGHT_RECORD'),
+                        child: Text('Nhật ký suy nghĩ'),
                       ),
                     ],
                     onChanged: (val) => setDialogState(
@@ -363,7 +396,7 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
           children: [
             const Expanded(
               child: Text(
-                'Kho module CBT 14 tuần',
+                'Kho mẫu Thử nghiệm hành vi',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
             ),
@@ -375,17 +408,12 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Admin chỉ quản lý cấu hình thư viện module CBT 14 tuần ở mức hệ thống.',
+          'Quản lý danh sách các kịch bản thực hành và thử nghiệm hành vi ở mức hệ thống.',
           style: TextStyle(color: AppColors.textSecondary),
         ),
         const SizedBox(height: 4),
         const Text(
-          'Therapist và hệ thống mới là bên dùng kho này để giao/phân phối bài thực tế cho từng bệnh nhân.',
-          style: TextStyle(color: AppColors.textSecondary),
-        ),
-        const SizedBox(height: 4),
-        const Text(
-          'Kho này không phải danh sách bài thực hành cá nhân hóa của bệnh nhân.',
+          'Chuyên gia sẽ sử dụng kho mẫu này để cá nhân hóa và giao bài tập phù hợp cho từng bệnh nhân.',
           style: TextStyle(color: AppColors.textSecondary),
         ),
         const SizedBox(height: 16),
@@ -437,14 +465,14 @@ class _AdminQuestsScreenState extends State<AdminQuestsScreen> {
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         subtitle: Text(
-                          '${it.category} • ${it.difficulty}'
+                          '${_cat(it.category)} • ${_diff(it.difficulty)}'
                           '${it.moduleCode.isNotEmpty ? ' • ${it.moduleCode}' : ''}'
                           '${it.programWeek != null ? ' • Tuần ${it.programWeek}' : ''}'
-                          '${it.programPhaseCode.isNotEmpty ? ' • ${it.programPhaseCode}' : ''}'
+                          '${it.programPhaseCode.isNotEmpty ? ' • ${_phase(it.programPhaseCode)}' : ''}'
                           '\n${it.description}'
-                          '${it.interventionType.isNotEmpty ? '\nCan thiệp: ${it.interventionType}' : ''}'
+                          '${it.interventionType.isNotEmpty ? '\nCan thiệp: ${_interv(it.interventionType)}' : ''}'
                           '${it.therapistOnlyAssignable ? '\nChỉ bác sĩ giao' : ''}'
-                          '${it.hardLocked ? ' • Hard lock' : ''}',
+                          '${it.hardLocked ? ' • Khóa cứng' : ''}',
                         ),
                         isThreeLine: true,
                         trailing: IconButton(

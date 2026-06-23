@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/auth/auth_provider.dart';
@@ -145,7 +145,7 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 value: selectedId,
-                decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Chuyên gia (ACTIVE)'),
+                decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Chuyên gia (Đang hoạt động)'),
                 items: therapists
                     .map((t) => DropdownMenuItem<String>(
                           value: t.therapistId,
@@ -539,7 +539,7 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
                 ),
                 const SizedBox(width: 8),
                 FilterChip(
-                  label: const Text('Triage Queue'),
+                  label: const Text('Triage (Đánh giá sơ bộ)'),
                   selected: _triageOnly,
                   onSelected: _loading
                       ? null
@@ -619,18 +619,18 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
-                                            'LSAS: ${it.currentLsasScore ?? 0} • Tapering: ${it.taperingStage ?? 'NONE'} • Ẩn danh: ${it.anonymousModeEnabled ? 'Đang bật' : 'Đang tắt'}',
+                                            'Điểm LSAS: ${it.currentLsasScore ?? 0} • Giãn cách: ${it.taperingStage == 'NONE' ? 'Không' : it.taperingStage ?? 'Không'} • Ẩn danh: ${it.anonymousModeEnabled ? 'Đang bật' : 'Đang tắt'}',
                                             style: const TextStyle(color: Colors.black54),
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
-                                            'Risk: $risk • Red flag: $red • Tốt nghiệp: ${it.graduatedAt != null ? 'Đã bật' : 'Chưa'}',
+                                            'Rủi ro: $risk • Cờ đỏ: ${red ? 'Có' : 'Không'} • Tốt nghiệp: ${it.graduatedAt != null ? 'Đã tốt nghiệp' : 'Chưa'}',
                                             style: const TextStyle(color: Colors.black54),
                                           ),
                                           if (it.triageRequired) ...[
                                             const SizedBox(height: 4),
                                             Text(
-                                              'Triage: ${it.triageStatus ?? 'PENDING'} • Priority: ${it.triagePriority ?? risk}',
+                                              'Xử lý khẩn (Triage): ${it.triageStatus == 'PENDING' ? 'Chờ xử lý' : it.triageStatus ?? 'Chờ xử lý'} • Mức ưu tiên: ${it.triagePriority ?? risk}',
                                               style: const TextStyle(color: AppColors.alert, fontWeight: FontWeight.w600),
                                             ),
                                           ],
@@ -652,7 +652,7 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
                                           onChanged: _loading ? null : (v) => _toggleActive(it, v),
                                           activeColor: AppColors.success,
                                         ),
-                                        const Text('Active'),
+                                        const Text('Hoạt động'),
                                       ],
                                     ),
                                     const SizedBox(width: 8),

@@ -85,7 +85,7 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
     if (token == null || token.isEmpty) return;
 
     if (status == 'ACTIVE' && item.credentialCount <= 0) {
-      setState(() => _error = 'Chưa có chứng chỉ. Không thể duyệt ACTIVE.');
+      setState(() => _error = 'Chưa có chứng chỉ. Không thể cấp quyền Đang hoạt động.');
       return;
     }
 
@@ -445,7 +445,7 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
       setState(() => _items = [created, ..._items]);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Đã tạo tài khoản bác sĩ. Trạng thái: PENDING'),
+          content: Text('Đã tạo tài khoản bác sĩ. Trạng thái: Chờ duyệt'),
           backgroundColor: AppColors.success,
         ),
       );
@@ -473,9 +473,9 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
   String _statusLabel(String status) {
     switch (status) {
       case 'ACTIVE':
-        return 'ĐÃ CẤP PHÉP';
+        return 'ĐANG HOẠT ĐỘNG';
       case 'REJECTED':
-        return 'TỪ CHỐI';
+        return 'BỊ TỪ CHỐI';
       case 'PENDING':
       default:
         return 'CHỜ DUYỆT';

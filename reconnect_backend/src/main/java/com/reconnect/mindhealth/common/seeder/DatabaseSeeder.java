@@ -7,6 +7,7 @@ import java.util.UUID;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -432,80 +433,163 @@ public class DatabaseSeeder implements CommandLineRunner {
     }
 
     private void ensureClinicalQuestTemplates() throws Exception {
+        purgeLegacyQuestTemplates();
+
         ensureClinicalQuestTemplate(
-                "VICIOUS_CYCLE",
-                "Bản đồ vòng lặp lo âu",
-                "Điền tình huống, suy nghĩ, triệu chứng cơ thể và hành vi an toàn để nhìn rõ vòng lặp lo âu xã hội.",
-                QuestCategory.COGNITIVE,
+                "SOCIAL_PHONE_PUBLIC",
+                "Gọi điện thoại ở nơi công cộng",
+                "Gọi một cuộc điện thoại ngắn ở nơi có người xung quanh, bỏ bớt hành vi an toàn và ghi lại điều thực sự xảy ra.",
+                QuestCategory.SOCIAL,
                 QuestDifficulty.EASY,
                 1,
                 "MAP_AND_BELIEF_BREAK",
-                "VICIOUS_CYCLE_MAP",
+                "BEHAVIORAL_EXPERIMENT",
                 List.of(),
                 false,
                 false);
         ensureClinicalQuestTemplate(
-                "SAFETY_BEHAVIOR_DROP",
-                "Vứt bỏ hành vi an toàn",
-                "Thực hành trò chuyện ngắn và so sánh trải nghiệm khi còn giữ và khi đã giảm hành vi an toàn.",
-                QuestCategory.BEHAVIORAL,
+                "SOCIAL_ASK_DIRECTIONS",
+                "Hỏi đường một người lạ",
+                "Hỏi đường hoặc hỏi thông tin đơn giản từ một người lạ, sau đó so sánh dự đoán lo âu với kết quả thực tế.",
+                QuestCategory.SOCIAL,
                 QuestDifficulty.EASY,
-                2,
+                1,
                 "MAP_AND_BELIEF_BREAK",
-                "SAFETY_BEHAVIOR_EXPERIMENT",
-                List.of("VICIOUS_CYCLE"),
+                "BEHAVIORAL_EXPERIMENT",
+                List.of(),
                 false,
                 false);
         ensureClinicalQuestTemplate(
-                "VIDEO_FEEDBACK",
-                "Video Feedback",
-                "Ghi âm hoặc quay lại tương tác thực tế rồi xem lại để kiểm chứng hình ảnh bản thân có đang bị méo mó không.",
-                QuestCategory.BEHAVIORAL,
+                "SOCIAL_SMALL_TALK",
+                "Chào và bắt chuyện ngắn",
+                "Chào một người quen hoặc bắt đầu một câu trò chuyện ngắn, chú ý xem phản ứng thật có giống điều mình lo không.",
+                QuestCategory.SOCIAL,
+                QuestDifficulty.EASY,
+                2,
+                "MAP_AND_BELIEF_BREAK",
+                "BEHAVIORAL_EXPERIMENT",
+                List.of("SOCIAL_ASK_DIRECTIONS"),
+                false,
+                false);
+        ensureClinicalQuestTemplate(
+                "SOCIAL_EAT_PUBLIC",
+                "Ăn uống ở nơi công cộng",
+                "Ăn hoặc uống một món nhỏ ở nơi công cộng và ghi lại mức sợ hãi, né tránh trước và sau khi thực hiện.",
+                QuestCategory.SOCIAL,
                 QuestDifficulty.MEDIUM,
                 4,
                 "REAL_WORLD_EXPERIMENTS",
-                "VIDEO_FEEDBACK",
-                List.of("SAFETY_BEHAVIOR_DROP"),
-                true,
-                true);
+                "BEHAVIORAL_EXPERIMENT",
+                List.of("SOCIAL_SMALL_TALK"),
+                false,
+                false);
         ensureClinicalQuestTemplate(
-                "SURVEYS",
-                "Khảo sát kiểm chứng suy nghĩ",
-                "Gửi khảo sát ngắn để kiểm chứng người khác thực sự nghĩ gì thay vì tự đọc suy nghĩ.",
+                "SOCIAL_JOIN_SMALL_GROUP",
+                "Tham gia vào nhóm nhỏ",
+                "Tham gia một nhóm nhỏ trong vài phút, thử nói một câu ngắn và quan sát phản ứng thực tế của mọi người.",
+                QuestCategory.SOCIAL,
+                QuestDifficulty.MEDIUM,
+                5,
+                "REAL_WORLD_EXPERIMENTS",
+                "BEHAVIORAL_EXPERIMENT",
+                List.of("SOCIAL_EAT_PUBLIC"),
+                false,
+                false);
+        ensureClinicalQuestTemplate(
+                "SOCIAL_ASK_QUESTION",
+                "Đặt câu hỏi trong lớp hoặc cuộc họp",
+                "Chuẩn bị và đặt một câu hỏi ngắn trong lớp học, cuộc họp hoặc nhóm trao đổi.",
                 QuestCategory.SOCIAL,
                 QuestDifficulty.MEDIUM,
                 6,
                 "REAL_WORLD_EXPERIMENTS",
-                "SURVEY",
-                List.of("VIDEO_FEEDBACK"),
+                "BEHAVIORAL_EXPERIMENT",
+                List.of("SOCIAL_JOIN_SMALL_GROUP"),
+                true,
+                false);
+        ensureClinicalQuestTemplate(
+                "SOCIAL_PRESENT_OPINION",
+                "Trình bày ý kiến trước nhóm nhỏ",
+                "Nêu một ý kiến cá nhân trước nhóm nhỏ, giảm hành vi an toàn như né mắt, nói quá nhỏ hoặc chuẩn bị quá mức.",
+                QuestCategory.SOCIAL,
+                QuestDifficulty.HARD,
+                8,
+                "REAL_WORLD_EXPERIMENTS",
+                "BEHAVIORAL_EXPERIMENT",
+                List.of("SOCIAL_ASK_QUESTION"),
                 true,
                 true);
         ensureClinicalQuestTemplate(
-                "THEN_VS_NOW",
-                "Then vs Now",
-                "Phân biệt ký ức tổn thương cũ với tình huống hiện tại để giảm hợp nhất cảm xúc.",
-                QuestCategory.COGNITIVE,
+                "SOCIAL_ASK_STAFF_HELP",
+                "Nhờ nhân viên hỗ trợ",
+                "Chủ động hỏi nhân viên cửa hàng, lễ tân hoặc bộ phận hỗ trợ về một thông tin đơn giản.",
+                QuestCategory.SOCIAL,
+                QuestDifficulty.EASY,
+                3,
+                "MAP_AND_BELIEF_BREAK",
+                "BEHAVIORAL_EXPERIMENT",
+                List.of("SOCIAL_PHONE_PUBLIC"),
+                false,
+                false);
+        ensureClinicalQuestTemplate(
+                "SOCIAL_POLITE_REFUSAL",
+                "Từ chối một yêu cầu nhỏ",
+                "Tập nói lời từ chối lịch sự với một yêu cầu nhỏ, sau đó ghi lại điều người khác phản hồi thật sự.",
+                QuestCategory.SOCIAL,
                 QuestDifficulty.HARD,
-                9,
+                10,
                 "DEEP_COGNITIVE_MEMORY",
-                "THEN_VS_NOW",
-                List.of("SURVEYS"),
+                "BEHAVIORAL_EXPERIMENT",
+                List.of("SOCIAL_PRESENT_OPINION"),
                 true,
                 true);
         ensureClinicalQuestTemplate(
-                "IMAGERY_RESCRIPTING",
-                "Imagery Rescripting",
-                "Viết lại kịch bản cho ký ức xã hội đau buồn theo hướng an toàn và lành mạnh hơn.",
-                QuestCategory.COGNITIVE,
+                "SOCIAL_SMALL_MISTAKE",
+                "Thực hiện một lỗi nhỏ có kiểm soát",
+                "Cố ý thực hiện một lỗi xã hội rất nhỏ và an toàn, ví dụ hỏi lại thông tin, để kiểm chứng nỗi sợ bị đánh giá.",
+                QuestCategory.SOCIAL,
                 QuestDifficulty.HARD,
-                11,
+                12,
                 "DEEP_COGNITIVE_MEMORY",
-                "IMAGERY_RESCRIPTING",
-                List.of("THEN_VS_NOW"),
+                "BEHAVIORAL_EXPERIMENT",
+                List.of("SOCIAL_POLITE_REFUSAL"),
                 true,
                 true);
     }
 
+    private void purgeLegacyQuestTemplates() {
+        Set<String> canonicalModuleCodes = Set.of(
+                "SOCIAL_PHONE_PUBLIC",
+                "SOCIAL_ASK_DIRECTIONS",
+                "SOCIAL_SMALL_TALK",
+                "SOCIAL_EAT_PUBLIC",
+                "SOCIAL_JOIN_SMALL_GROUP",
+                "SOCIAL_ASK_QUESTION",
+                "SOCIAL_PRESENT_OPINION",
+                "SOCIAL_ASK_STAFF_HELP",
+                "SOCIAL_POLITE_REFUSAL",
+                "SOCIAL_SMALL_MISTAKE");
+        Set<String> legacyModuleCodes = Set.of(
+                "VICIOUS_CYCLE",
+                "SAFETY_BEHAVIOR_DROP",
+                "VIDEO_FEEDBACK",
+                "SURVEYS",
+                "THEN_VS_NOW",
+                "IMAGERY_RESCRIPTING");
+
+        List<QuestTemplate> legacy = questTemplateRepository.findAll().stream()
+                .filter(template -> template.getModuleCode() == null
+                        || template.getModuleCode().isBlank()
+                        || legacyModuleCodes.contains(template.getModuleCode()))
+                .filter(template -> template.getModuleCode() == null
+                        || template.getModuleCode().isBlank()
+                        || !canonicalModuleCodes.contains(template.getModuleCode()))
+                .toList();
+        if (!legacy.isEmpty()) {
+            questTemplateRepository.deleteAll(legacy);
+            System.out.println("Removed legacy CBT quest templates: " + legacy.size());
+        }
+    }
     private void ensureClinicalQuestTemplate(
             String moduleCode,
             String title,
@@ -536,3 +620,4 @@ public class DatabaseSeeder implements CommandLineRunner {
         questTemplateRepository.save(template);
     }
 }
+
