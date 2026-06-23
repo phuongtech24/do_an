@@ -140,7 +140,7 @@ class _TherapistLoginScreenState extends State<TherapistLoginScreen> {
               ),
               const SizedBox(height: 8),
               const Text(
-                'Tài khoản THERAPIST hoặc ADMIN',
+                'Tài khoản bác sĩ hoặc quản trị viên',
                 style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
               )
             ],

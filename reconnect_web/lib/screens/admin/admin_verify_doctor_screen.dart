@@ -445,7 +445,7 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
       setState(() => _items = [created, ..._items]);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Đã tạo tài khoản therapist. Trạng thái: PENDING'),
+          content: Text('Đã tạo tài khoản bác sĩ. Trạng thái: PENDING'),
           backgroundColor: AppColors.success,
         ),
       );

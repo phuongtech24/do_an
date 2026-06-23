@@ -181,11 +181,11 @@ public class AuthServiceImpl implements IAuthService {
     private void enforceTherapistNotRejected(User user) {
         TherapistProfile profile = therapistProfileRepository
                 .findById(user.getId())
-                .orElseThrow(() -> new RuntimeException("Tài khoản therapist chưa có profile"));
+                .orElseThrow(() -> new RuntimeException("Tài khoản bác sĩ chưa có hồ sơ"));
 
         ApprovalStatus approvalStatus = profile.getApprovalStatus();
         if (approvalStatus == ApprovalStatus.REJECTED) {
-            throw new RuntimeException("Tài khoản therapist đã bị từ chối duyệt. Vui lòng liên hệ admin.");
+            throw new RuntimeException("Tài khoản bác sĩ đã bị từ chối duyệt. Vui lòng liên hệ quản trị viên.");
         }
     }
 
