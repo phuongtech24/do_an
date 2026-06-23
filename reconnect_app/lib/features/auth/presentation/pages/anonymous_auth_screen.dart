@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -70,7 +70,7 @@ class _AuthHero extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Tiếp tục hành trình CBT của bạn hoặc trải nghiệm Guest Mode an toàn để làm LSAS trước.',
+                  'Tiếp tục hành trình chăm sóc tinh thần của bạn, hoặc khám phá ứng dụng trước mà không cần tạo tài khoản.',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.92),
                     height: 1.45,
@@ -332,7 +332,7 @@ class _PatientLoginFormState extends State<_PatientLoginForm> {
                 onChanged: isLoading ? null : (value) => setState(() => _rememberMe = value ?? true),
                 controlAffinity: ListTileControlAffinity.leading,
                 title: const Text('Ghi nhớ đăng nhập'),
-                subtitle: const Text('Lưu refresh token an toàn trên thiết bị này.'),
+                subtitle: const Text('Giữ đăng nhập an toàn cho những lần truy cập sau.'),
               ),
               const SizedBox(height: 4),
               SizedBox(
@@ -410,7 +410,7 @@ class _PatientLoginFormState extends State<_PatientLoginForm> {
                         const SizedBox(width: 12),
                         const Expanded(
                           child: Text(
-                            'Bắt đầu ngay (ẩn danh)',
+                            'Trải nghiệm ẩn danh',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
@@ -422,12 +422,12 @@ class _PatientLoginFormState extends State<_PatientLoginForm> {
                     ),
                     const SizedBox(height: 10),
                     const Text(
-                      'Bạn sẽ chọn biệt danh và avatar hệ thống trước, sau đó làm bài LSAS 24 câu để trải nghiệm app trong chế độ an toàn.',
+                      'Bạn sẽ được chọn một biệt danh và ảnh đại diện ngẫu nhiên để tự do khám phá các tính năng của ứng dụng một cách riêng tư.',
                       style: TextStyle(color: AppColors.textSecondary, height: 1.45),
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      'Sau LSAS, app sẽ mời bạn liên kết tài khoản và cập nhật thông tin y tế tối thiểu để mở khóa lộ trình CBT chính thức.',
+                      'Sau khi trải nghiệm, bạn hoàn toàn có thể lưu lại tiến trình bằng cách tạo tài khoản chính thức.',
                       style: TextStyle(color: AppColors.textSecondary, height: 1.45),
                     ),
                     const SizedBox(height: 14),
@@ -437,7 +437,7 @@ class _PatientLoginFormState extends State<_PatientLoginForm> {
                         onPressed: isLoading ? null : () => _onStartAnonymous(context, auth),
                         icon: const Icon(Icons.privacy_tip_outlined, color: AppColors.primary),
                         label: const Text(
-                          'Bắt đầu ngay (ẩn danh)',
+                          'Bắt đầu trải nghiệm',
                           style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.primary),
                         ),
                         style: FilledButton.styleFrom(
