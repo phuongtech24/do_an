@@ -25,14 +25,10 @@ import com.reconnect.mindhealth.modules.clinical.service.ClinicalTriageService;
 import com.reconnect.mindhealth.modules.journal.dto.JournalDto;
 import com.reconnect.mindhealth.modules.journal.enums.JournalType;
 import com.reconnect.mindhealth.modules.journal.service.IJournalService;
-import com.reconnect.mindhealth.modules.risk.entity.DailyRiskLog;
-import com.reconnect.mindhealth.modules.risk.repository.DailyRiskLogRepository;
 import com.reconnect.mindhealth.modules.roadmap.entity.FearLadderItem;
-import com.reconnect.mindhealth.modules.roadmap.entity.PatientQuest;
 import com.reconnect.mindhealth.modules.roadmap.enums.FearLadderStatus;
 import com.reconnect.mindhealth.modules.roadmap.repository.BehavioralExperimentRepository;
 import com.reconnect.mindhealth.modules.roadmap.repository.FearLadderItemRepository;
-import com.reconnect.mindhealth.modules.roadmap.service.RoadmapDailyAssignmentService;
 import com.reconnect.mindhealth.modules.roadmap.service.RoadmapProgramStateService;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -43,8 +39,6 @@ public class AdminDemoControlService {
     private static final Logger log = LoggerFactory.getLogger(AdminDemoControlService.class);
 
     private final PatientProfileRepository patientProfileRepository;
-    private final DailyRiskLogRepository dailyRiskLogRepository;
-    private final RoadmapDailyAssignmentService roadmapDailyAssignmentService;
     private final UserMoodRepository userMoodRepository;
     private final IJournalService journalService;
     private final AppointmentRepository appointmentRepository;
@@ -55,8 +49,6 @@ public class AdminDemoControlService {
 
     public AdminDemoControlService(
             PatientProfileRepository patientProfileRepository,
-            DailyRiskLogRepository dailyRiskLogRepository,
-            RoadmapDailyAssignmentService roadmapDailyAssignmentService,
             UserMoodRepository userMoodRepository,
             IJournalService journalService,
             AppointmentRepository appointmentRepository,
@@ -65,8 +57,6 @@ public class AdminDemoControlService {
             BehavioralExperimentRepository behavioralExperimentRepository,
             RoadmapProgramStateService roadmapProgramStateService) {
         this.patientProfileRepository = patientProfileRepository;
-        this.dailyRiskLogRepository = dailyRiskLogRepository;
-        this.roadmapDailyAssignmentService = roadmapDailyAssignmentService;
         this.userMoodRepository = userMoodRepository;
         this.journalService = journalService;
         this.appointmentRepository = appointmentRepository;
@@ -101,23 +91,6 @@ public class AdminDemoControlService {
     }
 
     @Transactional
-    public AdminDemoControlResultDto runDailyRoadmap(UUID patientId, LocalDate date, UUID adminId) {
-        PatientProfile patient = getPatient(patientId);
-        LocalDate effectiveDate = date != null ? date : LocalDate.now();
-        List<PatientQuest> created = roadmapDailyAssignmentService.ensureDailySystemQuests(patient, effectiveDate);
-        AdminDemoControlResultDto result = snapshot(
-                patient,
-                "RUN_DAILY_ROADMAP",
-                created.isEmpty()
-                        ? "Bá»‡nh nhÃ¢n Ä‘Ã£ cÃ³ bÃ i há»‡ thá»‘ng trong ngÃ y, khÃ´ng táº¡o trÃ¹ng."
-                        : "ÄÃ£ táº¡o bÃ i há»‡ thá»‘ng cho hÃ´m nay.");
-        result.setCreatedQuests(created.size());
-        log.info("Admin demo control run daily roadmap adminId={}, patientId={}, date={}, created={}",
-                adminId, patientId, effectiveDate, created.size());
-        return result;
-    }
-
-    @Transactional
     public AdminDemoControlResultDto setRisk(UUID patientId, int score, boolean redFlag, UUID adminId) {
         int normalizedScore = Math.max(0, Math.min(score, 100));
         PatientProfile patient = getPatient(patientId);
@@ -130,7 +103,6 @@ public class AdminDemoControlService {
             patient.setTriagePriority(null);
         }
         patientProfileRepository.save(patient);
-        upsertRiskLog(patient);
 
         log.info("Admin demo control set risk adminId={}, patientId={}, score={}, redFlag={}",
                 adminId, patientId, normalizedScore, redFlag);
@@ -147,7 +119,6 @@ public class AdminDemoControlService {
         patient.setTriageStatus(null);
         patient.setTriagePriority(null);
         patientProfileRepository.save(patient);
-        upsertRiskLog(patient);
 
         log.info("Admin demo control clear risk adminId={}, patientId={}", adminId, patientId);
         return snapshot(patient, "CLEAR_RISK", "ÄÃ£ táº¯t cáº£nh bÃ¡o risk/red flag demo.");
@@ -184,7 +155,6 @@ public class AdminDemoControlService {
             patient.setTriagePriority(null);
             patientProfileRepository.save(patient);
         }
-        upsertRiskLog(patient);
 
         log.info("Admin demo control set LSAS band adminId={}, patientId={}, band={}, score={}",
                 adminId, patientId, normalizedBand, score);
@@ -258,15 +228,11 @@ public class AdminDemoControlService {
         fearLadderItemRepository.saveAll(items);
         clearBehavioralExperiments(patientId);
 
-        List<PatientQuest> created = roadmapDailyAssignmentService.ensureDailySystemQuests(patient, LocalDate.now());
         AdminDemoControlResultDto result = snapshot(
                 patient,
                 "UNLOCK_ALL_ROADMAP_CONTENT",
                 "Đã mở khóa toàn bộ roadmap demo: tuần 14, toàn bộ Fear Ladder đã làm chủ và bài hệ thống hôm nay đã sẵn sàng.");
-        result.setCreatedQuests(created.size());
 
-        log.info("Admin demo control unlock all roadmap content adminId={}, patientId={}, ladderCount={}, createdQuests={}",
-                adminId, patientId, items.size(), created.size());
         return result;
     }
     @Transactional
@@ -345,7 +311,6 @@ public class AdminDemoControlService {
         userMood.setMoodScore(Math.max(0, 100 - userMood.getAnxietyScore()));
         userMoodRepository.save(userMood);
         patientProfileRepository.save(patient);
-        upsertRiskLog(patient);
 
         log.info("Admin demo control seed daily check-in adminId={}, patientId={}, mode={}",
                 adminId, patientId, normalizedMode);
@@ -467,22 +432,6 @@ public class AdminDemoControlService {
     private PatientProfile getPatient(UUID patientId) {
         return patientProfileRepository.findById(patientId)
                 .orElseThrow(() -> new EntityNotFoundException("KhÃ´ng tÃ¬m tháº¥y há»“ sÆ¡ bá»‡nh nhÃ¢n: " + patientId));
-    }
-
-    private void upsertRiskLog(PatientProfile patient) {
-        DailyRiskLog riskLog = dailyRiskLogRepository.findByPatientProfile_IdAndRiskDate(patient.getId(), LocalDate.now())
-                .orElseGet(DailyRiskLog::new);
-        riskLog.setPatientProfile(patient);
-        riskLog.setRiskDate(LocalDate.now());
-        riskLog.setRiskScore(patient.getCurrentRiskScore() != null ? patient.getCurrentRiskScore() : 0);
-        riskLog.setScoreSafety(patient.getCurrentRiskScore() != null ? patient.getCurrentRiskScore() : 0);
-        riskLog.setScoreAi(0);
-        riskLog.setScoreMood(0);
-        riskLog.setOverrideTriggered(Boolean.TRUE.equals(patient.getIsRedFlagActive())
-                || (patient.getCurrentRiskScore() != null && patient.getCurrentRiskScore() >= 70));
-        riskLog.setRedFlagActive(Boolean.TRUE.equals(patient.getIsRedFlagActive()));
-        riskLog.setCalculatedAt(LocalDateTime.now());
-        dailyRiskLogRepository.save(riskLog);
     }
 
     private AdminDemoControlResultDto snapshot(PatientProfile patient, String action, String message) {

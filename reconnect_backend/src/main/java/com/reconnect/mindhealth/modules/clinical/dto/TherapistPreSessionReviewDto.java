@@ -14,7 +14,6 @@ public class TherapistPreSessionReviewDto {
     private Integer behavioralExperimentsLastWeek;
     private Integer thoughtRecordsLastWeek;
     private Integer dailyCheckinsLastWeek;
-    private Integer recentHomeworkCompleted;
     private Integer programWeek;
     private String programPhaseLabel;
     private Integer currentRiskScore;
@@ -94,14 +93,6 @@ public class TherapistPreSessionReviewDto {
 
     public void setDailyCheckinsLastWeek(Integer dailyCheckinsLastWeek) {
         this.dailyCheckinsLastWeek = dailyCheckinsLastWeek;
-    }
-
-    public Integer getRecentHomeworkCompleted() {
-        return recentHomeworkCompleted;
-    }
-
-    public void setRecentHomeworkCompleted(Integer recentHomeworkCompleted) {
-        this.recentHomeworkCompleted = recentHomeworkCompleted;
     }
 
     public Integer getProgramWeek() {

@@ -9,4 +9,7 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class TherapistPatientSearchRequestDto extends PageSearchRequestDto {
     private Boolean redFlagOnly = false;
+
+    public Boolean getRedFlagOnly() { return redFlagOnly; }
+    public void setRedFlagOnly(Boolean redFlagOnly) { this.redFlagOnly = redFlagOnly; }
 }

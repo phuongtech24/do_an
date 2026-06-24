@@ -11,4 +11,7 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class JournalSearchRequestDto extends PageSearchRequestDto {
     private UUID patientId;
+
+    public UUID getPatientId() { return patientId; }
+    public void setPatientId(UUID patientId) { this.patientId = patientId; }
 }

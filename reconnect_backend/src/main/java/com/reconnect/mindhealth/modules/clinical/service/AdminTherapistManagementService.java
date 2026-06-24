@@ -53,12 +53,6 @@ public class AdminTherapistManagementService {
                 }
                 profile.setPhoneNumber(request.getPhoneNumber().trim());
             }
-                User user = profile.getUser();
-                if (user != null) {
-                    user.setUsername(profile.getFullName());
-                    userRepository.save(user);
-                }
-            }
             if (request.getHometown() != null) {
                 profile.setHometown(blankToNull(request.getHometown()));
             }
@@ -80,6 +74,11 @@ public class AdminTherapistManagementService {
             }
             if (request.getMeetingLink() != null) {
                 profile.setMeetingLink(blankToNull(request.getMeetingLink()));
+            }
+            if (profile.getUser() != null && profile.getFullName() != null) {
+                User user = profile.getUser();
+                user.setUsername(profile.getFullName());
+                userRepository.save(user);
             }
         }
 

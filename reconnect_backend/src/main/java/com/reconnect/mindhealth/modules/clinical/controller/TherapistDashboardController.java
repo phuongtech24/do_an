@@ -36,12 +36,10 @@ import com.reconnect.mindhealth.modules.journal.repository.JournalRepository;
 import com.reconnect.mindhealth.modules.roadmap.entity.BehavioralExperiment;
 import com.reconnect.mindhealth.modules.roadmap.entity.FearLadderItem;
 import com.reconnect.mindhealth.modules.roadmap.entity.PatientGoal;
-import com.reconnect.mindhealth.modules.roadmap.entity.PatientQuest;
 import com.reconnect.mindhealth.modules.roadmap.enums.PatientGoalStatus;
 import com.reconnect.mindhealth.modules.roadmap.repository.BehavioralExperimentRepository;
 import com.reconnect.mindhealth.modules.roadmap.repository.FearLadderItemRepository;
 import com.reconnect.mindhealth.modules.roadmap.repository.PatientGoalRepository;
-import com.reconnect.mindhealth.modules.roadmap.repository.PatientQuestRepository;
 import com.reconnect.mindhealth.modules.roadmap.service.RoadmapProgramStateService;
 
 @RestController
@@ -57,7 +55,6 @@ public class TherapistDashboardController {
     private final UserMoodRepository userMoodRepository;
     private final FearLadderItemRepository fearLadderItemRepository;
     private final BehavioralExperimentRepository behavioralExperimentRepository;
-    private final PatientQuestRepository patientQuestRepository;
 
     public TherapistDashboardController(
             TherapistAssignmentService therapistAssignmentService,
@@ -68,8 +65,7 @@ public class TherapistDashboardController {
             JournalRepository journalRepository,
             UserMoodRepository userMoodRepository,
             FearLadderItemRepository fearLadderItemRepository,
-            BehavioralExperimentRepository behavioralExperimentRepository,
-            PatientQuestRepository patientQuestRepository) {
+            BehavioralExperimentRepository behavioralExperimentRepository) {
         this.therapistAssignmentService = therapistAssignmentService;
         this.lsasSubmissionRepository = lsasSubmissionRepository;
         this.patientGoalRepository = patientGoalRepository;
@@ -79,7 +75,6 @@ public class TherapistDashboardController {
         this.userMoodRepository = userMoodRepository;
         this.fearLadderItemRepository = fearLadderItemRepository;
         this.behavioralExperimentRepository = behavioralExperimentRepository;
-        this.patientQuestRepository = patientQuestRepository;
     }
 
     @GetMapping("/patients")
@@ -145,8 +140,8 @@ public class TherapistDashboardController {
 
     private Integer resolveBaselineLsas(PatientProfile patient) {
         return Optional.ofNullable(lsasSubmissionRepository.findTopByPatientProfile_IdAndSubmissionTypeOrderByCreateDateAsc(
-                patient.getId(),
-                LsasSubmissionType.BASELINE))
+                        patient.getId(),
+                        LsasSubmissionType.BASELINE))
                 .map(LsasSubmission::getTotalScore)
                 .orElse(patient.getCurrentLsasScore());
     }
@@ -161,8 +156,12 @@ public class TherapistDashboardController {
     }
 
     private boolean resolveStalledProgress(PatientProfile patient) {
-        List<PatientQuest> recent = patientQuestRepository.findRecentByPatientId(patient.getId()).stream().limit(3).toList();
-        return !recent.isEmpty() && recent.stream().noneMatch(quest -> quest.getCompletedAt() != null);
+        List<BehavioralExperiment> recent = behavioralExperimentRepository
+                .findByPatientProfile_IdOrderByAssignedAtDesc(patient.getId())
+                .stream()
+                .limit(3)
+                .toList();
+        return !recent.isEmpty() && recent.stream().noneMatch(item -> item.getStatus() != null && item.getCompletedAt() != null);
     }
 
     private java.time.LocalDateTime resolveUpcomingAppointment(PatientProfile patient) {
@@ -220,9 +219,6 @@ public class TherapistDashboardController {
         dto.setRecentDailyCheckinSummaries(moods.stream()
                 .map(item -> "Lo âu " + safe(item.getAnxietyScore()) + "/100, né tránh " + safe(item.getAvoidanceUrgeScore()) + "/100")
                 .toList());
-
-        List<PatientQuest> recentQuests = patientQuestRepository.findRecentByPatientId(patient.getId()).stream().limit(5).toList();
-        dto.setRecentHomeworkCompleted((int) recentQuests.stream().filter(item -> item.getCompletedAt() != null).count());
 
         int programWeek = roadmapProgramStateService.resolveProgramWeek(patient);
         dto.setProgramWeek(programWeek > 0 ? programWeek : null);

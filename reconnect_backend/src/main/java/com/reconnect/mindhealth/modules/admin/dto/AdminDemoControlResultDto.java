@@ -9,7 +9,6 @@ public class AdminDemoControlResultDto {
     private Integer currentRiskScore;
     private Integer currentLsasScore;
     private Boolean redFlagActive;
-    private Integer createdQuests;
     private String clinicalRoute;
     private Boolean clinicalAttention;
     private String taperingStage;
@@ -77,14 +76,6 @@ public class AdminDemoControlResultDto {
 
     public void setRedFlagActive(Boolean redFlagActive) {
         this.redFlagActive = redFlagActive;
-    }
-
-    public Integer getCreatedQuests() {
-        return createdQuests;
-    }
-
-    public void setCreatedQuests(Integer createdQuests) {
-        this.createdQuests = createdQuests;
     }
 
     public String getClinicalRoute() {

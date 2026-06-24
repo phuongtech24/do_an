@@ -20,8 +20,6 @@ import com.reconnect.mindhealth.modules.clinical.enums.Status;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
 import com.reconnect.mindhealth.modules.journal.repository.JournalRepository;
 import com.reconnect.mindhealth.modules.risk.dto.RiskCalculationResultDto;
-import com.reconnect.mindhealth.modules.risk.entity.DailyRiskLog;
-import com.reconnect.mindhealth.modules.risk.repository.DailyRiskLogRepository;
 import com.reconnect.mindhealth.modules.risk.service.IRiskScoringService;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -36,17 +34,14 @@ public class RiskScoringServiceImpl implements IRiskScoringService {
     private final PatientProfileRepository patientProfileRepository;
     private final JournalRepository journalRepository;
     private final UserMoodRepository userMoodRepository;
-    private final DailyRiskLogRepository dailyRiskLogRepository;
 
     public RiskScoringServiceImpl(
             PatientProfileRepository patientProfileRepository,
             JournalRepository journalRepository,
-            UserMoodRepository userMoodRepository,
-            DailyRiskLogRepository dailyRiskLogRepository) {
+            UserMoodRepository userMoodRepository) {
         this.patientProfileRepository = patientProfileRepository;
         this.journalRepository = journalRepository;
         this.userMoodRepository = userMoodRepository;
-        this.dailyRiskLogRepository = dailyRiskLogRepository;
     }
 
     @Override
@@ -60,7 +55,6 @@ public class RiskScoringServiceImpl implements IRiskScoringService {
             patient.setStatus(Status.WARNING);
         }
         PatientProfile saved = patientProfileRepository.save(patient);
-        persistDailyRiskLog(saved, result);
         return result;
     }
 
@@ -86,63 +80,27 @@ public class RiskScoringServiceImpl implements IRiskScoringService {
         int maxAiToday = journalRepository.getMaxAiRiskScoreInDay(patientId, startOfDay, endOfDay);
         int scoreAi = maxAiToday >= 100 ? 100 : (maxAiToday >= 70 ? 70 : 0);
         int scoreCheckIn = calculateCheckInSafetyScore(patientId);
-        int scoreMood = calculateMoodScore(patientId);
         int scoreSafety = Math.max(scoreAi >= 100 ? 100 : 0, scoreCheckIn);
 
         boolean override = scoreAi >= 70 || scoreSafety >= 70;
         int riskIndex;
         if (scoreAi >= 100 || scoreSafety >= 100) {
             riskIndex = 100;
-        } else if (scoreAi >= 70) {
+        } else if (scoreAi >= 70 || scoreSafety >= 70) {
             riskIndex = 70;
         } else {
-            riskIndex = (int) Math.round((0.5 * scoreAi) + (0.25 * scoreMood) + (0.25 * scoreCheckIn));
+            riskIndex = 0;
         }
 
         RiskCalculationResultDto dto = new RiskCalculationResultDto();
         dto.setPatientId(patientId);
         dto.setScoreAi(scoreAi);
-        dto.setScoreMood(scoreMood);
+        dto.setScoreMood(0);
         dto.setScoreCheckIn(scoreCheckIn);
         dto.setScoreSafety(scoreSafety);
         dto.setRiskIndex(riskIndex);
         dto.setOverrideTriggered(override);
         return dto;
-    }
-
-    private void persistDailyRiskLog(PatientProfile patient, RiskCalculationResultDto result) {
-        LocalDate today = LocalDate.now(ZoneId.of("Asia/Bangkok"));
-        DailyRiskLog dailyLog = dailyRiskLogRepository
-                .findByPatientProfile_IdAndRiskDate(patient.getId(), today)
-                .orElseGet(DailyRiskLog::new);
-        dailyLog.setPatientProfile(patient);
-        dailyLog.setRiskDate(today);
-        dailyLog.setRiskScore(result.getRiskIndex());
-        dailyLog.setScoreAi(result.getScoreAi());
-        dailyLog.setScoreMood(result.getScoreMood());
-        dailyLog.setScoreSafety(result.getScoreSafety());
-        dailyLog.setOverrideTriggered(result.isOverrideTriggered());
-        dailyLog.setRedFlagActive(Boolean.TRUE.equals(patient.getIsRedFlagActive()));
-        dailyLog.setCalculatedAt(LocalDateTime.now());
-        dailyRiskLogRepository.save(dailyLog);
-    }
-
-    private int calculateMoodScore(UUID patientId) {
-        List<UserMood> last3 = userMoodRepository.findTop3ByPatientProfile_IdOrderByCreateDateDesc(patientId);
-        if (last3 == null || last3.size() < 3) {
-            return 0;
-        }
-        double average = last3.stream()
-                .mapToInt(mood -> mood.getMoodScore() != null ? mood.getMoodScore() : 0)
-                .average()
-                .orElse(100);
-        if (average < 20) {
-            return 100;
-        }
-        if (average < 35) {
-            return 50;
-        }
-        return 0;
     }
 
     private int calculateCheckInSafetyScore(UUID patientId) {
@@ -156,11 +114,6 @@ public class RiskScoringServiceImpl implements IRiskScoringService {
             return 100;
         }
 
-        int anxiety = latest.getAnxietyScore() != null ? latest.getAnxietyScore() : 0;
-        int sadness = latest.getSadnessScore() != null ? latest.getSadnessScore() : 0;
-        if (anxiety >= 90 || sadness >= 90) {
-            return 50;
-        }
         return 0;
     }
 }

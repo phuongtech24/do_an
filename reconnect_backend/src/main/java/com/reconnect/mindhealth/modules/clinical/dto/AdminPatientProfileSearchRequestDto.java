@@ -10,4 +10,9 @@ import lombok.EqualsAndHashCode;
 public class AdminPatientProfileSearchRequestDto extends PageSearchRequestDto {
     private Boolean redFlagOnly = false;
     private Boolean triageOnly = false;
+
+    public Boolean getRedFlagOnly() { return redFlagOnly; }
+    public void setRedFlagOnly(Boolean redFlagOnly) { this.redFlagOnly = redFlagOnly; }
+    public Boolean getTriageOnly() { return triageOnly; }
+    public void setTriageOnly(Boolean triageOnly) { this.triageOnly = triageOnly; }
 }
