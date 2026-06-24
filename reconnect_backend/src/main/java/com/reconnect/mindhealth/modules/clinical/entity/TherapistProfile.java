@@ -28,6 +28,9 @@ public class TherapistProfile extends BaseObject {
     @Column(name = "full_name", nullable = false)
     private String fullName;
 
+    @Column(name = "phone_number", length = 20)
+    private String phoneNumber;
+
     @Column(name = "specialization")
     private String specialization;
 
@@ -73,6 +76,14 @@ public class TherapistProfile extends BaseObject {
 
     public void setFullName(String fullName) {
         this.fullName = fullName;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
     }
 
 

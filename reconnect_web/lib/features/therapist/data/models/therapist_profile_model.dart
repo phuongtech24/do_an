@@ -2,6 +2,7 @@ class TherapistProfileModel {
   final String therapistId;
   final String fullName;
   final String email;
+  final String? phoneNumber;
   final String? hometown;
   final int? birthYear;
   final String? voiceDescription;
@@ -17,6 +18,7 @@ class TherapistProfileModel {
     required this.therapistId,
     required this.fullName,
     required this.email,
+    this.phoneNumber,
     required this.hometown,
     required this.birthYear,
     required this.voiceDescription,
@@ -39,6 +41,7 @@ class TherapistProfileModel {
       therapistId: json['therapistId']?.toString() ?? '',
       fullName: json['fullName']?.toString() ?? '',
       email: json['email']?.toString() ?? '',
+      phoneNumber: json['phoneNumber']?.toString(),
       hometown: nullableString(json['hometown']),
       birthYear: (json['birthYear'] as num?)?.toInt(),
       voiceDescription: nullableString(json['voiceDescription']),

@@ -140,6 +140,48 @@ class _TherapistCredentialsUploadScreenState extends State<TherapistCredentialsU
     }
   }
 
+
+  Future<void> _deleteCredential(TherapistCredentialModel item) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = auth.token;
+    if (token == null || token.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Xóa chứng chỉ?'),
+        content: Text('Bạn có chắc muốn xóa file "${item.fileName}" không?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Hủy')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.alert, foregroundColor: Colors.white),
+            child: const Text('Xóa'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() {
+      _loading = true;
+      _error = '';
+    });
+
+    try {
+      await _repo.deleteCredential(token: token, credentialId: item.id);
+      await _loadAll();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã xóa chứng chỉ.')));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
+
   String _mapStatus(String s) {
     if (s == 'PENDING') return 'Chờ duyệt';
     if (s == 'ACTIVE') return 'Đang hoạt động';
@@ -255,9 +297,18 @@ class _TherapistCredentialsUploadScreenState extends State<TherapistCredentialsU
                                 leading: const Icon(Icons.description_outlined),
                                 title: Text(it.fileName, maxLines: 1, overflow: TextOverflow.ellipsis),
                                 subtitle: Text('${(it.sizeBytes / 1024).toStringAsFixed(1)} KB • ${it.uploadedAt}'),
-                                trailing: TextButton(
-                                  onPressed: _loading ? null : () => _download(it),
-                                  child: const Text('Tải xuống'),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    TextButton(
+                                      onPressed: _loading ? null : () => _download(it),
+                                      child: const Text('Tải xuống'),
+                                    ),
+                                    IconButton(
+                                      onPressed: _loading ? null : () => _deleteCredential(it),
+                                      icon: const Icon(Icons.close, color: AppColors.alert),
+                                    ),
+                                  ],
                                 ),
                               );
                             },

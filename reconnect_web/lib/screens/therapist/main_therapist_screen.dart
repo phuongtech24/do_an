@@ -66,7 +66,7 @@ class _MainTherapistScreenState extends State<MainTherapistScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Text(
-                    'Hi, ${email ?? 'Chuy?n gia'}',
+                    'Hi, ${email ?? 'Chuyên gia'}',
                     textAlign: TextAlign.center,
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     maxLines: 2,
@@ -76,26 +76,26 @@ class _MainTherapistScreenState extends State<MainTherapistScreen> {
                 const Divider(height: 48),
                 _SidebarItem(
                   icon: Icons.psychology,
-                  label: 'B?ng ?i?u tr?',
+                  label: 'Bảng điều trị',
                   selected: _selectedIndex == 0,
                   onTap: () => setState(() => _selectedIndex = 0),
                 ),
                 _SidebarItem(
                   icon: Icons.calendar_month,
-                  label: 'L?ch h?n & Tham v?n',
+                  label: 'Lịch hẹn & Tham vấn',
                   selected: _selectedIndex == 1,
                   onTap: () => setState(() => _selectedIndex = 1),
                 ),
                 _SidebarItem(
                   icon: Icons.account_circle_outlined,
-                  label: 'H? s? chuy?n gia',
+                  label: 'Hồ sơ chuyên gia',
                   selected: _selectedIndex == 2,
                   onTap: () => setState(() => _selectedIndex = 2),
                 ),
                 const Spacer(),
                 ListTile(
                   leading: const Icon(Icons.logout, color: Colors.grey),
-                  title: const Text('??ng xu?t'),
+                  title: const Text('Đăng xuất'),
                   onTap: () {
                     context.read<AuthProvider>().logout();
                     Navigator.pop(context);
@@ -170,7 +170,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
     if (token == null || token.isEmpty) {
       setState(() {
         _loading = false;
-        _error = 'Ch?a ??ng nh?p ho?c token kh?ng h?p l?.';
+        _error = 'Chưa đăng nhập hoặc token không hợp lệ.';
       });
       return;
     }
@@ -206,7 +206,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
           children: [
             const Expanded(
               child: Text(
-                'B?ng gi?m s?t b?nh nh?n',
+                'Danh sách bệnh nhân',
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
               ),
             ),
@@ -223,7 +223,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
             ),
             const SizedBox(width: 12),
             IconButton(
-              tooltip: 'Táº£i láº¡i',
+              tooltip: 'Tải lại',
               onPressed: _loadPatients,
               icon: const Icon(Icons.refresh),
             ),
@@ -231,7 +231,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
         ),
         const SizedBox(height: 8),
         const Text(
-          'Theo d?i b?nh nh?n ???c Admin g?n, ?u ti?n ca Red Flag v? ti?n ?? can thi?p CBT.',
+          'Theo dõi bệnh nhân được Admin gán, ưu tiên ca Red Flag và tiến độ can thiệp CBT.',
           style: TextStyle(color: AppColors.textSecondary),
         ),
         const SizedBox(height: 32),
@@ -264,8 +264,8 @@ class _PatientDashboardState extends State<PatientDashboard> {
           padding: const EdgeInsets.all(32),
           child: Text(
             _redFlagOnly
-                ? 'Kh?ng c? b?nh nh?n Red Flag trong danh s?ch ph? tr?ch.'
-                : 'Ch?a c? b?nh nh?n n?o ???c Admin g?n cho t?i kho?n chuy?n gia n?y.',
+                ? 'Không có bệnh nhân Red Flag trong danh sách phụ trách.'
+                : 'Chưa có bệnh nhân nào được Admin gán cho tài khoản chuyên gia này.',
             textAlign: TextAlign.center,
             style: const TextStyle(color: AppColors.textSecondary, fontSize: 16),
           ),
@@ -302,7 +302,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 _StatusBadge(
-                  label: isRedAlert ? 'RED FLAG' : '?ANG THEO D?I',
+                  label: isRedAlert ? 'RED FLAG' : 'ĐANG THEO DÕI',
                   color: isRedAlert ? AppColors.alert : AppColors.success,
                 ),
                 Text(
@@ -318,7 +318,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
                     children: [
                       Icon(Icons.warning_amber_rounded, color: AppColors.alert, size: 16),
                       SizedBox(width: 4),
-                      Text('C?n ?u ti?n can thi?p', style: TextStyle(color: AppColors.alert)),
+                      Text('Cần ưu tiên can thiệp', style: TextStyle(color: AppColors.alert)),
                     ],
                   ),
               ],
@@ -358,7 +358,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
               backgroundColor: isRedAlert ? AppColors.alert : AppColors.primary,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Xem chi ti?t & can thi?p'),
+            child: const Text('Xem chi tiết & can thiệp'),
           ),
         );
       },

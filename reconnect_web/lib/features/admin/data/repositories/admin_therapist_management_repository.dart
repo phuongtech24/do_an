@@ -8,6 +8,7 @@ class AdminTherapistManagementRepository {
     required String token,
     required String therapistId,
     String? fullName,
+    String? phoneNumber,
     String? hometown,
     int? birthYear,
     String? voiceDescription,
@@ -21,6 +22,7 @@ class AdminTherapistManagementRepository {
       headers: {'Authorization': 'Bearer $token'},
       body: {
         'fullName': fullName,
+        'phoneNumber': phoneNumber,
         'hometown': hometown,
         'birthYear': birthYear,
         'voiceDescription': voiceDescription,

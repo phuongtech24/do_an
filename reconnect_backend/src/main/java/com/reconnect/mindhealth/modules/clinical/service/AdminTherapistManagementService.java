@@ -46,6 +46,13 @@ public class AdminTherapistManagementService {
         if (request != null) {
             if (request.getFullName() != null && !request.getFullName().trim().isEmpty()) {
                 profile.setFullName(request.getFullName().trim());
+            }
+            if (request.getPhoneNumber() != null) {
+                if (request.getPhoneNumber().trim().isEmpty()) {
+                    throw new IllegalArgumentException("Số điện thoại không được để trống.");
+                }
+                profile.setPhoneNumber(request.getPhoneNumber().trim());
+            }
                 User user = profile.getUser();
                 if (user != null) {
                     user.setUsername(profile.getFullName());

@@ -3,6 +3,7 @@ package com.reconnect.mindhealth.modules.clinical.dto;
 public class AdminTherapistUpdateRequestDto {
 
     private String fullName;
+    private String phoneNumber;
     private String hometown;
     private Integer birthYear;
     private String voiceDescription;
@@ -20,6 +21,14 @@ public class AdminTherapistUpdateRequestDto {
 
     public void setFullName(String fullName) {
         this.fullName = fullName;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
     }
 
     public String getHometown() {

@@ -112,6 +112,7 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
                   therapistId: x.therapistId,
                   fullName: x.fullName,
                   email: x.email,
+                  phoneNumber: x.phoneNumber,
                   hometown: x.hometown,
                   birthYear: x.birthYear,
                   voiceDescription: x.voiceDescription,
@@ -175,6 +176,7 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
                     therapistId: x.therapistId,
                     fullName: x.fullName,
                     email: x.email,
+                    phoneNumber: x.phoneNumber,
                     hometown: x.hometown,
                     birthYear: x.birthYear,
                     voiceDescription: x.voiceDescription,
@@ -246,6 +248,7 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
     if (token == null || token.isEmpty) return;
 
     final fullNameCtrl = TextEditingController(text: item.fullName);
+    final phoneNumberCtrl = TextEditingController(text: item.phoneNumber ?? '');
     final hometownCtrl = TextEditingController(text: item.hometown ?? '');
     final birthYearCtrl = TextEditingController(text: item.birthYear?.toString() ?? '');
     final voiceDescriptionCtrl = TextEditingController(text: item.voiceDescription ?? '');
@@ -265,6 +268,8 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(controller: fullNameCtrl, decoration: const InputDecoration(labelText: 'Họ tên')),
+              const SizedBox(height: 10),
+              TextField(controller: phoneNumberCtrl, decoration: const InputDecoration(labelText: 'Số điện thoại *')),
               const SizedBox(height: 10),
               TextField(controller: hometownCtrl, decoration: const InputDecoration(labelText: 'Quê quán / khu vực')),
               const SizedBox(height: 10),
@@ -295,7 +300,13 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Lưu')),
+          ElevatedButton(onPressed: () {
+            if (phoneNumberCtrl.text.trim().isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Số điện thoại không được để trống')));
+              return;
+            }
+            Navigator.pop(context, true);
+          }, child: const Text('Lưu')),
         ],
       ),
     );
@@ -312,6 +323,7 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
         token: token,
         therapistId: item.therapistId,
         fullName: fullNameCtrl.text.trim(),
+        phoneNumber: phoneNumberCtrl.text.trim(),
         hometown: hometownCtrl.text.trim(),
         birthYear: int.tryParse(birthYearCtrl.text.trim()),
         voiceDescription: voiceDescriptionCtrl.text.trim(),
