@@ -1,0 +1,76 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+skinparam nodesep 40
+skinparam ranksep 50
+
+skinparam state {
+  BackgroundColor LightBlue
+  BorderColor Blue
+  ArrowColor DarkBlue
+  FontName "Times New Roman"
+}
+
+title Biểu đồ luồng giao diện - Mobile App (Bệnh nhân)
+
+' --- AUTH & ONBOARDING ---
+state "Màn hình Khởi động\n(Splash Screen)" as Splash
+state "Đăng nhập / Đăng ký" as Auth
+state "Onboarding & LSAS Baseline" as Onboarding
+
+' --- MAIN DASHBOARD ---
+state "Trang chủ Bệnh nhân (Dashboard)" as Dashboard {
+  state "Khám phá\n(Home/Check-in)" as TabHome
+  state "Lộ trình CBT\n(Roadmap)" as TabRoadmap
+  state "Nhật ký AI\n(Journal)" as TabJournal
+  state "Đặt lịch\n(Telehealth)" as TabTelehealth
+  
+  TabHome -[hidden]right-> TabRoadmap
+  TabRoadmap -[hidden]right-> TabJournal
+  TabJournal -[hidden]right-> TabTelehealth
+}
+
+' --- SUB-FLOWS ---
+state "Kiểm tra tâm trạng\n(Daily Check-in)" as DailyCheckin
+state "Cảnh báo khẩn\n(Safety Gate)" as SafetyGate
+
+state "Chi tiết Bậc sợ hãi" as FearLadder
+state "Bài tập Hành vi\n(Behavioral Exp)" as BehavioralExp
+
+state "Viết Nhật ký" as WriteJournal
+state "Chat cùng AI" as AiChat
+
+state "Chọn Bác sĩ & Slot" as Booking
+state "Chi tiết Buổi hẹn" as AppointmentDetail
+
+' --- CONNECTIONS ---
+[*] -down-> Splash
+Splash -down-> Auth : Chưa đăng nhập
+Splash -down-> Dashboard : Đã đăng nhập
+
+Auth -right-> Onboarding : Đăng ký mới
+Onboarding -down-> Dashboard : Hoàn tất
+
+' Home Flow
+Dashboard --> DailyCheckin : Từ Tab Khám phá
+DailyCheckin -down-> SafetyGate : Điểm rủi ro cao
+DailyCheckin -up-> Dashboard : Bình thường
+SafetyGate -up-> Dashboard : Đã tiếp nhận
+
+' Roadmap Flow
+Dashboard --> FearLadder : Từ Tab Lộ trình
+FearLadder -down-> BehavioralExp : Bắt đầu thực hành
+BehavioralExp -up-> Dashboard : Hoàn thành
+
+' Journal Flow
+Dashboard --> WriteJournal : Viết mới (Từ Tab Nhật ký)
+Dashboard --> AiChat : Mở Chat AI
+WriteJournal -up-> Dashboard : Đã lưu
+AiChat -up-> Dashboard : Kết thúc chat
+
+' Telehealth Flow
+Dashboard --> Booking : Đặt mới (Từ Tab Đặt lịch)
+Booking -down-> AppointmentDetail : Xác nhận đặt
+Dashboard --> AppointmentDetail : Xem lịch hẹn
+AppointmentDetail -up-> Dashboard : Quay lại
+
+@enduml

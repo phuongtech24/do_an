@@ -1,0 +1,150 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+title Biểu đồ lớp thiết kế — Package Journal & AI (Thought Record + AI Companion)
+
+interface IJournalService {
+  +createJournal(req: JournalRequestDto): JournalDto
+  +getJournalsByPatient(patientId: UUID): List<JournalDto>
+  +analyzeRisk(journalId: UUID): RiskAnalysisDto
+}
+
+interface IAiAssistantService {
+  +generateResponse(message: String, context: String): String
+  +analyzeSentiment(text: String): SentimentResultDto
+  +suggestCognitiveErrors(text: String): List<String>
+}
+
+interface IAiChatService {
+  +startSession(patientId: UUID): AiChatSessionDto
+  +sendMessage(sessionId: UUID, content: String): AiChatMessageDto
+  +getHistory(sessionId: UUID): List<AiChatMessageDto>
+  +submitFeedback(messageId: UUID, isHelpful: Boolean): void
+}
+
+class JournalController {
+  -journalService: IJournalService
+  +createJournal(req: JournalRequestDto): ResponseEntity
+  +getJournals(patientId: UUID): ResponseEntity
+  +analyzeRisk(journalId: UUID): ResponseEntity
+}
+
+class AiController {
+  -aiAssistantService: IAiAssistantService
+  +analyzeThoughtRecord(req: JournalRequestDto): ResponseEntity
+  +suggestErrors(text: String): ResponseEntity
+}
+
+class AiChatController {
+  -aiChatService: IAiChatService
+  +startSession(patientId: UUID): ResponseEntity
+  +sendMessage(sessionId: UUID, req: ChatMessageDto): ResponseEntity
+  +getHistory(sessionId: UUID): ResponseEntity
+  +submitFeedback(messageId: UUID, isHelpful: Boolean): ResponseEntity
+}
+
+class JournalServiceImpl {
+  -journalRepository: IJournalRepository
+  -aiAssistantService: IAiAssistantService
+  -patientProfileRepository: IPatientProfileRepository
+  +createJournal(req: JournalRequestDto): JournalDto
+  +analyzeRisk(journalId: UUID): RiskAnalysisDto
+  +updateAiAnalysis(journal: Journal, score: Integer, reason: String): void
+}
+
+class GeminiAiAssistantServiceImpl {
+  -geminiApiKey: String
+  -geminiEndpoint: String
+  +generateResponse(message: String, context: String): String
+  +analyzeSentiment(text: String): SentimentResultDto
+  +suggestCognitiveErrors(text: String): List<String>
+}
+
+class AiChatServiceImpl {
+  -aiChatSessionRepository: IAiChatSessionRepository
+  -aiChatMessageRepository: IAiChatMessageRepository
+  -aiChatFeedbackRepository: IAiChatFeedbackRepository
+  -aiAssistantService: IAiAssistantService
+  +startSession(patientId: UUID): AiChatSessionDto
+  +sendMessage(sessionId: UUID, content: String): AiChatMessageDto
+  +submitFeedback(messageId: UUID, isHelpful: Boolean): void
+}
+
+interface IJournalRepository {
+  +save(journal: Journal): Journal
+  +findByPatientId(id: UUID): List<Journal>
+  +findHighRiskByPatientId(id: UUID): List<Journal>
+}
+
+interface IAiChatSessionRepository {
+  +save(session: AiChatSession): AiChatSession
+  +findByPatientId(id: UUID): List<AiChatSession>
+}
+
+interface IAiChatMessageRepository {
+  +save(msg: AiChatMessage): AiChatMessage
+  +findBySessionId(id: UUID): List<AiChatMessage>
+}
+
+interface IAiChatFeedbackRepository {
+  +save(fb: AiChatFeedback): AiChatFeedback
+}
+
+class JournalRepository
+class AiChatSessionRepository
+class AiChatMessageRepository
+class AiChatFeedbackRepository
+
+class JournalRequestDto {
+  +patientId: UUID
+  +journalType: String
+  +contentEncrypted: String
+  +step: Integer
+}
+
+class JournalDto {
+  +id: UUID
+  +journalType: String
+  +aiRiskScore: Integer
+  +severityLevel: String
+  +aiRiskReason: String
+  +createdAt: LocalDateTime
+}
+
+class ChatMessageDto {
+  +content: String
+}
+
+class AiChatSessionDto {
+  +sessionId: UUID
+  +sessionTitle: String
+  +createdAt: LocalDateTime
+}
+
+class AiChatMessageDto {
+  +messageId: UUID
+  +role: String
+  +content: String
+  +sentAt: LocalDateTime
+}
+
+JournalController --> IJournalService : uses
+AiController --> IAiAssistantService : uses
+AiChatController --> IAiChatService : uses
+JournalServiceImpl ..|> IJournalService : implements
+GeminiAiAssistantServiceImpl ..|> IAiAssistantService : implements
+AiChatServiceImpl ..|> IAiChatService : implements
+JournalServiceImpl --> IJournalRepository : uses
+JournalServiceImpl --> IAiAssistantService : uses
+AiChatServiceImpl --> IAiChatSessionRepository : uses
+AiChatServiceImpl --> IAiChatMessageRepository : uses
+AiChatServiceImpl --> IAiAssistantService : uses
+JournalRepository ..|> IJournalRepository : implements
+AiChatSessionRepository ..|> IAiChatSessionRepository : implements
+AiChatMessageRepository ..|> IAiChatMessageRepository : implements
+AiChatFeedbackRepository ..|> IAiChatFeedbackRepository : implements
+JournalController ..> JournalRequestDto : uses
+JournalController ..> JournalDto : returns
+AiChatController ..> ChatMessageDto : uses
+AiChatController ..> AiChatMessageDto : returns
+
+@enduml

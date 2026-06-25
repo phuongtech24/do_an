@@ -1,14 +1,31 @@
-@startuml
+﻿@startuml
 skinparam defaultFontName "Times New Roman"
-class LoginBoundary
-class AuthController
-class AuthService
-class TokenService
-class UserRepository
-class PasswordEncoder
-LoginBoundary --> AuthController
-AuthController --> AuthService
-AuthService --> TokenService
-AuthService --> UserRepository
-AuthService --> PasswordEncoder
+skinparam shadowing false
+skinparam monochrome true
+skinparam linetype ortho
+skinparam nodesep 45
+skinparam ranksep 40
+title UC03 - Đăng nhập và xác thực
+left to right direction
+actor "Người dùng" as A
+boundary "Form_DangNhap" as B1
+boundary "Form_QuenMatKhau" as B2
+control "ctrl_Auth" as C1
+control "ctrl_TokenManager" as C2
+entity "Ent_User" as E1
+entity "Ent_PatientProfile" as E2
+entity "Ent_TherapistProfile" as E3
+B1 -[hidden]down-> B2
+C1 -[hidden]down-> C2
+E1 -[hidden]down-> E2
+E2 -[hidden]down-> E3
+A -- B1
+A -- B2
+B1 -- C1
+B2 -- C1
+C1 -- C2
+C1 -- E1
+C1 -- E2
+C1 -- E3
+C2 -- E1
 @enduml

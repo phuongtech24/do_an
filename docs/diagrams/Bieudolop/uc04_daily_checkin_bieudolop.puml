@@ -1,14 +1,38 @@
-@startuml
+﻿@startuml
 skinparam defaultFontName "Times New Roman"
-class DailyCheckinBoundary
-class MoodController
-class MoodService
-class SafetyGatePolicy
-class UserMoodRepository
-class RedFlagService
-DailyCheckinBoundary --> MoodController
-MoodController --> MoodService
-MoodService --> SafetyGatePolicy
-MoodService --> UserMoodRepository
-MoodService --> RedFlagService
+skinparam shadowing false
+skinparam monochrome true
+skinparam linetype ortho
+skinparam nodesep 45
+skinparam ranksep 40
+title UC04 - Điểm danh cảm xúc và Safety Gate
+left to right direction
+actor "Bệnh nhân" as A
+boundary "Form_DailyCheckin" as B1
+boundary "Form_SafetyGate" as B2
+boundary "Form_KhanCap" as B3
+control "ctrl_CheckinSubmit" as C1
+control "ctrl_SafetyGate" as C2
+control "ctrl_Routing" as C3
+entity "Ent_UserMood" as E1
+entity "Ent_PatientProfile" as E2
+entity "Ent_Journal" as E3
+B1 -[hidden]down-> B2
+B2 -[hidden]down-> B3
+C1 -[hidden]down-> C2
+C2 -[hidden]down-> C3
+E1 -[hidden]down-> E2
+E2 -[hidden]down-> E3
+A -- B1
+A -- B2
+B1 -- C1
+B2 -- C2
+B3 -- C2
+C1 -- C2
+C2 -- C3
+C1 -- E1
+C2 -- E1
+C2 -- E2
+C3 -- E1
+C3 -- E3
 @enduml

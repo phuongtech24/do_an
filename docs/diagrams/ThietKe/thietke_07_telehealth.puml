@@ -1,0 +1,120 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+title Biểu đồ lớp thiết kế — Package Telehealth (Đặt lịch & Phiên CBT)
+
+interface IBookingService {
+  +getAvailableSlots(therapistId: UUID, date: LocalDate): List<SlotDto>
+  +bookAppointment(req: BookingRequestDto): AppointmentDto
+  +cancelAppointment(id: UUID): void
+  +getAppointmentsByPatient(patientId: UUID): List<AppointmentDto>
+  +getAppointmentsByTherapist(therapistId: UUID): List<AppointmentDto>
+}
+
+interface IScheduleManageService {
+  +addWeeklySlot(req: WeeklySlotDto): void
+  +removeWeeklySlot(slotId: UUID): void
+  +generateSlotsForDate(therapistId: UUID, date: LocalDate): List<SlotDto>
+}
+
+class BoosterController {
+  -bookingService: IBookingService
+  +getAvailableSlots(therapistId: UUID, date: LocalDate): ResponseEntity
+  +bookAppointment(req: BookingRequestDto): ResponseEntity
+  +cancelAppointment(id: UUID): ResponseEntity
+  +getMyAppointments(patientId: UUID): ResponseEntity
+}
+
+class ScheduleController {
+  -scheduleManageService: IScheduleManageService
+  +addWeeklySlot(req: WeeklySlotDto): ResponseEntity
+  +removeWeeklySlot(slotId: UUID): ResponseEntity
+  +getMySlots(therapistId: UUID): ResponseEntity
+}
+
+class BoosterServiceImpl {
+  -appointmentRepository: IAppointmentRepository
+  -scheduleSlotRepository: IScheduleSlotRepository
+  -weeklyScheduleRepository: IWeeklyScheduleRepository
+  +getAvailableSlots(therapistId: UUID, date: LocalDate): List<SlotDto>
+  +bookAppointment(req: BookingRequestDto): AppointmentDto
+  +cancelAppointment(id: UUID): void
+}
+
+class ScheduleManageServiceImpl {
+  -weeklyScheduleRepository: IWeeklyScheduleRepository
+  -scheduleSlotRepository: IScheduleSlotRepository
+  +addWeeklySlot(req: WeeklySlotDto): void
+  +generateSlotsForDate(therapistId: UUID, date: LocalDate): List<SlotDto>
+}
+
+interface IAppointmentRepository {
+  +save(a: Appointment): Appointment
+  +findByPatientId(id: UUID): List<Appointment>
+  +findByTherapistId(id: UUID): List<Appointment>
+  +findUpcomingByPatientId(id: UUID): List<Appointment>
+}
+
+interface IScheduleSlotRepository {
+  +findAvailableByTherapistAndDate(tid: UUID, date: LocalDate): List<TherapistScheduleSlot>
+  +save(slot: TherapistScheduleSlot): TherapistScheduleSlot
+  +markBooked(slotId: UUID): void
+}
+
+interface IWeeklyScheduleRepository {
+  +findByTherapistId(id: UUID): List<TherapistWeeklyScheduleSlot>
+  +save(slot: TherapistWeeklyScheduleSlot): TherapistWeeklyScheduleSlot
+  +delete(slotId: UUID): void
+}
+
+class AppointmentRepository
+class TherapistScheduleSlotRepository
+class TherapistWeeklyScheduleSlotRepository
+
+class BookingRequestDto {
+  +patientId: UUID
+  +therapistId: UUID
+  +slotId: UUID
+  +durationMinutes: Integer
+  +purpose: String
+}
+
+class AppointmentDto {
+  +id: UUID
+  +startAt: LocalDateTime
+  +endAt: LocalDateTime
+  +status: String
+  +purpose: String
+  +meetingLink: String
+  +durationMinutes: Integer
+}
+
+class SlotDto {
+  +slotId: UUID
+  +slotDate: LocalDate
+  +startTime: LocalTime
+  +endTime: LocalTime
+  +isBooked: Boolean
+}
+
+class WeeklySlotDto {
+  +therapistId: UUID
+  +dayOfWeek: String
+  +startTime: LocalTime
+  +endTime: LocalTime
+}
+
+BoosterController --> IBookingService : uses
+ScheduleController --> IScheduleManageService : uses
+BoosterServiceImpl ..|> IBookingService : implements
+ScheduleManageServiceImpl ..|> IScheduleManageService : implements
+BoosterServiceImpl --> IAppointmentRepository : uses
+BoosterServiceImpl --> IScheduleSlotRepository : uses
+BoosterServiceImpl --> IWeeklyScheduleRepository : uses
+AppointmentRepository ..|> IAppointmentRepository : implements
+TherapistScheduleSlotRepository ..|> IScheduleSlotRepository : implements
+TherapistWeeklyScheduleSlotRepository ..|> IWeeklyScheduleRepository : implements
+BoosterController ..> BookingRequestDto : uses
+BoosterController ..> AppointmentDto : returns
+BoosterController ..> SlotDto : returns
+
+@enduml

@@ -1,16 +1,31 @@
-@startuml
+﻿@startuml
 skinparam defaultFontName "Times New Roman"
-class ThoughtRecordBoundary
-class JournalController
-class JournalService
-class AiAssistantService
-class AiController
-class JournalRepository
-class DistortionAnalyzer
-ThoughtRecordBoundary --> JournalController
-JournalController --> JournalService
-JournalService --> AiAssistantService
-JournalService --> AiController
-JournalService --> JournalRepository
-AiAssistantService --> DistortionAnalyzer
+skinparam shadowing false
+skinparam monochrome true
+skinparam linetype ortho
+skinparam nodesep 45
+skinparam ranksep 40
+title UC05 - Nhật ký suy nghĩ có hỗ trợ AI
+left to right direction
+actor "Bệnh nhân" as A
+boundary "Form_ThoughtRecord" as B1
+boundary "Form_AiSuggest" as B2
+control "ctrl_JournalWrite" as C1
+control "ctrl_AiAnalysis" as C2
+control "ctrl_RiskDetect" as C3
+entity "Ent_Journal" as E1
+entity "Ent_PatientProfile" as E2
+B1 -[hidden]down-> B2
+C1 -[hidden]down-> C2
+C2 -[hidden]down-> C3
+E1 -[hidden]down-> E2
+A -- B1
+A -- B2
+B1 -- C1
+B2 -- C2
+C1 -- C2
+C2 -- C3
+C1 -- E1
+C3 -- E1
+C3 -- E2
 @enduml

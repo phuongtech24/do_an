@@ -1,0 +1,54 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+skinparam nodesep 50
+skinparam ranksep 50
+
+skinparam state {
+  BackgroundColor LightGreen
+  BorderColor DarkGreen
+  ArrowColor DarkGreen
+  FontName "Times New Roman"
+}
+
+title Biểu đồ luồng giao diện - Web Portal (Admin & Bác sĩ)
+
+state "Màn hình Đăng nhập" as Login
+
+' --- ADMIN FLOW ---
+state "Quyền Quản trị viên (Admin)" as AdminBlock {
+  state "Trang chủ Admin" as AdminDashboard
+  state "Quản lý Bác sĩ" as AdminTherapist
+  state "Duyệt Chứng chỉ" as AdminCredential
+  
+  AdminDashboard -down-> AdminTherapist : Mở danh sách
+  AdminTherapist -right-> AdminCredential : Xem chi tiết\nchứng chỉ
+  AdminCredential -left-> AdminTherapist : Duyệt / Từ chối
+}
+
+' --- THERAPIST FLOW ---
+state "Quyền Bác sĩ (Therapist)" as TherapistBlock {
+  state "Trang chủ Bác sĩ" as TherapistDashboard
+  
+  state "Chi tiết Bệnh nhân" as PatientDetail
+  state "Gói Review Lâm sàng\n(Pre-Session)" as PreSessionReview
+  state "Giao Bài tập CBT" as AssignCBT
+  
+  state "Quản lý Slot Lịch\n(Schedule)" as SlotManage
+
+  TherapistDashboard -down-> PatientDetail : Chọn Bệnh nhân
+  PatientDetail -right-> PreSessionReview : Xem báo cáo rủi ro
+  PreSessionReview -left-> PatientDetail : Đóng
+  
+  PatientDetail -down-> AssignCBT : Giao Fear Ladder
+  AssignCBT -up-> PatientDetail : Giao thành công
+  
+  TherapistDashboard -down-> SlotManage : Mở Lịch tuần
+  SlotManage -up-> TherapistDashboard : Đã lưu cấu hình
+}
+
+' --- CONNECTIONS ---
+[*] -down-> Login
+Login -down-> AdminDashboard : Tài khoản Admin
+Login -down-> TherapistDashboard : Tài khoản Bác sĩ
+
+@enduml

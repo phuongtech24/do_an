@@ -1,0 +1,84 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+title Biểu đồ lớp thiết kế — Package Assessment (LSAS)
+
+interface IAssessmentService {
+  +getSituations(): List<LsasSituationDto>
+  +submitLsas(req: LsasSubmitDto): LsasResultDto
+  +getLatestResult(patientId: UUID): LsasResultDto
+  +getHistory(patientId: UUID): List<LsasResultDto>
+}
+
+class AssessmentController {
+  -assessmentService: IAssessmentService
+  +getSituations(): ResponseEntity
+  +submitLsas(req: LsasSubmitDto): ResponseEntity
+  +getResult(patientId: UUID): ResponseEntity
+  +getHistory(patientId: UUID): ResponseEntity
+}
+
+class AssessmentServiceImpl {
+  -lsasSubmissionRepository: ILsasSubmissionRepository
+  -lsasAnswerRepository: ILsasAnswerRepository
+  -lsasSituationRepository: ILsasSituationRepository
+  -patientProfileRepository: IPatientProfileRepository
+  +submitLsas(req: LsasSubmitDto): LsasResultDto
+  +computeRoute(totalScore: Integer): ClinicalRoute
+  +getSeverityBand(totalScore: Integer): SeverityBand
+}
+
+interface ILsasSubmissionRepository {
+  +save(s: LsasSubmission): LsasSubmission
+  +findLatestByPatientId(id: UUID): Optional<LsasSubmission>
+  +findAllByPatientId(id: UUID): List<LsasSubmission>
+}
+
+interface ILsasAnswerRepository {
+  +saveAll(answers: List<LsasAnswer>): List<LsasAnswer>
+  +findBySubmissionId(id: UUID): List<LsasAnswer>
+}
+
+interface ILsasSituationRepository {
+  +findAll(): List<LsasSituation>
+  +findById(id: UUID): Optional<LsasSituation>
+}
+
+class LsasSubmissionRepository
+class LsasAnswerRepository
+class LsasSituationRepository
+
+class LsasSubmitDto {
+  +patientId: UUID
+  +submissionType: String
+  +answers: List<AnswerItemDto>
+}
+
+class AnswerItemDto {
+  +situationId: UUID
+  +fearScore: Integer
+  +avoidanceScore: Integer
+}
+
+class LsasResultDto {
+  +submissionId: UUID
+  +totalScore: Integer
+  +fearTotal: Integer
+  +avoidanceTotal: Integer
+  +severityBand: String
+  +clinicalRoute: String
+  +takenAt: LocalDateTime
+}
+
+AssessmentController --> IAssessmentService : uses
+AssessmentServiceImpl ..|> IAssessmentService : implements
+AssessmentServiceImpl --> ILsasSubmissionRepository : uses
+AssessmentServiceImpl --> ILsasAnswerRepository : uses
+AssessmentServiceImpl --> ILsasSituationRepository : uses
+LsasSubmissionRepository ..|> ILsasSubmissionRepository : implements
+LsasAnswerRepository ..|> ILsasAnswerRepository : implements
+LsasSituationRepository ..|> ILsasSituationRepository : implements
+AssessmentController ..> LsasSubmitDto : uses
+AssessmentController ..> LsasResultDto : returns
+LsasSubmitDto *-- AnswerItemDto
+
+@enduml

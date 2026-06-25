@@ -1,0 +1,132 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+title Biểu đồ lớp thiết kế — Package Clinical (Bác sĩ & Quản trị viên)
+
+interface IClinicalTriageService {
+  +getMyPatients(therapistId: UUID): List<PatientSummaryDto>
+  +getRedFlagPatients(): List<PatientSummaryDto>
+  +activateRedFlag(patientId: UUID): void
+  +overrideTherapistAssignment(patientId: UUID, therapistId: UUID): void
+  +getPreSessionReview(patientId: UUID): PreSessionReviewDto
+}
+
+interface IAdminService {
+  +listAllTherapists(): List<TherapistSummaryDto>
+  +approveCredential(credentialId: UUID): void
+  +rejectCredential(credentialId: UUID): void
+  +lockAccount(userId: UUID): void
+  +unlockAccount(userId: UUID): void
+}
+
+class TherapistDashboardController {
+  -clinicalTriageService: IClinicalTriageService
+  +getMyPatients(): ResponseEntity
+  +getRedFlagPatients(): ResponseEntity
+  +getPreSessionReview(patientId: UUID): ResponseEntity
+  +overrideTherapist(patientId: UUID, therapistId: UUID): ResponseEntity
+}
+
+class AdminDemoControlController {
+  -adminService: IAdminService
+  +listTherapists(): ResponseEntity
+  +approveCredential(credentialId: UUID): ResponseEntity
+  +rejectCredential(credentialId: UUID): ResponseEntity
+  +lockAccount(userId: UUID): ResponseEntity
+  +unlockAccount(userId: UUID): ResponseEntity
+}
+
+class ClinicalTriageServiceImpl {
+  -patientProfileRepository: IPatientProfileRepository
+  -therapistProfileRepository: ITherapistProfileRepository
+  -journalRepository: IJournalRepository
+  -lsasSubmissionRepository: ILsasSubmissionRepository
+  -userMoodRepository: IUserMoodRepository
+  -fearLadderItemRepository: IFearLadderItemRepository
+  -appointmentRepository: IAppointmentRepository
+  +getRedFlagPatients(): List<PatientSummaryDto>
+  +activateRedFlag(patientId: UUID): void
+  +overrideTherapistAssignment(patientId: UUID, therapistId: UUID): void
+  +buildPreSessionReview(patientId: UUID): PreSessionReviewDto
+}
+
+class AdminServiceImpl {
+  -therapistProfileRepository: ITherapistProfileRepository
+  -therapistCredentialRepository: ITherapistCredentialRepository
+  -userRepository: IUserRepository
+  +listAllTherapists(): List<TherapistSummaryDto>
+  +approveCredential(credentialId: UUID): void
+  +lockAccount(userId: UUID): void
+}
+
+interface IPatientProfileRepository {
+  +findById(id: UUID): Optional<PatientProfile>
+  +findByTherapistId(id: UUID): List<PatientProfile>
+  +findRedFlagActive(): List<PatientProfile>
+  +save(p: PatientProfile): PatientProfile
+}
+
+interface ITherapistProfileRepository {
+  +findById(id: UUID): Optional<TherapistProfile>
+  +findAllActive(): List<TherapistProfile>
+  +save(t: TherapistProfile): TherapistProfile
+}
+
+interface ITherapistCredentialRepository {
+  +save(c: TherapistCredential): TherapistCredential
+  +findByTherapistId(id: UUID): List<TherapistCredential>
+  +findPending(): List<TherapistCredential>
+  +updateStatus(id: UUID, status: String): void
+}
+
+class PatientProfileRepository
+class TherapistProfileRepository
+class TherapistCredentialRepository
+
+class PreSessionReviewDto {
+  +patientId: UUID
+  +lsasBaseline: Integer
+  +lsasCurrent: Integer
+  +lsasTrend: String
+  +recentJournals: List<JournalDto>
+  +recentMoods: List<CheckinResultDto>
+  +fearLadderSnapshot: List<FearLadderItemDto>
+  +recentExperiments: List<ExperimentDto>
+  +upcomingAppointment: AppointmentDto
+  +isRedFlagActive: Boolean
+  +currentProgramWeek: Integer
+}
+
+class PatientSummaryDto {
+  +patientId: UUID
+  +nickName: String
+  +currentLsasScore: Integer
+  +isRedFlagActive: Boolean
+  +currentProgramWeek: Integer
+  +upcomingAppointmentAt: LocalDateTime
+}
+
+class TherapistSummaryDto {
+  +therapistId: UUID
+  +fullName: String
+  +approvalStatus: String
+  +patientCount: Integer
+  +avatarUrl: String
+}
+
+TherapistDashboardController --> IClinicalTriageService : uses
+AdminDemoControlController --> IAdminService : uses
+ClinicalTriageServiceImpl ..|> IClinicalTriageService : implements
+AdminServiceImpl ..|> IAdminService : implements
+ClinicalTriageServiceImpl --> IPatientProfileRepository : uses
+ClinicalTriageServiceImpl --> ITherapistProfileRepository : uses
+ClinicalTriageServiceImpl --> ITherapistCredentialRepository : uses
+AdminServiceImpl --> ITherapistProfileRepository : uses
+AdminServiceImpl --> ITherapistCredentialRepository : uses
+PatientProfileRepository ..|> IPatientProfileRepository : implements
+TherapistProfileRepository ..|> ITherapistProfileRepository : implements
+TherapistCredentialRepository ..|> ITherapistCredentialRepository : implements
+TherapistDashboardController ..> PreSessionReviewDto : returns
+TherapistDashboardController ..> PatientSummaryDto : returns
+AdminDemoControlController ..> TherapistSummaryDto : returns
+
+@enduml

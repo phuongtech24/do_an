@@ -1,169 +1,208 @@
 @startuml
 skinparam defaultFontName "Times New Roman"
-title Biểu đồ lớp đối tượng tổng quát ReConnect MindHealth
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+title Biểu đồ lớp đối tượng tổng quát - ReConnect MindHealth
 
+package "Tài khoản và hồ sơ" {
 class User {
   +id: UUID
   +email: String
-  +passwordHash: String
   +role: Role
   +isActive: Boolean
   +isAnonymous: Boolean
 }
 
 class GuestProfile {
-  +id: UUID
   +nickname: String
   +avatarIcon: String
-  +convertedToPatient: Boolean
+  +lsasDemoCompleted: Boolean
 }
 
 class PatientProfile {
-  +userId: UUID
   +nickName: String
   +anonymousModeEnabled: Boolean
   +realFullName: String
   +phoneNumber: String
   +currentLsasScore: Integer
-  +isRedFlagActive: Boolean
   +currentProgramWeek: Integer
+  +currentRiskScore: Integer
+  +isRedFlagActive: Boolean
 }
 
 class TherapistProfile {
-  +userId: UUID
   +fullName: String
   +phoneNumber: String
   +specialization: String
-  +approvalStatus: ApprovalStatus
+  +approvalStatus: String
   +meetingLink: String
 }
 
+class TherapistCredential {
+  +fileName: String
+}
+}
+
+package "Đánh giá LSAS" {
 class LsasSituation {
-  +id: UUID
   +situationNumber: Integer
   +text: String
-  +situationGroup: LsasSituationGroup
+  +situationGroup: String
 }
 
 class LsasSubmission {
-  +id: UUID
-  +submissionType: LsasSubmissionType
+  +submissionType: String
   +fearTotal: Integer
   +avoidanceTotal: Integer
   +totalScore: Integer
 }
 
 class LsasAnswer {
-  +id: UUID
   +fearScore: Integer
   +avoidanceScore: Integer
   +totalScore: Integer
 }
+}
 
+package "Lộ trình trị liệu" {
 class PatientGoal {
-  +id: UUID
-  +goalType: PatientGoalType
+  +goalType: String
   +description: String
-  +status: PatientGoalStatus
+  +status: String
 }
 
 class FearLadderItem {
-  +id: UUID
   +baselineTotalScore: Integer
   +currentTotalScore: Integer
-  +bucket: FearLadderBucket
+  +bucket: String
   +ladderOrder: Integer
-  +status: FearLadderStatus
+  +status: String
 }
 
 class BehavioralExperiment {
-  +id: UUID
-  +status: BehavioralExperimentStatus
+  +status: String
   +prediction: String
   +predictionBeliefBefore: Integer
   +predictionBeliefAfter: Integer
   +outcome: String
   +learning: String
 }
+}
 
+package "Nhật ký và cảm xúc" {
 class UserMood {
-  +id: UUID
+  +moodScore: Integer
   +anxietyScore: Integer
-  +sadnessScore: Integer
   +avoidanceUrgeScore: Integer
+  +sadnessScore: Integer
   +anticipatoryAnxietyScore: Integer
-  +ruminationScore: Integer
-  +safetyResponse: SafetyResponse
+  +postEventRuminationScore: Integer
+  +safetyResponse: String
 }
 
 class Journal {
-  +id: UUID
-  +journalType: JournalType
-  +contentEncrypted: Text
+  +journalType: String
   +aiRiskScore: Integer
   +severityLevel: String
-  +aiRiskReason: Text
+}
 }
 
+package "Telehealth" {
 class Appointment {
-  +id: UUID
-  +startAt: LocalDateTime
-  +endAt: LocalDateTime
-  +status: AppointmentStatus
-  +purpose: AppointmentPurpose
-  +meetingLink: String
-}
-
-class TherapistCredential {
-  +id: UUID
-  +fileName: String
+  +startAt: DateTime
+  +endAt: DateTime
   +status: String
+  +purpose: String
 }
 
 class TherapistScheduleSlot {
-  +id: UUID
   +slotDate: Date
   +startTime: Time
-  +endTime: Time
+  +isOpen: Boolean
 }
 
 class TherapistWeeklyScheduleSlot {
-  +id: UUID
   +dayOfWeek: String
   +startTime: Time
-  +endTime: Time
+  +isOpen: Boolean
+}
+}
+
+package "Trợ lý AI đồng hành" {
+class AiChatSession {
+  +sessionType: String
+  +screenContext: String
+  +status: String
+  +startedAt: DateTime
+  +endedAt: DateTime
+}
+
+class AiChatMessage {
+  +senderType: String
+  +messageText: Text
+  +usedFallback: Boolean
+  +relatedTopicCode: String
+  +safetyEscalation: Boolean
+  +intentDetected: String
+}
+
+class AiChatFeedback {
+  +rating: Integer
+  +feedbackText: Text
+}
 }
 
 User "1" -- "0..1" GuestProfile
 User "1" -- "0..1" PatientProfile
 User "1" -- "0..1" TherapistProfile
+
+TherapistProfile "1" -- "0..*" TherapistCredential
 TherapistProfile "1" -- "0..*" PatientProfile : quản lý >
 
 PatientProfile "1" -- "0..*" LsasSubmission
 LsasSubmission "1" -- "24" LsasAnswer
-LsasAnswer "*" -- "1" LsasSituation
+LsasSituation "1" -- "0..*" LsasAnswer
 
 PatientProfile "1" -- "0..*" PatientGoal
 PatientProfile "1" -- "0..*" FearLadderItem
-FearLadderItem "*" -- "1" LsasSituation
-PatientProfile "1" -- "0..*" BehavioralExperiment
+LsasSituation "1" -- "0..*" FearLadderItem
 FearLadderItem "1" -- "0..*" BehavioralExperiment
+PatientProfile "1" -- "0..*" BehavioralExperiment
 
 PatientProfile "1" -- "0..*" UserMood
 PatientProfile "1" -- "0..*" Journal
 
 PatientProfile "1" -- "0..*" Appointment
 TherapistProfile "1" -- "0..*" Appointment
-
-TherapistProfile "1" -- "0..*" TherapistCredential
 TherapistProfile "1" -- "0..*" TherapistScheduleSlot
 TherapistProfile "1" -- "0..*" TherapistWeeklyScheduleSlot
 
-note bottom of Journal
-Lưu dữ liệu AI cho Thought Record:
-- aiRiskScore
-- severityLevel
-- aiRiskReason
+PatientProfile "1" -- "0..*" AiChatSession
+AiChatSession "1" -- "0..*" AiChatMessage
+AiChatMessage "1" -- "0..*" AiChatFeedback
+PatientProfile "1" -- "0..*" AiChatFeedback
+
+note right of PatientGoal
+goalType:
+COGNITIVE
+EMOTIONAL
+BEHAVIORAL
+SOCIAL
+end note
+
+note right of FearLadderItem
+bucket:
+EASY
+MEDIUM
+HARD
+EXTREME
+end note
+
+note right of Appointment
+Unique:
+(therapist_id, start_at)
+(patient_id, start_at)
 end note
 
 @enduml

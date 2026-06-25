@@ -1,0 +1,50 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+title Biểu đồ lớp thiết kế — Package GuestManagement
+
+interface IGuestService {
+  +createGuestSession(): GuestProfileDto
+  +getGuestProfile(id: UUID): GuestProfileDto
+  +updateNickname(id: UUID, nickname: String): void
+}
+
+class GuestController {
+  -guestService: IGuestService
+  +createSession(): ResponseEntity
+  +updateNickname(id: UUID, req: NicknameDto): ResponseEntity
+}
+
+class GuestServiceImpl {
+  -guestProfileRepository: IGuestProfileRepository
+  +createGuestSession(): GuestProfileDto
+  +updateNickname(id: UUID, nickname: String): void
+}
+
+interface IGuestProfileRepository {
+  +save(guest: GuestProfile): GuestProfile
+  +findById(id: UUID): Optional<GuestProfile>
+  +markConverted(id: UUID): void
+}
+
+class GuestProfileRepository
+
+class GuestProfileDto {
+  +id: UUID
+  +nickname: String
+  +avatarIcon: String
+  +convertedToPatient: Boolean
+}
+
+class NicknameDto {
+  +nickname: String
+  +avatarIcon: String
+}
+
+GuestController --> IGuestService : uses
+GuestServiceImpl ..|> IGuestService : implements
+GuestServiceImpl --> IGuestProfileRepository : uses
+GuestProfileRepository ..|> IGuestProfileRepository : implements
+GuestController ..> GuestProfileDto : returns
+GuestController ..> NicknameDto : uses
+
+@enduml
