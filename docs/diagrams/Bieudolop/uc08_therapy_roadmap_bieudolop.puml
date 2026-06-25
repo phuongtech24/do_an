@@ -1,0 +1,16 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+class RoadmapBoundary
+class RoadmapController
+class RoadmapService
+class FearLadderService
+class BehavioralExperimentService
+class FearLadderRepository
+class BehavioralExperimentRepository
+RoadmapBoundary --> RoadmapController
+RoadmapController --> RoadmapService
+RoadmapService --> FearLadderService
+RoadmapService --> BehavioralExperimentService
+FearLadderService --> FearLadderRepository
+BehavioralExperimentService --> BehavioralExperimentRepository
+@enduml

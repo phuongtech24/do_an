@@ -1,0 +1,38 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+title Biểu đồ tuần tự mức thiết kế - Đặt lịch tư vấn từ xa
+
+actor "Bệnh nhân" as Patient
+boundary "AppointmentScreen" as AppointmentView
+control "BoosterController" as BoosterController
+control "BoosterServiceImpl" as BoosterService
+control "AuthContextService" as AuthContext
+control "TherapistAccessGuardService" as GuardService
+database "AppointmentRepository" as AppointmentRepo
+database "TherapistScheduleSlotRepository" as SlotRepo
+database "Cơ sở dữ liệu" as DB
+
+Patient -> AppointmentView : Chọn bác sĩ và khung giờ
+AppointmentView -> BoosterController : Gửi yêu cầu đặt lịch
+BoosterController -> AuthContext : Lấy bệnh nhân hiện tại
+AuthContext --> BoosterController : PatientProfile
+BoosterController -> BoosterService : bookAppointment(request)
+BoosterService -> GuardService : Kiểm tra quyền truy cập
+GuardService --> BoosterService : Hợp lệ
+BoosterService -> SlotRepo : Kiểm tra khung giờ khả dụng
+SlotRepo --> BoosterService : Khung giờ hợp lệ
+BoosterService -> AppointmentRepo : Kiểm tra lịch trùng therapist/patient
+AppointmentRepo --> BoosterService : Kết quả kiểm tra
+BoosterService -> DB : Lưu appointment trong transaction
+
+alt Vi phạm unique constraint
+  DB --> BoosterService : DataIntegrityViolationException
+  BoosterService --> BoosterController : Báo khung giờ vừa bị đặt
+  BoosterController --> AppointmentView : Hiển thị lỗi nghiệp vụ
+else Lưu thành công
+  DB --> BoosterService : Appointment đã lưu
+  BoosterService --> BoosterController : BookingResponse
+  BoosterController --> AppointmentView : Trả lịch hẹn thành công
+end
+
+@enduml

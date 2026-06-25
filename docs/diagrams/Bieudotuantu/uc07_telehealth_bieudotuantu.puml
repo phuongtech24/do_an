@@ -1,0 +1,14 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+actor "Bệnh nhân" as Patient
+boundary "Màn hình Đặt lịch" as BookingView
+control "AppointmentController" as Controller
+control "AppointmentService" as Service
+database "Cơ sở dữ liệu" as DB
+Patient -> BookingView : Chọn khung giờ
+BookingView -> Controller : Gửi yêu cầu đặt lịch
+Controller -> Service : Kiểm tra và giữ chỗ
+Service -> DB : Lưu lịch hẹn
+DB --> Service : Thành công
+Service --> BookingView : Xác nhận lịch hẹn
+@enduml

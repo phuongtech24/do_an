@@ -1,0 +1,19 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+start
+:Người dùng mở màn hình đăng nhập;
+:Nhập email và mật khẩu;
+if (Có quên mật khẩu?) then (Có)
+  :Đi tới khôi phục mật khẩu;
+else (Không)
+  :Bấm Đăng nhập;
+endif
+:Hệ thống xác thực tài khoản;
+if (Hợp lệ?) then (Có)
+  :Tạo phiên đăng nhập;
+  :Điều hướng vào màn hình phù hợp;
+else (Không)
+  :Hiển thị lỗi;
+endif
+stop
+@enduml

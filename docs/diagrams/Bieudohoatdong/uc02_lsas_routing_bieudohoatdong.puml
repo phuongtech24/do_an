@@ -1,0 +1,33 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+title Biểu đồ hoạt động - Đánh giá LSAS và phân luồng lâm sàng
+
+start
+:Vào màn hình LSAS;
+:Thực hiện 24 tình huống;
+:Gửi kết quả LSAS;
+:Backend tính tổng điểm LSAS;
+:Lưu bài làm và kết quả;
+
+if (Tổng điểm < 30?) then (Có)
+  :Phân luồng mức 1;
+  :Gợi ý trấn an và theo dõi nhẹ;
+else (Không)
+  if (Tổng điểm <= 59?) then (Có)
+    :Phân luồng mức 2;
+    :Gợi ý nhánh tự hỗ trợ;
+  else (Không)
+    if (Tổng điểm <= 89?) then (Có)
+      :Phân luồng mức 3;
+      :Đưa vào lộ trình CBT có bác sĩ theo dõi;
+    else (Không)
+      :Phân luồng mức 4;
+      :Kích hoạt Cờ đỏ;
+      :Đẩy vào nhánh ưu tiên lâm sàng khẩn cấp;
+    endif
+  endif
+endif
+
+:Hiển thị kết quả và hướng dẫn tiếp theo;
+stop
+@enduml

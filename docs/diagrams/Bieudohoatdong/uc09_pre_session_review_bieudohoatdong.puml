@@ -1,0 +1,11 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+start
+:Mở hồ sơ bệnh nhân;
+:Xem LSAS gần nhất;
+:Xem thang sợ hãi;
+:Xem nhật ký suy nghĩ;
+:Xem lịch sử thử nghiệm hành vi;
+:Chuẩn bị agenda phiên tư vấn;
+stop
+@enduml

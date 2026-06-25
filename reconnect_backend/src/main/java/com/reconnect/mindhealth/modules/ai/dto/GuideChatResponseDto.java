@@ -1,5 +1,6 @@
 package com.reconnect.mindhealth.modules.ai.dto;
 
+import java.util.UUID;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,6 +17,10 @@ public class GuideChatResponseDto {
     private boolean safetyEscalation;
 
     private boolean handoffRecommended;
+
+    private UUID sessionId;
+
+    private UUID messageId;
 
     public GuideChatResponseDto() {
     }
@@ -81,5 +86,21 @@ public class GuideChatResponseDto {
 
     public void setHandoffRecommended(boolean handoffRecommended) {
         this.handoffRecommended = handoffRecommended;
+    }
+
+    public UUID getSessionId() {
+        return sessionId;
+    }
+
+    public void setSessionId(UUID sessionId) {
+        this.sessionId = sessionId;
+    }
+
+    public UUID getMessageId() {
+        return messageId;
+    }
+
+    public void setMessageId(UUID messageId) {
+        this.messageId = messageId;
     }
 }

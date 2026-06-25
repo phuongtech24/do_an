@@ -2,6 +2,7 @@ package com.reconnect.mindhealth.modules.journal.repository;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.Date;
 import com.reconnect.mindhealth.modules.journal.entity.Journal;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -18,6 +19,11 @@ public interface JournalRepository extends JpaRepository<Journal, UUID> {
     List<Journal> findJournalsByPatientId(@Param("patientId") UUID patientId);
 
     List<Journal> findTop5ByPatientProfile_IdOrderByCreateDateDesc(UUID patientId);
+
+    List<Journal> findByPatientProfile_IdAndCreateDateBetweenOrderByCreateDateAsc(
+            UUID patientId,
+            Date startDate,
+            Date endDate);
 
     @Query("SELECT COALESCE(MAX(j.aiRiskScore), 0) FROM Journal j WHERE j.patientProfile.id = :patientId AND j.createDate >= :startOfDay AND j.createDate <= :endOfDay")
     Integer getMaxAiRiskScoreInDay(@Param("patientId") UUID patientId,

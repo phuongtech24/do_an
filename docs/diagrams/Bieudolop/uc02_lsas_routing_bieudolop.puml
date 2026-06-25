@@ -1,0 +1,16 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+class LsasScreenBoundary
+class LsasController
+class LsasService
+class LsasScoringEngine
+class LsasAnswerRepository
+class LsasSituation
+class RoutingPolicy
+LsasScreenBoundary --> LsasController
+LsasController --> LsasService
+LsasService --> LsasScoringEngine
+LsasService --> LsasAnswerRepository
+LsasScoringEngine --> LsasSituation
+LsasService --> RoutingPolicy
+@enduml

@@ -1,0 +1,14 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+class TelehealthBoundary
+class AppointmentController
+class AppointmentService
+class AppointmentRepository
+class AvailabilityService
+class SessionReview
+TelehealthBoundary --> AppointmentController
+AppointmentController --> AppointmentService
+AppointmentService --> AppointmentRepository
+AppointmentService --> AvailabilityService
+AppointmentService --> SessionReview
+@enduml

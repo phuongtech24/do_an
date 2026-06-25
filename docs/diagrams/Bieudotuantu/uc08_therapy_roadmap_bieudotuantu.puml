@@ -1,0 +1,16 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+actor "Bệnh nhân" as Patient
+boundary "Màn hình Lộ trình" as RoadmapView
+control "RoadmapController" as Controller
+control "RoadmapService" as Service
+control "FearLadderService" as LadderService
+database "Cơ sở dữ liệu" as DB
+Patient -> RoadmapView : Mở lộ trình
+RoadmapView -> Controller : Lấy tiến độ
+Controller -> Service : Tổng hợp lộ trình
+Service -> LadderService : Lấy thang sợ hãi
+LadderService -> DB : Đọc ladder item
+DB --> LadderService : Danh sách bài đang mở
+LadderService --> RoadmapView : Hiển thị bài tập phù hợp
+@enduml

@@ -1,0 +1,13 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+start
+:Khách mở ứng dụng ở chế độ ẩn danh;
+:Chọn biệt danh;
+:Chọn ảnh đại diện ảo;
+:Thực hiện LSAS thử nghiệm nếu muốn;
+:Hoàn tất cổng chuyển đổi tài khoản;
+:Liên kết email và mật khẩu;
+:Khai báo hồ sơ y tế tối thiểu;
+:Chuyển thành Bệnh nhân;
+stop
+@enduml

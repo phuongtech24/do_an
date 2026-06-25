@@ -1,0 +1,11 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+start
+:Mở Nhật ký suy nghĩ;
+:Nhập tình huống và suy nghĩ tự động;
+:Nhận gợi ý câu hỏi phản biện;
+:Nhận diện méo mó nhận thức;
+:Hoàn thiện 6 bước;
+:Lưu bài viết;
+stop
+@enduml

@@ -1,0 +1,14 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+start
+:Mở điểm danh cảm xúc;
+:Chấm 5 chỉ số tâm trạng;
+if (Chọn Không an toàn?) then (Có)
+  :Kích hoạt Safety Gate;
+  :Bật Cờ đỏ;
+else (Không)
+  :Lưu biểu đồ cảm xúc;
+endif
+:Đi tới gợi ý tiếp theo;
+stop
+@enduml

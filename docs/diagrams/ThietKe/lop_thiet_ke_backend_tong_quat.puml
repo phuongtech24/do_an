@@ -1,0 +1,102 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+title Biểu đồ lớp thiết kế chi tiết backend
+
+package "Auth" {
+  class AuthController
+  class AuthServiceImpl
+  class UserRepository
+  class JwtService
+  class User
+  class LoginRequestDto
+  class LoginResponseDto
+
+  AuthController --> AuthServiceImpl
+  AuthServiceImpl --> UserRepository
+  AuthServiceImpl --> JwtService
+  AuthServiceImpl --> User
+  AuthController --> LoginRequestDto
+  AuthController --> LoginResponseDto
+}
+
+package "Assessment" {
+  class AssessmentController
+  class AssessmentServiceImpl
+  class LsasSubmissionRepository
+  class LsasAnswerRepository
+  class LsasSituationRepository
+  class LsasSubmission
+  class LsasAnswer
+  class LsasSituation
+
+  AssessmentController --> AssessmentServiceImpl
+  AssessmentServiceImpl --> LsasSubmissionRepository
+  AssessmentServiceImpl --> LsasAnswerRepository
+  AssessmentServiceImpl --> LsasSituationRepository
+}
+
+package "Roadmap" {
+  class RoadmapController
+  class FearLadderController
+  class BehavioralExperimentController
+  class FearLadderService
+  class RoadmapProgramStateService
+  class FearLadderItemRepository
+  class BehavioralExperimentRepository
+  class PatientGoalRepository
+  class FearLadderItem
+  class BehavioralExperiment
+  class PatientGoal
+
+  RoadmapController --> RoadmapProgramStateService
+  FearLadderController --> FearLadderService
+  BehavioralExperimentController --> FearLadderService
+  FearLadderService --> FearLadderItemRepository
+  FearLadderService --> BehavioralExperimentRepository
+  FearLadderService --> PatientGoalRepository
+}
+
+package "Journal & AI" {
+  class JournalController
+  class JournalServiceImpl
+  class AiController
+  class GeminiAiAssistantServiceImpl
+  class JournalRepository
+  class Journal
+
+  JournalController --> JournalServiceImpl
+  JournalController --> AiController
+  AiController --> GeminiAiAssistantServiceImpl
+  JournalServiceImpl --> JournalRepository
+  JournalServiceImpl --> GeminiAiAssistantServiceImpl
+}
+
+package "Telehealth" {
+  class BoosterController
+  class BoosterServiceImpl
+  class AppointmentRepository
+  class TherapistScheduleSlotRepository
+  class Appointment
+
+  BoosterController --> BoosterServiceImpl
+  BoosterServiceImpl --> AppointmentRepository
+  BoosterServiceImpl --> TherapistScheduleSlotRepository
+}
+
+package "Clinical" {
+  class TherapistDashboardController
+  class ClinicalTriageService
+  class AdminDemoControlController
+  class AdminDemoControlService
+  class PatientProfileRepository
+  class TherapistProfileRepository
+  class PatientProfile
+  class TherapistProfile
+
+  TherapistDashboardController --> ClinicalTriageService
+  AdminDemoControlController --> AdminDemoControlService
+  ClinicalTriageService --> PatientProfileRepository
+  ClinicalTriageService --> TherapistProfileRepository
+}
+
+@enduml

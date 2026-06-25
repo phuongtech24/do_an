@@ -1,0 +1,14 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+class GuideChatBoundary
+class AiGuideController
+class AiGuideService
+class KnowledgeCardRepository
+class SafetyGuard
+class GeminiClient
+GuideChatBoundary --> AiGuideController
+AiGuideController --> AiGuideService
+AiGuideService --> KnowledgeCardRepository
+AiGuideService --> SafetyGuard
+AiGuideService --> GeminiClient
+@enduml

@@ -1,0 +1,14 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+class DailyCheckinBoundary
+class MoodController
+class MoodService
+class SafetyGatePolicy
+class UserMoodRepository
+class RedFlagService
+DailyCheckinBoundary --> MoodController
+MoodController --> MoodService
+MoodService --> SafetyGatePolicy
+MoodService --> UserMoodRepository
+MoodService --> RedFlagService
+@enduml

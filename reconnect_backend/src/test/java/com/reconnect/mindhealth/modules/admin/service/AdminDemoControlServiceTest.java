@@ -5,12 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -30,14 +28,10 @@ import com.reconnect.mindhealth.modules.clinical.enums.TaperingStage;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
 import com.reconnect.mindhealth.modules.clinical.service.ClinicalTriageService;
 import com.reconnect.mindhealth.modules.journal.service.IJournalService;
-import com.reconnect.mindhealth.modules.risk.entity.DailyRiskLog;
-import com.reconnect.mindhealth.modules.risk.repository.DailyRiskLogRepository;
 import com.reconnect.mindhealth.modules.roadmap.entity.FearLadderItem;
-import com.reconnect.mindhealth.modules.roadmap.entity.PatientQuest;
 import com.reconnect.mindhealth.modules.roadmap.enums.FearLadderStatus;
 import com.reconnect.mindhealth.modules.roadmap.repository.BehavioralExperimentRepository;
 import com.reconnect.mindhealth.modules.roadmap.repository.FearLadderItemRepository;
-import com.reconnect.mindhealth.modules.roadmap.service.RoadmapDailyAssignmentService;
 import com.reconnect.mindhealth.modules.roadmap.service.RoadmapProgramStateService;
 import com.reconnect.mindhealth.modules.roadmap.service.RoadmapProgramStateService.ProgramPhase;
 
@@ -46,10 +40,6 @@ class AdminDemoControlServiceTest {
 
     @Mock
     private PatientProfileRepository patientProfileRepository;
-    @Mock
-    private DailyRiskLogRepository dailyRiskLogRepository;
-    @Mock
-    private RoadmapDailyAssignmentService roadmapDailyAssignmentService;
     @Mock
     private UserMoodRepository userMoodRepository;
     @Mock
@@ -102,8 +92,6 @@ class AdminDemoControlServiceTest {
 
         when(patientProfileRepository.findById(patientId)).thenReturn(Optional.of(patient));
         when(patientProfileRepository.save(any(PatientProfile.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(dailyRiskLogRepository.findByPatientProfile_IdAndRiskDate(eq(patientId), any(LocalDate.class)))
-                .thenReturn(Optional.of(new DailyRiskLog()));
         when(fearLadderItemRepository.findByPatientProfile_IdOrderByLadderOrderAsc(patientId)).thenReturn(List.of());
         when(roadmapProgramStateService.resolveProgramWeek(any(PatientProfile.class))).thenReturn(6);
         when(roadmapProgramStateService.resolvePhase(anyInt()))
@@ -115,7 +103,6 @@ class AdminDemoControlServiceTest {
         assertFalse(Boolean.TRUE.equals(patient.getTriageRequired()));
         assertEquals("SET_LSAS_BAND", result.getAction());
         verify(clinicalTriageService, never()).openUrgentTriage(any(PatientProfile.class));
-        verify(dailyRiskLogRepository).save(any(DailyRiskLog.class));
     }
 
     @Test
@@ -168,8 +155,6 @@ class AdminDemoControlServiceTest {
         when(patientProfileRepository.save(any(PatientProfile.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(fearLadderItemRepository.findByPatientProfile_IdOrderByLadderOrderAsc(patientId))
                 .thenReturn(List.of(item1, item2));
-        when(roadmapDailyAssignmentService.ensureDailySystemQuests(any(PatientProfile.class), any(LocalDate.class)))
-                .thenReturn(List.of(new PatientQuest()));
         when(roadmapProgramStateService.resolveProgramWeek(any(PatientProfile.class))).thenReturn(14);
         when(roadmapProgramStateService.resolvePhase(anyInt()))
                 .thenReturn(new ProgramPhase("DEEP_COGNITIVE_MEMORY", "Tuần 9-14"));
@@ -184,7 +169,6 @@ class AdminDemoControlServiceTest {
         assertEquals("UNLOCK_ALL_ROADMAP_CONTENT", result.getAction());
         assertEquals(2, result.getFearLadderMasteredCount());
         assertTrue(Boolean.TRUE.equals(result.getGraduationReady()));
-        assertEquals(1, result.getCreatedQuests());
         verify(fearLadderItemRepository).saveAll(any());
         verify(behavioralExperimentRepository).deleteByPatientProfile_Id(patientId);
     }

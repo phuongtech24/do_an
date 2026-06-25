@@ -1,0 +1,20 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+actor "Khách" as Guest
+boundary "Màn hình Khách" as GuestView
+control "GuestAccountController" as Controller
+control "GuestAccountService" as Service
+database "Cơ sở dữ liệu" as DB
+Guest -> GuestView : Mở chế độ khách
+GuestView -> Controller : Bắt đầu trải nghiệm ẩn danh
+Controller -> Service : Tạo phiên khách
+Service -> DB : Lưu biệt danh, avatar
+DB --> Service : Đã lưu
+Service --> GuestView : Hiển thị LSAS thử nghiệm
+Guest -> GuestView : Chọn liên kết tài khoản
+GuestView -> Controller : Gửi email, mật khẩu, hồ sơ tối thiểu
+Controller -> Service : Chuyển thành Bệnh nhân
+Service -> DB : Cập nhật hồ sơ
+DB --> Service : Thành công
+Service --> GuestView : Kết thúc cổng chuyển đổi
+@enduml

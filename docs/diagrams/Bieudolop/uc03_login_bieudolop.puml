@@ -1,0 +1,14 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+class LoginBoundary
+class AuthController
+class AuthService
+class TokenService
+class UserRepository
+class PasswordEncoder
+LoginBoundary --> AuthController
+AuthController --> AuthService
+AuthService --> TokenService
+AuthService --> UserRepository
+AuthService --> PasswordEncoder
+@enduml

@@ -1,0 +1,10 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+start
+:Xem khung giờ trống;
+:Chọn bác sĩ và thời gian;
+:Đặt lịch tư vấn từ xa;
+:Hệ thống xác nhận lịch;
+:Tham gia phiên tư vấn;
+stop
+@enduml

@@ -1,0 +1,10 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+start
+:Vào dashboard điều phối;
+:Xem danh sách Cờ đỏ;
+:Chọn ca ưu tiên;
+:Ghi đè ghép cặp bác sĩ - bệnh nhân;
+:Cập nhật trạng thái điều phối;
+stop
+@enduml

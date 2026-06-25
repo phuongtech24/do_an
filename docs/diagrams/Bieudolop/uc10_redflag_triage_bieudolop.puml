@@ -1,0 +1,14 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+class RedFlagBoundary
+class ClinicalTriageController
+class ClinicalTriageService
+class PatientRepository
+class TherapistRepository
+class OverridePolicy
+RedFlagBoundary --> ClinicalTriageController
+ClinicalTriageController --> ClinicalTriageService
+ClinicalTriageService --> PatientRepository
+ClinicalTriageService --> TherapistRepository
+ClinicalTriageService --> OverridePolicy
+@enduml

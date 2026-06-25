@@ -1,0 +1,39 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+title Biểu đồ tuần tự - Đánh giá LSAS và phân luồng lâm sàng
+
+actor "Khách" as Guest
+boundary "Màn hình LSAS" as LsasView
+control "LsasController" as Controller
+control "LsasService" as Service
+database "Cơ sở dữ liệu" as DB
+
+Guest -> LsasView : Mở màn hình LSAS
+LsasView --> Guest : Hiển thị 24 tình huống
+
+loop 24 tình huống
+  Guest -> LsasView : Chọn mức sợ hãi và né tránh
+end
+
+Guest -> LsasView : Nộp bài LSAS
+LsasView -> Controller : Gửi câu trả lời LSAS
+Controller -> Service : Tính điểm và phân luồng
+Service -> DB : Lưu bài làm và kết quả
+DB --> Service : Đã lưu thành công
+
+alt Tổng điểm < 30
+  Service --> Controller : Nhánh trấn an / theo dõi nhẹ
+  Controller --> LsasView : Hiển thị kết quả mức 1
+else Tổng điểm từ 30 đến 59
+  Service --> Controller : Nhánh tự hỗ trợ
+  Controller --> LsasView : Hiển thị kết quả mức 2
+else Tổng điểm từ 60 đến 89
+  Service --> Controller : Nhánh CBT có bác sĩ theo dõi
+  Controller --> LsasView : Hiển thị kết quả mức 3
+else Tổng điểm >= 90
+  Service --> Controller : Kích hoạt Cờ đỏ / ưu tiên lâm sàng
+  Controller --> LsasView : Hiển thị kết quả mức 4
+end
+
+LsasView --> Guest : Hiển thị kết quả và hướng tiếp theo
+@enduml

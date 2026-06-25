@@ -1,0 +1,16 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+class GuestAccountBoundary
+class GuestAccountController
+class GuestAccountService
+class GuestAccountRepository
+class GuestProfile
+class ConversionGate
+class IdentityProfile
+GuestAccountBoundary --> GuestAccountController
+GuestAccountController --> GuestAccountService
+GuestAccountService --> GuestAccountRepository
+GuestAccountService --> GuestProfile
+GuestAccountService --> ConversionGate
+ConversionGate --> IdentityProfile
+@enduml

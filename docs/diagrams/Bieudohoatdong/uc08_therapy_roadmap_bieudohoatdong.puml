@@ -1,0 +1,12 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+start
+:Vào lộ trình trị liệu;
+:Xem tuần hiện tại;
+:Xem thang sợ hãi;
+:Chọn bài tập đang mở;
+:Thiết lập dự đoán;
+:Thực hành;
+:Tổng kết bài học;
+stop
+@enduml

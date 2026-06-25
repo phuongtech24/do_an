@@ -1,0 +1,16 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+class ThoughtRecordBoundary
+class JournalController
+class JournalService
+class AiAssistantService
+class AiController
+class JournalRepository
+class DistortionAnalyzer
+ThoughtRecordBoundary --> JournalController
+JournalController --> JournalService
+JournalService --> AiAssistantService
+JournalService --> AiController
+JournalService --> JournalRepository
+AiAssistantService --> DistortionAnalyzer
+@enduml

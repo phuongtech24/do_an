@@ -1,0 +1,16 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+class PreSessionReviewBoundary
+class TherapistDashboardController
+class PreSessionReviewService
+class JournalRepository
+class FearLadderRepository
+class LsasRepository
+class BehavioralExperimentRepository
+PreSessionReviewBoundary --> TherapistDashboardController
+TherapistDashboardController --> PreSessionReviewService
+PreSessionReviewService --> JournalRepository
+PreSessionReviewService --> FearLadderRepository
+PreSessionReviewService --> LsasRepository
+PreSessionReviewService --> BehavioralExperimentRepository
+@enduml
