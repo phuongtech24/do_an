@@ -38,6 +38,14 @@ public class UserSchemaMigrationRunner {
                     "ALTER TABLE users ADD COLUMN reset_password_token VARCHAR(128) NULL");
             ensureColumn(jdbcTemplate, "reset_password_expires_at",
                     "ALTER TABLE users ADD COLUMN reset_password_expires_at DATETIME NULL");
+            ensureColumn(jdbcTemplate, "email_verified",
+                    "ALTER TABLE users ADD COLUMN email_verified BIT(1) NOT NULL DEFAULT b'0'");
+            ensureColumn(jdbcTemplate, "email_verification_otp",
+                    "ALTER TABLE users ADD COLUMN email_verification_otp VARCHAR(16) NULL");
+            ensureColumn(jdbcTemplate, "email_verification_expires_at",
+                    "ALTER TABLE users ADD COLUMN email_verification_expires_at DATETIME NULL");
+            ensureColumn(jdbcTemplate, "email_verification_sent_at",
+                    "ALTER TABLE users ADD COLUMN email_verification_sent_at DATETIME NULL");
         };
     }
 

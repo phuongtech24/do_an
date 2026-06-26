@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:reconnect_app/features/auth/data/models/email_verification_response.dart';
 import 'package:reconnect_app/features/auth/data/models/guest_profile_model.dart';
 import 'package:reconnect_app/features/auth/data/models/login_request.dart';
 import 'package:reconnect_app/features/auth/data/models/login_response.dart';
@@ -269,6 +270,45 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<EmailVerificationResponse?> verifyEmailOtp({
+    required String email,
+    required String otp,
+  }) async {
+    _status = AuthStatus.loading;
+    _errorMessage = '';
+    notifyListeners();
+
+    try {
+      final response = await _repository.verifyEmailOtp(email: email, otp: otp);
+      _status = AuthStatus.success;
+      notifyListeners();
+      return response;
+    } catch (e) {
+      _status = AuthStatus.error;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      return null;
+    }
+  }
+
+  Future<EmailVerificationResponse?> resendEmailOtp(String email) async {
+    _status = AuthStatus.loading;
+    _errorMessage = '';
+    notifyListeners();
+
+    try {
+      final response = await _repository.resendEmailOtp(email);
+      _status = AuthStatus.success;
+      notifyListeners();
+      return response;
+    } catch (e) {
+      _status = AuthStatus.error;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      return null;
+    }
+  }
+
   Future<bool> linkGuestAccount({
     required String email,
     required String password,
@@ -281,7 +321,7 @@ class AuthProvider extends ChangeNotifier {
     _errorMessage = '';
     notifyListeners();
     try {
-      final response = await _repository.linkGuestAccount(
+      await _repository.linkGuestAccount(
         guestId: guestId,
         email: email,
         password: password,
@@ -289,11 +329,6 @@ class AuthProvider extends ChangeNotifier {
         phoneNumber: phoneNumber,
         token: token,
       );
-      _loginResponse = response;
-      _guestProfile = null;
-      await _sessionStorage.saveSessionWithPreference(response, rememberMe: true);
-      await loadPatientProfile();
-      _pendingDailyCheckinAfterLogin = true;
       _status = AuthStatus.success;
       notifyListeners();
       return true;
@@ -316,6 +351,29 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
     try {
       await _repository.requestPasswordReset(email);
+      _status = AuthStatus.success;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _status = AuthStatus.error;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> deleteAccount() async {
+    final patientId = _loginResponse?.user.id ?? '';
+    final authToken = token;
+    if (patientId.isEmpty || authToken == null || authToken.isEmpty) return false;
+
+    _status = AuthStatus.loading;
+    _errorMessage = '';
+    notifyListeners();
+
+    try {
+      await _repository.deletePatientAccount(patientId: patientId, token: authToken);
+      logout();
       _status = AuthStatus.success;
       notifyListeners();
       return true;

@@ -47,6 +47,18 @@ public class User extends BaseObject {
     @Column(name = "reset_password_expires_at")
     private java.util.Date resetPasswordExpiresAt;
 
+    @Column(name = "email_verified")
+    private Boolean emailVerified = false;
+
+    @Column(name = "email_verification_otp", length = 16)
+    private String emailVerificationOtp;
+
+    @Column(name = "email_verification_expires_at")
+    private java.util.Date emailVerificationExpiresAt;
+
+    @Column(name = "email_verification_sent_at")
+    private java.util.Date emailVerificationSentAt;
+
     @OneToOne(mappedBy = "user")
     private TherapistProfile therapistProfile;
 
@@ -132,6 +144,38 @@ public class User extends BaseObject {
 
     public void setResetPasswordExpiresAt(java.util.Date resetPasswordExpiresAt) {
         this.resetPasswordExpiresAt = resetPasswordExpiresAt;
+    }
+
+    public Boolean getEmailVerified() {
+        return emailVerified;
+    }
+
+    public void setEmailVerified(Boolean emailVerified) {
+        this.emailVerified = emailVerified;
+    }
+
+    public String getEmailVerificationOtp() {
+        return emailVerificationOtp;
+    }
+
+    public void setEmailVerificationOtp(String emailVerificationOtp) {
+        this.emailVerificationOtp = emailVerificationOtp;
+    }
+
+    public java.util.Date getEmailVerificationExpiresAt() {
+        return emailVerificationExpiresAt;
+    }
+
+    public void setEmailVerificationExpiresAt(java.util.Date emailVerificationExpiresAt) {
+        this.emailVerificationExpiresAt = emailVerificationExpiresAt;
+    }
+
+    public java.util.Date getEmailVerificationSentAt() {
+        return emailVerificationSentAt;
+    }
+
+    public void setEmailVerificationSentAt(java.util.Date emailVerificationSentAt) {
+        this.emailVerificationSentAt = emailVerificationSentAt;
     }
     
 }

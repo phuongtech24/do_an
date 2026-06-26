@@ -1,33 +1,38 @@
 @startuml
 skinparam defaultFontName "Times New Roman"
-title Biểu đồ hoạt động - Đánh giá LSAS và phân luồng lâm sàng
+skinparam wrapWidth 180
+skinparam NodePadding 20
 
+|Người dùng|
 start
-:Vào màn hình LSAS;
-:Thực hiện 24 tình huống;
-:Gửi kết quả LSAS;
-:Backend tính tổng điểm LSAS;
-:Lưu bài làm và kết quả;
+:Vào màn hình bài kiểm tra LSAS;
+:Thực hiện chấm điểm 24 tình huống;
+:Gửi kết quả bài làm;
 
+|Hệ thống|
+:Tính tổng điểm Fear và Avoidance;
+:Lưu bài làm và kết quả (LsasSubmission);
 if (Tổng điểm < 30?) then (Có)
-  :Phân luồng mức 1;
-  :Gợi ý trấn an và theo dõi nhẹ;
+  :Phân luồng mức 1 (REASSURANCE);
+  :Trả về gợi ý trấn an và tự chăm sóc;
 else (Không)
   if (Tổng điểm <= 59?) then (Có)
-    :Phân luồng mức 2;
-    :Gợi ý nhánh tự hỗ trợ;
+    :Phân luồng mức 2 (SELF_HELP);
+    :Mở khóa luồng tự trị liệu CBT;
   else (Không)
     if (Tổng điểm <= 89?) then (Có)
-      :Phân luồng mức 3;
-      :Đưa vào lộ trình CBT có bác sĩ theo dõi;
+      :Phân luồng mức 3 (THERAPIST_TRACK);
+      :Yêu cầu lộ trình CBT 14 tuần có bác sĩ;
     else (Không)
-      :Phân luồng mức 4;
-      :Kích hoạt Cờ đỏ;
-      :Đẩy vào nhánh ưu tiên lâm sàng khẩn cấp;
+      :Phân luồng mức 4 (URGENT_RED_FLAG);
+      :Kích hoạt Cờ đỏ (Red Flag);
+      :Đẩy cảnh báo khẩn cấp lên Dashboard Bác sĩ;
     endif
   endif
 endif
 
-:Hiển thị kết quả và hướng dẫn tiếp theo;
+|Người dùng|
+:Nhận kết quả phân tích mức độ;
+:Xem hướng dẫn lộ trình tiếp theo;
 stop
 @enduml

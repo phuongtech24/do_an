@@ -9,12 +9,15 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.reconnect.mindhealth.common.dto.ApiResponse;
+import com.reconnect.mindhealth.modules.auth.dto.EmailVerificationRequestDto;
+import com.reconnect.mindhealth.modules.auth.dto.EmailVerificationResponseDto;
 import com.reconnect.mindhealth.modules.auth.dto.ForgotPasswordRequestDto;
 import com.reconnect.mindhealth.modules.auth.dto.GuestLinkAccountRequestDto;
 import com.reconnect.mindhealth.modules.auth.dto.LoginRequest;
 import com.reconnect.mindhealth.modules.auth.dto.LoginResponse;
 import com.reconnect.mindhealth.modules.auth.dto.RefreshTokenRequestDto;
 import com.reconnect.mindhealth.modules.auth.dto.RegisterRequest;
+import com.reconnect.mindhealth.modules.auth.dto.ResendEmailOtpRequestDto;
 import com.reconnect.mindhealth.modules.auth.dto.ResetPasswordRequestDto;
 import com.reconnect.mindhealth.modules.auth.dto.UserDto;
 import com.reconnect.mindhealth.modules.auth.service.IAuthService;
@@ -27,12 +30,12 @@ public class AuthController {
     private IAuthService authService;
 
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<UserDto>> register(@RequestBody RegisterRequest request) {
+    public ResponseEntity<ApiResponse<EmailVerificationResponseDto>> register(@RequestBody RegisterRequest request) {
         try {
-            UserDto rs = authService.register(request);
-            return ResponseEntity.ok(ApiResponse.success("Đăng ký thành công.", rs));
+            EmailVerificationResponseDto rs = authService.register(request);
+            return ResponseEntity.ok(ApiResponse.success("Da tao tai khoan va gui ma OTP xac minh email.", rs));
         } catch (Exception e) {
-            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+            return ResponseEntity.ok(ApiResponse.error("Loi: " + e.getMessage()));
         }
     }
 
@@ -41,12 +44,12 @@ public class AuthController {
         try {
             LoginResponse response = authService.login(request);
             if (response == null) {
-                return ResponseEntity.ok(ApiResponse.error("Sai mật khẩu."));
+                return ResponseEntity.ok(ApiResponse.error("Sai mat khau."));
             }
-            return ResponseEntity.ok(ApiResponse.success("Đăng nhập thành công.", response));
+            return ResponseEntity.ok(ApiResponse.success("Dang nhap thanh cong.", response));
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+            return ResponseEntity.ok(ApiResponse.error("Loi: " + e.getMessage()));
         }
     }
 
@@ -54,21 +57,43 @@ public class AuthController {
     public ResponseEntity<ApiResponse<LoginResponse>> registerAnonymous(@RequestParam String deviceId) {
         try {
             LoginResponse rs = authService.registerAnonymous(deviceId);
-            return ResponseEntity.ok(ApiResponse.success("Đã tạo phiên guest.", rs));
+            return ResponseEntity.ok(ApiResponse.success("Da tao phien guest.", rs));
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+            return ResponseEntity.ok(ApiResponse.error("Loi: " + e.getMessage()));
         }
     }
 
     @PostMapping("/guest/link-account")
-    public ResponseEntity<ApiResponse<LoginResponse>> linkGuestAccount(@RequestBody GuestLinkAccountRequestDto request) {
+    public ResponseEntity<ApiResponse<EmailVerificationResponseDto>> linkGuestAccount(@RequestBody GuestLinkAccountRequestDto request) {
         try {
-            LoginResponse rs = authService.linkGuestAccount(request);
-            return ResponseEntity.ok(ApiResponse.success("Đã liên kết tài khoản thành công.", rs));
+            EmailVerificationResponseDto rs = authService.linkGuestAccount(request);
+            return ResponseEntity.ok(ApiResponse.success("Da gui ma OTP de hoan tat lien ket tai khoan.", rs));
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+            return ResponseEntity.ok(ApiResponse.error("Loi: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/verify-email-otp")
+    public ResponseEntity<ApiResponse<UserDto>> verifyEmailOtp(@RequestBody EmailVerificationRequestDto request) {
+        try {
+            UserDto rs = authService.verifyEmailOtp(request);
+            return ResponseEntity.ok(ApiResponse.success("Xac minh email thanh cong.", rs));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.ok(ApiResponse.error("Loi: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/resend-email-otp")
+    public ResponseEntity<ApiResponse<EmailVerificationResponseDto>> resendEmailOtp(@RequestBody ResendEmailOtpRequestDto request) {
+        try {
+            EmailVerificationResponseDto rs = authService.resendEmailOtp(request);
+            return ResponseEntity.ok(ApiResponse.success("Da gui lai ma OTP.", rs));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.ok(ApiResponse.error("Loi: " + e.getMessage()));
         }
     }
 
@@ -76,10 +101,10 @@ public class AuthController {
     public ResponseEntity<ApiResponse<LoginResponse>> refresh(@RequestBody RefreshTokenRequestDto request) {
         try {
             LoginResponse rs = authService.refreshToken(request);
-            return ResponseEntity.ok(ApiResponse.success("Làm mới phiên đăng nhập thành công.", rs));
+            return ResponseEntity.ok(ApiResponse.success("Lam moi phien dang nhap thanh cong.", rs));
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+            return ResponseEntity.ok(ApiResponse.error("Loi: " + e.getMessage()));
         }
     }
 
@@ -87,10 +112,10 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Void>> forgotPassword(@RequestBody ForgotPasswordRequestDto request) {
         try {
             authService.requestPasswordReset(request);
-            return ResponseEntity.ok(ApiResponse.success("Nếu email tồn tại, hệ thống đã tạo yêu cầu đặt lại mật khẩu.", null));
+            return ResponseEntity.ok(ApiResponse.success("Neu email ton tai, he thong da tao yeu cau dat lai mat khau.", null));
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+            return ResponseEntity.ok(ApiResponse.error("Loi: " + e.getMessage()));
         }
     }
 
@@ -98,10 +123,10 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Void>> resetPassword(@RequestBody ResetPasswordRequestDto request) {
         try {
             authService.resetPassword(request);
-            return ResponseEntity.ok(ApiResponse.success("Đặt lại mật khẩu thành công.", null));
+            return ResponseEntity.ok(ApiResponse.success("Dat lai mat khau thanh cong.", null));
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.ok(ApiResponse.error("Lỗi: " + e.getMessage()));
+            return ResponseEntity.ok(ApiResponse.error("Loi: " + e.getMessage()));
         }
     }
 }

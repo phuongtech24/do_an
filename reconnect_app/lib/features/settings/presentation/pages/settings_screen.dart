@@ -126,6 +126,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (dialogContext) => AlertDialog(
+                    title: const Text('Xoá tài khoản'),
+                    content: const Text(
+                      'Bạn có đồng ý xoá tài khoản không? Tài khoản sẽ bị khoá ngay và bạn sẽ được đăng xuất khỏi thiết bị này.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(dialogContext, false),
+                        child: const Text('Huỷ'),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.pop(dialogContext, true),
+                        child: const Text('Đồng ý xoá'),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirm != true || !mounted) return;
+
+                final ok = await Provider.of<AuthProvider>(context, listen: false).deleteAccount();
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(ok ? 'Tài khoản đã được xoá mềm.' : Provider.of<AuthProvider>(context, listen: false).errorMessage),
+                    backgroundColor: ok ? AppColors.success : AppColors.alert,
+                  ),
+                );
+                if (ok && mounted) {
+                  context.go('/auth');
+                }
+              },
+              icon: const Icon(Icons.delete_forever_outlined),
+              label: const Text('Xoá tài khoản'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.alert,
+                side: const BorderSide(color: AppColors.alert),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
             child: FilledButton.icon(
               onPressed: () {
                 Provider.of<AuthProvider>(context, listen: false).logout();

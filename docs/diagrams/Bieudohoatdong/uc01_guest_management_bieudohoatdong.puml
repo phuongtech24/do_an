@@ -1,13 +1,54 @@
 @startuml
 skinparam defaultFontName "Times New Roman"
+skinparam wrapWidth 180
+skinparam NodePadding 20
+
+|Người dùng|
 start
-:Khách mở ứng dụng ở chế độ ẩn danh;
-:Chọn biệt danh;
-:Chọn ảnh đại diện ảo;
-:Thực hiện LSAS thử nghiệm nếu muốn;
-:Hoàn tất cổng chuyển đổi tài khoản;
-:Liên kết email và mật khẩu;
-:Khai báo hồ sơ y tế tối thiểu;
-:Chuyển thành Bệnh nhân;
-stop
+:Khởi động ứng dụng;
+:Chọn "Trải nghiệm ẩn danh";
+
+|Hệ thống|
+:Lấy mã thiết bị (Device ID);
+:Tạo tài khoản ẩn danh (Role GUEST);
+:Cấp biệt danh "Khach_..." và avatar hệ thống;
+:Tạo phiên đăng nhập tự động;
+
+|Người dùng|
+:Có thể đổi biệt danh và avatar;
+:Thực hiện bài kiểm tra lo âu xã hội (LSAS);
+:Hệ thống yêu cầu liên kết tài khoản để xem kết quả chi tiết;
+:Nhập email, mật khẩu, họ tên thật, SĐT;
+
+|Hệ thống|
+:Kiểm tra định dạng thông tin và email tồn tại;
+if (Thông tin hợp lệ?) then (Không)
+  :Thông báo lỗi định dạng hoặc trùng email;
+  |Người dùng|
+  :Nhập lại thông tin;
+  detach
+else (Có)
+  |Hệ thống|
+  :Chuyển đổi Role từ GUEST sang PATIENT;
+  :Khởi tạo hồ sơ Bệnh nhân (PatientProfile);
+  :Xóa hồ sơ Guest cũ và gán kết quả LSAS;
+  :Gửi mã OTP xác minh qua email;
+  
+  |Người dùng|
+  :Nhận và nhập mã OTP;
+  
+  |Hệ thống|
+  :Xác thực mã OTP;
+  if (Mã OTP hợp lệ?) then (Không)
+    :Thông báo lỗi mã OTP;
+    |Người dùng|
+    :Nhập lại mã OTP;
+    detach
+  else (Có)
+    |Hệ thống|
+    :Cập nhật trạng thái xác minh email;
+    :Cấp phiên đăng nhập Bệnh nhân chính thức;
+    stop
+  endif
+endif
 @enduml

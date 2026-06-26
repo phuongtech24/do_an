@@ -1,11 +1,32 @@
 @startuml
 skinparam defaultFontName "Times New Roman"
+skinparam wrapWidth 180
+skinparam NodePadding 20
+
+|Người dùng|
 start
-:Mở Nhật ký suy nghĩ;
-:Nhập tình huống và suy nghĩ tự động;
-:Nhận gợi ý câu hỏi phản biện;
-:Nhận diện méo mó nhận thức;
-:Hoàn thiện 6 bước;
+:Mở tính năng Nhật ký CBT (Thought Record);
+:Nhập tình huống, cảm xúc và suy nghĩ tự động;
+:Nhận diện méo mó nhận thức (Cognitive Distortions);
+:Hoàn thiện 6 bước (bao gồm phản biện và đánh giá lại);
 :Lưu bài viết;
+
+|Hệ thống|
+:Đóng gói và mã hóa dữ liệu (AES-128);
+:Gửi dữ liệu cho AI Assistant phân tích rủi ro;
+:Ghi nhận kết quả AI (Điểm rủi ro, Mức độ nghiêm trọng);
+:Lưu trữ Nhật ký vào CSDL;
+if (Điểm rủi ro AI >= 70?) then (Có)
+  :Kích hoạt chấm điểm rủi ro khẩn cấp;
+  if (Xác nhận mức độ nguy hiểm?) then (Có)
+    :Bật Cờ đỏ (Red Flag);
+    :Cảnh báo cho Bác sĩ điều trị;
+  else (Không)
+  endif
+else (Không)
+endif
+
+|Người dùng|
+:Nhận thông báo lưu thành công;
 stop
 @enduml

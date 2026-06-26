@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.reconnect.mindhealth.common.dto.ApiResponse;
+import com.reconnect.mindhealth.modules.clinical.dto.AccountDeletionRequestDto;
 import com.reconnect.mindhealth.modules.clinical.dto.PatientProfileDto;
 import com.reconnect.mindhealth.modules.clinical.dto.PatientProfileUpdateRequestDto;
 import com.reconnect.mindhealth.modules.clinical.dto.PatientSafetyGateRequestDto;
@@ -31,25 +32,35 @@ public class PatientProfileController {
         try {
             return ResponseEntity.ok(ApiResponse.success("OK", patientProfileSelfService.getProfile(patientId)));
         } catch (Exception e) {
-            return ResponseEntity.ok(ApiResponse.error("Lỗi khi tải hồ sơ bệnh nhân: " + e.getMessage()));
+            return ResponseEntity.ok(ApiResponse.error("Loi khi tai ho so benh nhan: " + e.getMessage()));
         }
     }
 
     @PostMapping
     public ResponseEntity<ApiResponse<PatientProfileDto>> updateProfile(@RequestBody PatientProfileUpdateRequestDto request) {
         try {
-            return ResponseEntity.ok(ApiResponse.success("Cập nhật hồ sơ bệnh nhân thành công.", patientProfileSelfService.updateProfile(request)));
+            return ResponseEntity.ok(ApiResponse.success("Cap nhat ho so benh nhan thanh cong.", patientProfileSelfService.updateProfile(request)));
         } catch (Exception e) {
-            return ResponseEntity.ok(ApiResponse.error("Lỗi khi cập nhật hồ sơ bệnh nhân: " + e.getMessage()));
+            return ResponseEntity.ok(ApiResponse.error("Loi khi cap nhat ho so benh nhan: " + e.getMessage()));
         }
     }
 
     @PostMapping("/safety-gate")
     public ResponseEntity<ApiResponse<PatientProfileDto>> completeSafetyGate(@RequestBody PatientSafetyGateRequestDto request) {
         try {
-            return ResponseEntity.ok(ApiResponse.success("Đã ghi nhận cam kết an toàn y tế.", patientProfileSelfService.completeSafetyGate(request)));
+            return ResponseEntity.ok(ApiResponse.success("Da ghi nhan cam ket an toan y te.", patientProfileSelfService.completeSafetyGate(request)));
         } catch (Exception e) {
-            return ResponseEntity.ok(ApiResponse.error("Lỗi khi lưu thông tin an toàn y tế: " + e.getMessage()));
+            return ResponseEntity.ok(ApiResponse.error("Loi khi luu thong tin an toan y te: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/delete-account")
+    public ResponseEntity<ApiResponse<Void>> deleteAccount(@RequestBody AccountDeletionRequestDto request) {
+        try {
+            patientProfileSelfService.softDeleteAccount(request);
+            return ResponseEntity.ok(ApiResponse.success("Tai khoan da duoc xoa mem thanh cong.", null));
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.error("Loi khi xoa tai khoan: " + e.getMessage()));
         }
     }
 }

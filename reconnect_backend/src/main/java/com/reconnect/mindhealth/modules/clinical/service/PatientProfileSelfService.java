@@ -8,6 +8,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.reconnect.mindhealth.common.util.PatientProfileFieldValidator;
+import com.reconnect.mindhealth.modules.auth.entity.User;
+import com.reconnect.mindhealth.modules.auth.repository.UserRepository;
+import com.reconnect.mindhealth.modules.clinical.dto.AccountDeletionRequestDto;
 import com.reconnect.mindhealth.modules.clinical.dto.PatientProfileDto;
 import com.reconnect.mindhealth.modules.clinical.dto.PatientProfileUpdateRequestDto;
 import com.reconnect.mindhealth.modules.clinical.dto.PatientSafetyGateRequestDto;
@@ -20,9 +23,11 @@ import jakarta.persistence.EntityNotFoundException;
 public class PatientProfileSelfService {
 
     private final PatientProfileRepository patientProfileRepository;
+    private final UserRepository userRepository;
 
-    public PatientProfileSelfService(PatientProfileRepository patientProfileRepository) {
+    public PatientProfileSelfService(PatientProfileRepository patientProfileRepository, UserRepository userRepository) {
         this.patientProfileRepository = patientProfileRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional(readOnly = true)
@@ -107,6 +112,59 @@ public class PatientProfileSelfService {
                 true));
         profile.setSafetyGateCompleted(true);
         return new PatientProfileDto(patientProfileRepository.save(profile));
+    }
+
+    @Transactional
+    public void softDeleteAccount(AccountDeletionRequestDto request) {
+        if (request == null || request.getPatientId() == null) {
+            throw new IllegalArgumentException("Thieu patientId.");
+        }
+        if (!Boolean.TRUE.equals(request.getConfirmDelete())) {
+            throw new IllegalArgumentException("Ban chua xac nhan xoa tai khoan.");
+        }
+
+        PatientProfile profile = load(request.getPatientId());
+        User user = profile.getUser();
+        if (user == null) {
+            throw new EntityNotFoundException("Khong tim thay tai khoan nguoi dung.");
+        }
+
+        String deletedSuffix = user.getId().toString().substring(0, 8);
+        user.setEmail("deleted+" + deletedSuffix + "@reconnect.local");
+        user.setUsername("deleted_" + deletedSuffix);
+        user.setIsActive(false);
+        user.setVoided(true);
+        user.setResetPasswordToken(null);
+        user.setResetPasswordExpiresAt(null);
+        user.setEmailVerificationOtp(null);
+        user.setEmailVerificationExpiresAt(null);
+        user.setEmailVerificationSentAt(null);
+        userRepository.save(user);
+
+        profile.setAnonymousModeEnabled(true);
+        profile.setRealFullName(null);
+        profile.setPhoneNumber(null);
+        profile.setEmergencyContactPhone(null);
+        profile.setDateOfBirth(null);
+        profile.setGender(null);
+        profile.setEducationLevel(null);
+        profile.setOccupation(null);
+        profile.setRelationshipStatus(null);
+        profile.setMedicalHistory(null);
+        profile.setNickName("tai_khoan_da_xoa_" + deletedSuffix);
+        profile.setAvatarIcon("avatar_deleted");
+        profile.setMedicalProfileCompleted(false);
+        profile.setSafetyGateCompleted(false);
+        profile.setCurrentRiskScore(0);
+        profile.setCurrentLsasScore(0);
+        profile.setIsRedFlagActive(false);
+        profile.setTriageRequired(false);
+        profile.setTriageStatus(null);
+        profile.setTriagePriority(null);
+        profile.setTriageTriggeredAt(null);
+        profile.setIsActive(false);
+        profile.setVoided(true);
+        patientProfileRepository.save(profile);
     }
 
     private PatientProfile load(UUID patientId) {

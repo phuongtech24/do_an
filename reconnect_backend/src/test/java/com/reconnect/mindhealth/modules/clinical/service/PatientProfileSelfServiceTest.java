@@ -1,5 +1,6 @@
 package com.reconnect.mindhealth.modules.clinical.service;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -15,6 +16,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.reconnect.mindhealth.modules.auth.entity.User;
+import com.reconnect.mindhealth.modules.auth.repository.UserRepository;
+import com.reconnect.mindhealth.modules.clinical.dto.AccountDeletionRequestDto;
 import com.reconnect.mindhealth.modules.clinical.dto.PatientProfileDto;
 import com.reconnect.mindhealth.modules.clinical.dto.PatientProfileUpdateRequestDto;
 import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
@@ -25,6 +29,9 @@ class PatientProfileSelfServiceTest {
 
     @Mock
     private PatientProfileRepository patientProfileRepository;
+
+    @Mock
+    private UserRepository userRepository;
 
     @InjectMocks
     private PatientProfileSelfService patientProfileSelfService;
@@ -44,16 +51,16 @@ class PatientProfileSelfServiceTest {
         request.setGender("Nam");
         request.setPhoneNumber("0987654321");
         request.setEmergencyContactPhone("0911222333");
-        request.setEducationLevel("Đại học");
-        request.setOccupation("Lập trình viên");
-        request.setRelationshipStatus("Độc thân");
-        request.setMedicalHistory("Không");
+        request.setEducationLevel("Dai hoc");
+        request.setOccupation("Lap trinh vien");
+        request.setRelationshipStatus("Doc than");
+        request.setMedicalHistory("Khong");
 
         PatientProfileDto result = patientProfileSelfService.updateProfile(request);
 
         assertEquals("0987654321", result.getPhoneNumber());
-        assertEquals("Đại học", result.getEducationLevel());
-        assertEquals("Độc thân", result.getRelationshipStatus());
+        assertEquals("Dai hoc", result.getEducationLevel());
+        assertEquals("Doc than", result.getRelationshipStatus());
         assertEquals(Boolean.TRUE, result.getMedicalProfileCompleted());
     }
 
@@ -72,6 +79,36 @@ class PatientProfileSelfServiceTest {
                 IllegalArgumentException.class,
                 () -> patientProfileSelfService.updateProfile(request));
 
-        assertEquals("Số điện thoại cá nhân chỉ được chứa chữ số.", exception.getMessage());
+        assertEquals("So dien thoai ca nhan chi duoc chua chu so.", exception.getMessage());
+    }
+
+    @Test
+    void softDeleteAccount_anonymizesProfileAndDisablesUser() {
+        UUID patientId = UUID.randomUUID();
+        User user = new User();
+        user.setId(patientId);
+        user.setEmail("patient@example.com");
+        user.setUsername("patient");
+
+        PatientProfile profile = new PatientProfile();
+        profile.setId(patientId);
+        profile.setUser(user);
+        profile.setNickName("patient");
+
+        when(patientProfileRepository.findById(patientId)).thenReturn(Optional.of(profile));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(patientProfileRepository.save(any(PatientProfile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        AccountDeletionRequestDto request = new AccountDeletionRequestDto();
+        request.setPatientId(patientId);
+        request.setConfirmDelete(true);
+
+        assertDoesNotThrow(() -> patientProfileSelfService.softDeleteAccount(request));
+
+        assertEquals(Boolean.FALSE, user.getIsActive());
+        assertEquals(Boolean.TRUE, user.getVoided());
+        assertEquals(Boolean.FALSE, profile.getIsActive());
+        assertEquals(Boolean.TRUE, profile.getVoided());
     }
 }
+

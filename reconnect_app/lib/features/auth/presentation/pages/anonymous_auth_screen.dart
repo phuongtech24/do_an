@@ -153,6 +153,20 @@ class _PatientLoginFormState extends State<_PatientLoginForm> {
       return;
     }
 
+    final lowerMessage = auth.errorMessage.toLowerCase();
+    if (lowerMessage.contains('xac minh') || lowerMessage.contains('xác minh')) {
+      context.go(
+        '/verify-email',
+        extra: {
+          'email': _emailController.text.trim(),
+          'password': _passwordController.text.trim(),
+          'title': 'Xác minh email đăng nhập',
+          'subtitle': 'Tài khoản của bạn cần xác minh email trước khi tiếp tục đăng nhập.',
+        },
+      );
+      return;
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Đăng nhập thất bại: ${auth.errorMessage}'),
