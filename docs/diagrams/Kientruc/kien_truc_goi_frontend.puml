@@ -1,0 +1,115 @@
+@startuml
+skinparam defaultFontName "Segoe UI"
+skinparam linetype ortho
+skinparam nodesep 40
+skinparam ranksep 60
+skinparam roundcorner 10
+skinparam shadowing true
+skinparam packageStyle rectangle
+
+skinparam Package {
+    BackgroundColor #F8F9FA
+    BorderColor #343A40
+    BorderThickness 2
+    FontSize 16
+    FontStyle bold
+}
+
+skinparam Folder {
+    BackgroundColor #FFFFFF
+    BorderColor #0056B3
+    BorderThickness 1.5
+    FontSize 14
+}
+
+skinparam Frame {
+    BackgroundColor transparent
+    BorderColor #AAAAAA
+    BorderThickness 1
+    FontColor #666666
+    FontSize 13
+    FontStyle italic
+}
+
+skinparam Arrow {
+    Color #555555
+    Thickness 1.5
+}
+
+title Biểu đồ gói (Package Diagram) - Frontend ReConnect MindHealth
+
+package "Flutter Web (Dành cho Bác sĩ & Quản trị viên)" as Web {
+    
+    frame "Tầng Giao diện (Presentation)" {
+        folder "WebTherapistScreens\n[screens.therapist]" as WTS
+        folder "WebAdminScreens\n[screens.admin]" as WAS
+        folder "WebTherapistFeature\n[features.therapist]" as WTF
+    }
+    
+    frame "Tầng Dữ liệu & Dùng chung" {
+        folder "WebShared\n[shared]" as WS
+        folder "WebData\n[data]" as WD
+    }
+    
+    frame "Tầng Lõi (Core/Domain)" {
+        folder "WebDomain\n[domain]" as WDom
+        folder "WebCore\n[core]" as WC
+    }
+
+    WTS -down-> WS
+    WTS -down-> WD
+    WAS -down-> WS
+    WAS -down-> WD
+    WTF -down-> WD
+    
+    WD -down-> WDom
+    WD -down-> WC
+}
+
+package "Flutter Mobile (Dành cho Bệnh nhân)" as Mobile {
+    
+    folder "MobileApp\n[app]" as MApp
+    folder "MobileScreens\n[screens]" as MS
+    
+    frame "Các Module Tính năng (Features)" {
+        folder "MobileAuth\n[features.auth]" as MAuth
+        folder "MobileAssessment\n[features.assessment]" as MAss
+        folder "MobileRoadmap\n[features.roadmap]" as MRoad
+        folder "MobileJournal\n[features.journal]" as MJour
+        folder "MobileAi\n[features.ai_journal]" as MAi
+        folder "MobileShared\n[shared.widgets]" as MShare
+    }
+    
+    frame "Tầng Lõi & Mạng (Core/Network)" {
+        folder "MobileNetwork\n[network]" as MNet
+        folder "MobileCore\n[core]" as MCore
+    }
+    
+    MApp -[hidden]right-> MS
+
+    MS -down-> MAuth
+    MS -down-> MAss
+    MS -down-> MRoad
+    MS -down-> MJour
+    MS -down-> MAi
+    MS -down-> MShare
+    
+    MAuth -down-> MNet
+    MAuth -down-> MCore
+    
+    MAss -down-> MNet
+    MAss -down-> MCore
+    
+    MRoad -down-> MNet
+    MRoad -down-> MCore
+    
+    MJour -down-> MNet
+    MJour -down-> MCore
+    
+    MAi -down-> MNet
+    MAi -down-> MCore
+}
+
+Web -[hidden]down-> Mobile
+
+@enduml
