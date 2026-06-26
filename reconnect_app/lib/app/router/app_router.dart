@@ -7,7 +7,6 @@ import '../../features/assessment/presentation/pages/progress_screen.dart';
 import '../../features/assessment/presentation/pages/lsas_light_tips_screen.dart';
 import '../../features/auth/presentation/pages/anonymous_auth_screen.dart';
 import '../../features/auth/presentation/pages/auth_gate_screen.dart';
-import '../../features/auth/presentation/pages/email_verification_screen.dart';
 import '../../features/auth/presentation/pages/profile_setup_screen.dart';
 import '../../features/auth/presentation/pages/standard_signup_screen.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
@@ -53,20 +52,6 @@ class AppRouter {
         path: '/standard-signup',
         name: 'standard-signup',
         builder: (context, state) => const StandardSignupScreen(),
-      ),
-      GoRoute(
-        path: '/verify-email',
-        name: 'verify-email',
-        builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>? ?? {};
-          return EmailVerificationScreen(
-            email: extra['email'] as String? ?? '',
-            password: extra['password'] as String?,
-            title: extra['title'] as String? ?? 'Xác minh email',
-            subtitle: extra['subtitle'] as String?,
-            postVerifyRoute: extra['postVerifyRoute'] as String?,
-          );
-        },
       ),
       GoRoute(
         path: '/profile-setup',

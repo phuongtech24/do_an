@@ -14,8 +14,6 @@ class ApiConstants {
   static const String register = '$baseUrl/auth/register';
   static const String registerAnonymous = '$baseUrl/auth/register-anonymous';
   static const String guestLinkAccount = '$baseUrl/auth/guest/link-account';
-  static const String verifyEmailOtp = '$baseUrl/auth/verify-email-otp';
-  static const String resendEmailOtp = '$baseUrl/auth/resend-email-otp';
   static const String guestProfile = '$baseUrl/guest/profile';
 
   // User Endpoints
@@ -40,7 +38,6 @@ class ApiConstants {
   static String patientTherapistDetail(String id) => '$baseUrl/patient/therapists/$id';
   static const String patientProfile = '$baseUrl/patient/profile';
   static const String patientProfileSafetyGate = '$baseUrl/patient/profile/safety-gate';
-  static const String patientDeleteAccount = '$baseUrl/patient/profile/delete-account';
 
   // Roadmap Endpoints
   static const String getDailyQuests = '$baseUrl/roadmap/daily';

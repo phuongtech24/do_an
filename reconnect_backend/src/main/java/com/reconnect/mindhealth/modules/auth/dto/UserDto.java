@@ -10,7 +10,6 @@ public class UserDto extends BaseObjectDto {
     private Role role;
     private Boolean isAnonymous;
     private Boolean isActive;
-    private Boolean emailVerified;
 
     public UserDto() {}
 
@@ -24,7 +23,6 @@ public class UserDto extends BaseObjectDto {
             this.role = entity.getRole();
             this.isAnonymous = entity.getIsAnonymous();
             this.isActive = entity.getIsActive();
-            this.emailVerified = entity.getEmailVerified();
         }
     }
 
@@ -38,6 +36,4 @@ public class UserDto extends BaseObjectDto {
     public void setIsAnonymous(Boolean isAnonymous) { this.isAnonymous = isAnonymous; }
     public Boolean getIsActive() { return isActive; }
     public void setIsActive(Boolean isActive) { this.isActive = isActive; }
-    public Boolean getEmailVerified() { return emailVerified; }
-    public void setEmailVerified(Boolean emailVerified) { this.emailVerified = emailVerified; }
 }

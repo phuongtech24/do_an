@@ -22,13 +22,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reconnect.mindhealth.common.util.JwtUtil;
 import com.reconnect.mindhealth.modules.assessment.service.IAssessmentService;
 import com.reconnect.mindhealth.modules.auth.dto.ForgotPasswordRequestDto;
-import com.reconnect.mindhealth.modules.auth.dto.EmailVerificationRequestDto;
-import com.reconnect.mindhealth.modules.auth.dto.RegisterRequest;
 import com.reconnect.mindhealth.modules.auth.entity.User;
 import com.reconnect.mindhealth.modules.auth.repository.UserRepository;
 import com.reconnect.mindhealth.modules.auth.service.PasswordResetEmailService;
-import com.reconnect.mindhealth.modules.auth.service.EmailVerificationMailService;
-import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
 import com.reconnect.mindhealth.modules.clinical.repository.TherapistProfileRepository;
 import com.reconnect.mindhealth.modules.guest.repository.GuestProfileRepository;
@@ -62,9 +58,6 @@ class AuthServiceImplTest {
 
     @Mock
     private PasswordResetEmailService passwordResetEmailService;
-
-    @Mock
-    private EmailVerificationMailService emailVerificationMailService;
 
     @InjectMocks
     private AuthServiceImpl authService;
@@ -108,46 +101,5 @@ class AuthServiceImplTest {
 
         verify(userRepository, never()).save(any(User.class));
         verify(passwordResetEmailService, never()).sendResetPasswordEmail(any(), any(), any());
-    }
-
-    @Test
-    void register_marksEmailAsUnverified_andSendsOtp() {
-        RegisterRequest request = new RegisterRequest();
-        request.setEmail("patient@example.com");
-        request.setPassword("secret123");
-        request.setNickname("BN01");
-        request.setRole("PATIENT");
-        request.setIsAnonymous(false);
-
-        when(userRepository.existsByEmail("patient@example.com")).thenReturn(false);
-        when(passwordEncoder.encode("secret123")).thenReturn("encoded-secret");
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(patientProfileRepository.save(any(PatientProfile.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        assertDoesNotThrow(() -> authService.register(request));
-
-        verify(emailVerificationMailService).sendOtp(any(), any(), any());
-    }
-
-    @Test
-    void verifyEmailOtp_marksUserVerified_whenOtpMatches() {
-        User user = new User();
-        user.setEmail("patient@example.com");
-        user.setEmailVerified(false);
-        user.setEmailVerificationOtp("123456");
-        user.setEmailVerificationExpiresAt(new java.util.Date(System.currentTimeMillis() + 60_000L));
-
-        when(userRepository.findByEmail("patient@example.com")).thenReturn(Optional.of(user));
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        EmailVerificationRequestDto request = new EmailVerificationRequestDto();
-        request.setEmail("patient@example.com");
-        request.setOtp("123456");
-
-        var result = authService.verifyEmailOtp(request);
-
-        assertNotNull(result);
-        assertEquals(Boolean.TRUE, result.getEmailVerified());
-        verify(userRepository).save(user);
     }
 }

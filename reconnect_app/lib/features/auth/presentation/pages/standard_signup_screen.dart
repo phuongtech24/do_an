@@ -55,23 +55,21 @@ class _StandardSignupScreenState extends State<StandardSignupScreen> {
       return;
     }
 
+    await auth.login(
+      _emailController.text.trim(),
+      _passwordController.text.trim(),
+    );
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Đã tạo tài khoản. Vui lòng kiểm tra email để xác minh OTP.'),
-        backgroundColor: AppColors.success,
-      ),
-    );
-    context.go(
-      '/verify-email',
-      extra: {
-        'email': _emailController.text.trim(),
-        'password': _passwordController.text.trim(),
-        'title': 'Xác minh email đăng ký',
-        'subtitle': 'Nhập mã OTP vừa được gửi để kích hoạt tài khoản và tiếp tục tạo hồ sơ ban đầu.',
-        'postVerifyRoute': '/profile-setup?mode=standard',
-      },
-    );
+
+    if (auth.status == AuthStatus.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Đăng ký thành công. Hãy hoàn thiện hồ sơ ban đầu của bạn.'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+      context.go('/profile-setup?mode=standard');
+    }
   }
 
   @override

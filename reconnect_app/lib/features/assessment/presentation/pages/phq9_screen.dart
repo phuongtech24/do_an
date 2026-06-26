@@ -215,7 +215,7 @@ class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
         return StatefulBuilder(
           builder: (context, setStateDialog) => AlertDialog(
             scrollable: true,
-            title: const Text('Xem kết quả chi tiết và lộ trình trị liệu'),
+            title: const Text('Mở khóa kết quả và lộ trình CBT'),
             content: SizedBox(
               width: 430,
               child: Form(
@@ -225,13 +225,13 @@ class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Cảm ơn bạn đã dũng cảm hoàn thành bài đánh giá. Để MindHealth phân tích kết quả chi tiết và thiết lập lộ trình đồng hành phù hợp nhất, bạn vui lòng tạo tài khoản nhé. Mọi thông tin của bạn đều được bảo mật an toàn.',
+                      'Bạn đã hoàn thành bài LSAS. Để MindHealth phân tích kết quả chuyên sâu, thiết lập lộ trình phù hợp và kích hoạt an toàn y tế khi cần, vui lòng liên kết email, đặt mật khẩu và cung cấp tối thiểu họ tên thật cùng số điện thoại cá nhân.',
                       style: TextStyle(height: 1.5),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Ứng dụng vẫn sẽ tiếp tục hiển thị biệt danh và ảnh đại diện hệ thống để đảm bảo sự riêng tư của bạn như đã hứa.',
-                      style: TextStyle(height: 1.45),
+                    Text(
+                      'App vẫn tiếp tục hiển thị biệt danh ${auth.guestProfile?.nickname.isNotEmpty == true ? auth.guestProfile!.nickname : 'của bạn'} và avatar hệ thống như đã hứa.',
+                      style: const TextStyle(height: 1.45),
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
@@ -333,19 +333,7 @@ class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
                         );
                         if (!dialogContext.mounted) return;
                         if (ok) {
-                          Navigator.pop(dialogContext);
-                          if (context.mounted) {
-                            context.go(
-                              '/verify-email',
-                              extra: {
-                                'email': emailController.text.trim(),
-                                'password': passwordController.text,
-                                'title': 'Xác minh email chuyển đổi',
-                                'subtitle': 'Hệ thống vừa liên kết tài khoản guest của bạn. Vui lòng xác minh email để hoàn tất chuyển đổi.',
-                                'postVerifyRoute': '/profile-setup?mode=medical-profile&after=/lsas-light-tips',
-                              },
-                            );
-                          }
+                          Navigator.pop(dialogContext, true);
                         } else {
                           setStateDialog(() => submitting = false);
                           ScaffoldMessenger.of(dialogContext).showSnackBar(
@@ -398,7 +386,7 @@ class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Để hệ thống có thể phân tích kết quả đánh giá và đưa ra lộ trình phù hợp, bạn vui lòng cung cấp họ tên thật và số điện thoại cá nhân nhé. Thông tin này chỉ dành cho bác sĩ và quản trị viên để hỗ trợ bạn khi cần thiết, và được bảo mật hoàn toàn.',
+                      'Để mở khóa phân tích kết quả LSAS và lộ trình CBT phù hợp, bạn cần cung cấp tối thiểu họ tên thật và số điện thoại cá nhân. Thông tin này chỉ dành cho bác sĩ/admin để phục vụ an toàn y tế khi có tình huống khẩn cấp.',
                       style: TextStyle(height: 1.5),
                     ),
                     const SizedBox(height: 14),

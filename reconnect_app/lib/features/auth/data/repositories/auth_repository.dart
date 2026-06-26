@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:reconnect_app/core/constants/api_constants.dart';
-import 'package:reconnect_app/features/auth/data/models/email_verification_response.dart';
 import 'package:reconnect_app/features/auth/data/models/login_request.dart';
 import 'package:reconnect_app/features/auth/data/models/login_response.dart';
 
@@ -131,40 +130,6 @@ class AuthRepository {
     }
   }
 
-  Future<EmailVerificationResponse> verifyEmailOtp({
-    required String email,
-    required String otp,
-  }) async {
-    final response = await http.post(
-      Uri.parse(ApiConstants.verifyEmailOtp),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'email': email,
-        'otp': otp,
-      }),
-    );
-
-    final json = _decodeApiResponse(response, 'xác minh OTP email');
-    if (json['status'] == 200 && json['data'] != null) {
-      return EmailVerificationResponse.fromJson(json['data']);
-    }
-    throw Exception(json['message'] ?? 'Xác minh OTP thất bại.');
-  }
-
-  Future<EmailVerificationResponse> resendEmailOtp(String email) async {
-    final response = await http.post(
-      Uri.parse(ApiConstants.resendEmailOtp),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email}),
-    );
-
-    final json = _decodeApiResponse(response, 'gửi lại OTP email');
-    if (json['status'] == 200 && json['data'] != null) {
-      return EmailVerificationResponse.fromJson(json['data']);
-    }
-    throw Exception(json['message'] ?? 'Gửi lại OTP thất bại.');
-  }
-
   Future<LoginResponse> loginAnonymous(String deviceId) async {
     final response = await http.post(
       Uri.parse('${ApiConstants.registerAnonymous}?deviceId=$deviceId'),
@@ -178,7 +143,7 @@ class AuthRepository {
     throw Exception(json['message'] ?? 'Đăng nhập ẩn danh thất bại.');
   }
 
-  Future<EmailVerificationResponse> linkGuestAccount({
+  Future<LoginResponse> linkGuestAccount({
     required String guestId,
     required String email,
     required String password,
@@ -203,30 +168,8 @@ class AuthRepository {
 
     final json = _decodeApiResponse(response, 'liên kết tài khoản guest');
     if (json['status'] == 200 && json['data'] != null) {
-      return EmailVerificationResponse.fromJson(json['data']);
+      return LoginResponse.fromJson(json['data']);
     }
     throw Exception(json['message'] ?? 'Không thể liên kết tài khoản guest.');
-  }
-
-  Future<void> deletePatientAccount({
-    required String patientId,
-    required String token,
-  }) async {
-    final response = await http.post(
-      Uri.parse(ApiConstants.patientDeleteAccount),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({
-        'patientId': patientId,
-        'confirmDelete': true,
-      }),
-    );
-
-    final json = _decodeApiResponse(response, 'xoá tài khoản');
-    if (json['status'] != 200) {
-      throw Exception(json['message'] ?? 'Xoá tài khoản thất bại.');
-    }
   }
 }

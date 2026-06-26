@@ -20,21 +20,17 @@ import com.reconnect.mindhealth.modules.assessment.dto.LsasAnswerRequestDto;
 import com.reconnect.mindhealth.modules.assessment.dto.LsasSubmissionDto;
 import com.reconnect.mindhealth.modules.assessment.enums.LsasSubmissionType;
 import com.reconnect.mindhealth.modules.assessment.service.IAssessmentService;
-import com.reconnect.mindhealth.modules.auth.dto.EmailVerificationRequestDto;
-import com.reconnect.mindhealth.modules.auth.dto.EmailVerificationResponseDto;
-import com.reconnect.mindhealth.modules.auth.dto.ForgotPasswordRequestDto;
 import com.reconnect.mindhealth.modules.auth.dto.GuestLinkAccountRequestDto;
+import com.reconnect.mindhealth.modules.auth.dto.ForgotPasswordRequestDto;
 import com.reconnect.mindhealth.modules.auth.dto.LoginRequest;
 import com.reconnect.mindhealth.modules.auth.dto.LoginResponse;
 import com.reconnect.mindhealth.modules.auth.dto.RefreshTokenRequestDto;
 import com.reconnect.mindhealth.modules.auth.dto.RegisterRequest;
-import com.reconnect.mindhealth.modules.auth.dto.ResendEmailOtpRequestDto;
 import com.reconnect.mindhealth.modules.auth.dto.ResetPasswordRequestDto;
 import com.reconnect.mindhealth.modules.auth.dto.UserDto;
 import com.reconnect.mindhealth.modules.auth.entity.User;
 import com.reconnect.mindhealth.modules.auth.enums.Role;
 import com.reconnect.mindhealth.modules.auth.repository.UserRepository;
-import com.reconnect.mindhealth.modules.auth.service.EmailVerificationMailService;
 import com.reconnect.mindhealth.modules.auth.service.IAuthService;
 import com.reconnect.mindhealth.modules.auth.service.PasswordResetEmailService;
 import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
@@ -83,14 +79,8 @@ public class AuthServiceImpl implements IAuthService {
     @Autowired
     private PasswordResetEmailService passwordResetEmailService;
 
-    @Autowired
-    private EmailVerificationMailService emailVerificationMailService;
-
-    private static final long EMAIL_OTP_TTL_MILLIS = 10 * 60 * 1000L;
-    private static final long EMAIL_OTP_RESEND_COOLDOWN_MILLIS = 60 * 1000L;
-
     @Override
-    public EmailVerificationResponseDto register(RegisterRequest request) {
+    public UserDto register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email đã được sử dụng!");
         }
@@ -113,7 +103,6 @@ public class AuthServiceImpl implements IAuthService {
         entity.setPasswordHash(encodedPassword);
         entity.setRole(Role.valueOf(request.getRole() != null ? request.getRole() : "PATIENT"));
         entity.setIsAnonymous(request.getIsAnonymous() != null ? request.getIsAnonymous() : false);
-        entity.setEmailVerified(false);
 
         User savedUser = this.userRepository.save(entity);
 
@@ -155,8 +144,7 @@ public class AuthServiceImpl implements IAuthService {
             patientProfileRepository.save(profile);
         }
 
-        issueAndSendEmailVerificationOtp(savedUser, true);
-        return buildVerificationResponse(savedUser.getEmail(), "Vui long xac minh email truoc khi dang nhap.");
+        return new UserDto(savedUser);
     }
 
     @Override
@@ -167,10 +155,6 @@ public class AuthServiceImpl implements IAuthService {
 
         if (Boolean.FALSE.equals(entity.getIsActive())) {
             throw new RuntimeException("Tài khoản đã bị khóa");
-        }
-
-        if (entity.getRole() != Role.GUEST && !Boolean.TRUE.equals(entity.getEmailVerified())) {
-            throw new RuntimeException("Email chua duoc xac minh. Vui long nhap ma OTP.");
         }
 
         validatePasswordOrThrow(request, entity);
@@ -221,7 +205,7 @@ public class AuthServiceImpl implements IAuthService {
                 .orElseGet(() -> {
                     User newGuest = new User();
                     newGuest.setEmail(guestEmail);
-                    newGuest.setUsername("Khach_" + guestPrefix);
+                    newGuest.setUsername("Guest_" + guestPrefix);
                     newGuest.setPasswordHash(passwordEncoder.encode(normalizedDeviceId));
                     newGuest.setRole(Role.GUEST);
                     newGuest.setIsAnonymous(false);
@@ -250,7 +234,7 @@ public class AuthServiceImpl implements IAuthService {
     }
 
     @Override
-    public EmailVerificationResponseDto linkGuestAccount(GuestLinkAccountRequestDto request) {
+    public LoginResponse linkGuestAccount(GuestLinkAccountRequestDto request) {
         if (request.getGuestId() == null) {
             throw new IllegalArgumentException("Thiếu guestId.");
         }
@@ -291,7 +275,6 @@ public class AuthServiceImpl implements IAuthService {
         guestUser.setRole(Role.PATIENT);
         guestUser.setIsAnonymous(false);
         guestUser.setUsername(resolvedNickname);
-        guestUser.setEmailVerified(false);
         userRepository.save(guestUser);
 
         PatientProfile patientProfile = patientProfileRepository.findById(guestUser.getId())
@@ -323,56 +306,7 @@ public class AuthServiceImpl implements IAuthService {
                 request.getGuestId(),
                 patientProfile.getId(),
                 normalizedEmail);
-        issueAndSendEmailVerificationOtp(guestUser, true);
-        return buildVerificationResponse(normalizedEmail, "Tai khoan da duoc lien ket. Vui long nhap ma OTP de tiep tuc.");
-    }
-
-    @Override
-    public UserDto verifyEmailOtp(EmailVerificationRequestDto request) {
-        if (request == null || isBlank(request.getEmail())) {
-            throw new IllegalArgumentException("Email la bat buoc.");
-        }
-        if (request == null || isBlank(request.getOtp())) {
-            throw new IllegalArgumentException("Ma OTP la bat buoc.");
-        }
-
-        String normalizedEmail = request.getEmail().trim().toLowerCase(Locale.ROOT);
-        User user = userRepository.findByEmail(normalizedEmail)
-                .orElseThrow(() -> new EntityNotFoundException("Khong tim thay tai khoan can xac minh."));
-
-        if (Boolean.TRUE.equals(user.getEmailVerified())) {
-            return new UserDto(user);
-        }
-        if (isBlank(user.getEmailVerificationOtp()) || !request.getOtp().trim().equals(user.getEmailVerificationOtp())) {
-            throw new IllegalArgumentException("Ma OTP khong hop le.");
-        }
-        if (user.getEmailVerificationExpiresAt() == null || user.getEmailVerificationExpiresAt().before(new Date())) {
-            throw new IllegalArgumentException("Ma OTP da het han.");
-        }
-
-        user.setEmailVerified(true);
-        user.setEmailVerificationOtp(null);
-        user.setEmailVerificationExpiresAt(null);
-        user.setEmailVerificationSentAt(null);
-        return new UserDto(userRepository.save(user));
-    }
-
-    @Override
-    public EmailVerificationResponseDto resendEmailOtp(ResendEmailOtpRequestDto request) {
-        if (request == null || isBlank(request.getEmail())) {
-            throw new IllegalArgumentException("Email la bat buoc.");
-        }
-
-        String normalizedEmail = request.getEmail().trim().toLowerCase(Locale.ROOT);
-        User user = userRepository.findByEmail(normalizedEmail)
-                .orElseThrow(() -> new EntityNotFoundException("Khong tim thay tai khoan."));
-
-        if (Boolean.TRUE.equals(user.getEmailVerified())) {
-            return buildVerificationResponse(normalizedEmail, "Email da duoc xac minh truoc do.");
-        }
-
-        issueAndSendEmailVerificationOtp(user, false);
-        return buildVerificationResponse(normalizedEmail, "Da gui lai ma OTP xac minh email.");
+        return buildLoginResponse(guestUser);
     }
 
     @Override
@@ -389,9 +323,6 @@ public class AuthServiceImpl implements IAuthService {
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy tài khoản."));
         if (Boolean.FALSE.equals(entity.getIsActive())) {
             throw new IllegalStateException("Tài khoản đã bị khóa.");
-        }
-        if (entity.getRole() != Role.GUEST && !Boolean.TRUE.equals(entity.getEmailVerified())) {
-            throw new IllegalStateException("Email chua duoc xac minh.");
         }
         return buildLoginResponse(entity);
     }
@@ -492,28 +423,6 @@ public class AuthServiceImpl implements IAuthService {
         return value == null || value.trim().isEmpty();
     }
 
-    private EmailVerificationResponseDto buildVerificationResponse(String email, String nextStep) {
-        return new EmailVerificationResponseDto(email, true, (int) (EMAIL_OTP_TTL_MILLIS / 1000L), nextStep);
-    }
-
-    private void issueAndSendEmailVerificationOtp(User user, boolean forceNewOtp) {
-        Date now = new Date();
-        if (!forceNewOtp
-                && user.getEmailVerificationSentAt() != null
-                && now.getTime() - user.getEmailVerificationSentAt().getTime() < EMAIL_OTP_RESEND_COOLDOWN_MILLIS) {
-            throw new IllegalStateException("Vui long cho it nhat 60 giay truoc khi gui lai ma OTP.");
-        }
-
-        String otp = generateEmailOtp();
-        Date expiresAt = new Date(now.getTime() + EMAIL_OTP_TTL_MILLIS);
-        user.setEmailVerificationOtp(otp);
-        user.setEmailVerificationExpiresAt(expiresAt);
-        user.setEmailVerificationSentAt(now);
-        userRepository.save(user);
-        emailVerificationMailService.sendOtp(user.getEmail(), otp, expiresAt);
-        log.info("Email verification otp generated email={}, otp={}, expiresAt={}", user.getEmail(), otp, expiresAt);
-    }
-
     private LoginResponse buildLoginResponse(User entity) {
         String accessToken = jwtUtil.generateAccessToken(entity.getEmail());
         String refreshToken = jwtUtil.generateRefreshToken(entity.getEmail());
@@ -532,10 +441,5 @@ public class AuthServiceImpl implements IAuthService {
     private String generateResetToken() {
         long randomPart = ThreadLocalRandom.current().nextLong(100000, 999999);
         return "RST-" + randomPart + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT);
-    }
-
-    private String generateEmailOtp() {
-        int randomPart = ThreadLocalRandom.current().nextInt(100000, 1000000);
-        return String.valueOf(randomPart);
     }
 }

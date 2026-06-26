@@ -156,8 +156,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                     ? 'H\u1ED3 s\u01A1 kh\u00E1ch v\u00E3ng lai'
                     : 'H\u1ED3 s\u01A1 hi\u1EC3n th\u1ECB trong app',
                 subtitle: widget.mode == ProfileSetupMode.anonymousDemo
-                    ? 'Ở bước này bạn chỉ cần chọn biệt danh và ảnh đại diện hệ thống để bắt đầu làm LSAS một cách nhẹ nhàng, chưa cần khai thông tin y tế thật.'
-                    : 'Phần này là lớp hiển thị bên ngoài ứng dụng. Bạn có thể dùng biệt danh và ảnh đại diện hệ thống để cảm thấy an toàn hơn khi bắt đầu.',
+                    ? '\u1EDE b\u01B0\u1EDBc n\u00E0y b\u1EA1n ch\u1EC9 c\u1EA7n ch\u1ECDn bi\u1EC7t danh v\u00E0 avatar h\u1EC7 th\u1ED1ng \u0111\u1EC3 b\u1EAFt \u0111\u1EA7u l\u00E0m LSAS m\u1ED9t c\u00E1ch nh\u1EB9 nh\u00E0ng, ch\u01B0a c\u1EA7n khai th\u00F4ng tin y t\u1EBF th\u1EADt.'
+                    : 'Ph\u1EA7n n\u00E0y l\u00E0 l\u1EDBp hi\u1EC3n th\u1ECB b\u00EAn ngo\u00E0i app. B\u1EA1n c\u00F3 th\u1EC3 d\u00F9ng bi\u1EC7t danh v\u00E0 avatar h\u1EC7 th\u1ED1ng \u0111\u1EC3 c\u1EA3m th\u1EA5y an to\u00E0n h\u01A1n khi b\u1EAFt \u0111\u1EA7u.',
                 child: Column(
                   children: [
                     TextFormField(
@@ -182,7 +182,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                         activeColor: AppColors.primary,
                         title: const Text('B\u1EADt ch\u1EBF \u0111\u1ED9 \u1EA9n danh'),
                         subtitle: const Text(
-                          'Khi bật, ứng dụng ưu tiên hiển thị biệt danh và ảnh đại diện hệ thống. Bác sĩ vẫn xem được hồ sơ y tế thật trong cổng quản trị.',
+                          'Khi b\u1EADt, app \u01B0u ti\u00EAn hi\u1EC3n th\u1ECB bi\u1EC7t danh v\u00E0 avatar h\u1EC7 th\u1ED1ng. B\u00E1c s\u0129 v\u1EABn xem \u0111\u01B0\u1EE3c h\u1ED3 s\u01A1 y t\u1EBF th\u1EADt trong c\u1ED5ng qu\u1EA3n tr\u1ECB.',
                         ),
                         onChanged: (value) => setState(() => _anonymousMode = value),
                       ),
@@ -190,7 +190,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        'Chọn ảnh đại diện hệ thống',
+                        'Ch\u1ECDn avatar h\u1EC7 th\u1ED1ng',
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w800,
                               color: AppColors.textPrimary,
@@ -255,7 +255,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               _SectionCard(
                 title: 'H\u1ED3 s\u01A1 y t\u1EBF ch\u00EDnh th\u1EE9c',
                 subtitle:
-                    'Phần này chỉ dành cho bác sĩ và quản trị viên để phục vụ an toàn y tế, hỗ trợ khẩn cấp và xây dựng lộ trình điều trị đúng cho bạn.',
+                    'Ph\u1EA7n n\u00E0y ch\u1EC9 d\u00E0nh cho b\u00E1c s\u0129 v\u00E0 admin \u0111\u1EC3 ph\u1EE5c v\u1EE5 an to\u00E0n y t\u1EBF, h\u1ED7 tr\u1EE3 kh\u1EA9n c\u1EA5p v\u00E0 x\u00E2y d\u1EF1ng l\u1ED9 tr\u00ECnh \u0111i\u1EC1u tr\u1ECB \u0111\u00FAng cho b\u1EA1n.',
                 child: Column(
                   children: [
                     TextFormField(
@@ -547,7 +547,7 @@ class _ProfileSetupHero extends StatelessWidget {
               children: [
                 Text(
                   isAnonymousDemo
-                      ? 'Trải nghiệm trước bằng Chế độ khách'
+                      ? 'Tr\u1EA3i nghi\u1EC7m tr\u01B0\u1EDBc b\u1EB1ng Guest Mode'
                       : isMedicalOnly
                           ? 'B\u1ED5 sung h\u1ED3 s\u01A1 y t\u1EBF'
                           : 'Chu\u1EA9n b\u1ECB h\u1ED3 s\u01A1 ban \u0111\u1EA7u',
@@ -560,10 +560,10 @@ class _ProfileSetupHero extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   isAnonymousDemo
-                      ? 'Bạn sẽ chọn biệt danh và ảnh đại diện hệ thống trước, sau đó làm LSAS. Kết quả chi tiết chỉ mở sau khi bạn liên kết tài khoản và vượt qua cổng an toàn y tế.'
+                      ? 'B\u1EA1n s\u1EBD ch\u1ECDn bi\u1EC7t danh v\u00E0 avatar h\u1EC7 th\u1ED1ng tr\u01B0\u1EDBc, sau \u0111\u00F3 l\u00E0m LSAS. K\u1EBFt qu\u1EA3 chi ti\u1EBFt ch\u1EC9 m\u1EDF sau khi b\u1EA1n li\u00EAn k\u1EBFt t\u00E0i kho\u1EA3n v\u00E0 v\u01B0\u1EE3t qua c\u1ED5ng an to\u00E0n y t\u1EBF.'
                       : isMedicalOnly
-                          ? 'Hồ sơ thật giúp bác sĩ hỗ trợ đúng và can thiệp an toàn khi cần. Giao diện ứng dụng vẫn có thể tiếp tục hiển thị biệt danh nếu bạn bật chế độ ẩn danh.'
-                          : 'MindHealth tách riêng lớp hiển thị trong ứng dụng và lớp hồ sơ y tế thật để vừa an toàn tâm lý, vừa bảo đảm an toàn điều trị.',
+                          ? 'H\u1ED3 s\u01A1 th\u1EADt gi\u00FAp b\u00E1c s\u0129 h\u1ED7 tr\u1EE3 \u0111\u00FAng v\u00E0 can thi\u1EC7p an to\u00E0n khi c\u1EA7n. B\u1EC1 m\u1EB7t app v\u1EABn c\u00F3 th\u1EC3 ti\u1EBFp t\u1EE5c hi\u1EC3n th\u1ECB bi\u1EC7t danh n\u1EBFu b\u1EA1n b\u1EADt ch\u1EBF \u0111\u1ED9 \u1EA9n danh.'
+                          : 'MindHealth t\u00E1ch ri\u00EAng l\u1EDBp hi\u1EC3n th\u1ECB trong app v\u00E0 l\u1EDBp h\u1ED3 s\u01A1 y t\u1EBF th\u1EADt \u0111\u1EC3 v\u1EEBa an to\u00E0n t\u00E2m l\u00FD, v\u1EEBa b\u1EA3o \u0111\u1EA3m an to\u00E0n \u0111i\u1EC1u tr\u1ECB.',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.92),
                     height: 1.45,

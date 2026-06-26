@@ -1,32 +1,14 @@
 @startuml
 skinparam defaultFontName "Times New Roman"
-skinparam wrapWidth 180
-skinparam NodePadding 20
-
-|Người dùng|
 start
-:Mở tính năng Điểm danh cảm xúc (Daily Check-in);
-:Đánh giá 5 chỉ số tâm trạng (Lo âu, Né tránh, Buồn bã...);
-if (Có xuất hiện suy nghĩ tiêu cực/nguy hiểm?) then (Có)
-  :Xác nhận trạng thái "Không an toàn" (UNSAFE);
+:Mở điểm danh cảm xúc;
+:Chấm 5 chỉ số tâm trạng;
+if (Chọn Không an toàn?) then (Có)
+  :Kích hoạt Safety Gate;
+  :Bật Cờ đỏ;
 else (Không)
-  :Xác nhận trạng thái "An toàn" hoặc bỏ qua;
+  :Lưu biểu đồ cảm xúc;
 endif
-:Gửi kết quả điểm danh;
-
-|Hệ thống|
-:Lưu lịch sử cảm xúc (UserMood);
-:Phân tích và tính toán điểm rủi ro (Risk Score);
-if (Trạng thái là Không an toàn?) then (Có)
-  :Đẩy điểm rủi ro lên mức 100;
-  :Kích hoạt Cờ đỏ (Red Flag);
-  :Cập nhật trạng thái Bệnh nhân thành WARNING;
-else (Không)
-  :Cập nhật biểu đồ theo dõi bình thường;
-endif
-
-|Người dùng|
-:Nhận thông điệp phản hồi từ hệ thống;
-:Chuyển tới bài tập hoặc gợi ý trị liệu tiếp theo;
+:Đi tới gợi ý tiếp theo;
 stop
 @enduml
