@@ -1,0 +1,73 @@
+@startuml
+skinparam defaultFontName "Times New Roman"
+skinparam shadowing false
+skinparam monochrome true
+left to right direction
+title Trực quan hóa mối quan hệ giữa 19 bảng trong CSDL
+
+rectangle "Cụm tài khoản và hồ sơ" as G1 {
+  entity "users" as users
+  entity "guest_profiles" as guest_profiles
+  entity "therapist_profiles" as therapist_profiles
+  entity "patient_profiles" as patient_profiles
+}
+
+rectangle "Cụm LSAS và phân luồng" as G2 {
+  entity "lsas_situations" as lsas_situations
+  entity "lsas_submissions" as lsas_submissions
+  entity "lsas_answers" as lsas_answers
+}
+
+rectangle "Cụm mục tiêu trị liệu\nvà Fear Ladder" as G3 {
+  entity "patient_goals" as patient_goals
+  entity "fear_ladder_items" as fear_ladder_items
+  entity "behavioral_experiments" as behavioral_experiments
+}
+
+rectangle "Cụm theo dõi cảm xúc\nvà nhật ký" as G4 {
+  entity "user_moods" as user_moods
+  entity "journals" as journals
+}
+
+rectangle "Cụm tư vấn từ xa" as G5 {
+  entity "appointments" as appointments
+  entity "therapist_schedule_slots" as therapist_schedule_slots
+  entity "therapist_weekly_schedule_slots" as therapist_weekly_schedule_slots
+  entity "therapist_credentials" as therapist_credentials
+}
+
+rectangle "Cụm AI chat" as G6 {
+  entity "ai_chat_sessions" as ai_chat_sessions
+  entity "ai_chat_messages" as ai_chat_messages
+  entity "ai_chat_feedback" as ai_chat_feedback
+}
+
+users --> guest_profiles
+users --> therapist_profiles
+users --> patient_profiles
+therapist_profiles --> patient_profiles
+
+patient_profiles --> lsas_submissions
+lsas_submissions --> lsas_answers
+lsas_situations --> lsas_answers
+
+patient_profiles --> patient_goals
+patient_profiles --> fear_ladder_items
+lsas_situations --> fear_ladder_items
+fear_ladder_items --> behavioral_experiments
+patient_profiles --> behavioral_experiments
+
+patient_profiles --> user_moods
+patient_profiles --> journals
+
+patient_profiles --> appointments
+therapist_profiles --> appointments
+therapist_profiles --> therapist_schedule_slots
+therapist_profiles --> therapist_weekly_schedule_slots
+therapist_profiles --> therapist_credentials
+
+patient_profiles --> ai_chat_sessions
+ai_chat_sessions --> ai_chat_messages
+ai_chat_messages --> ai_chat_feedback
+patient_profiles --> ai_chat_feedback
+@enduml

@@ -92,7 +92,7 @@ public class AssessmentServiceImpl implements IAssessmentService {
     @Transactional
     public LsasSubmissionDto submitLsas(LsasSubmissionDto dto) {
         if (dto.getAnswers() == null || dto.getAnswers().size() != 24) {
-            throw new IllegalArgumentException("LSAS c?n ?? 24 c?u tr? l?i.");
+            throw new IllegalArgumentException("LSAS cần đủ 24 câu trả lời.");
         }
         validateUniqueSituations(dto.getAnswers());
 

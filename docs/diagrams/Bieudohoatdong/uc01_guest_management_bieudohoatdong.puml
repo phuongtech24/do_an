@@ -1,13 +1,23 @@
 @startuml
 skinparam defaultFontName "Times New Roman"
+skinparam wrapWidth 200
+skinparam NodePadding 20
+
+|Khách|
 start
-:Khách mở ứng dụng ở chế độ ẩn danh;
-:Chọn biệt danh;
-:Chọn ảnh đại diện ảo;
+:Mở ứng dụng ở chế độ ẩn danh;
+:Chọn biệt danh và ảnh đại diện ảo;
+
+|Hệ thống|
+:Cấp quyền trải nghiệm ẩn danh;
+
+|Khách|
 :Thực hiện LSAS thử nghiệm nếu muốn;
-:Hoàn tất cổng chuyển đổi tài khoản;
-:Liên kết email và mật khẩu;
-:Khai báo hồ sơ y tế tối thiểu;
-:Chuyển thành Bệnh nhân;
+:Truy cập cổng chuyển đổi tài khoản;
+:Liên kết email, mật khẩu và hồ sơ y tế tối thiểu;
+
+|Hệ thống|
+:Kiểm tra và lưu thông tin tài khoản;
+:Chuyển tài khoản Khách thành Bệnh nhân;
 stop
 @enduml

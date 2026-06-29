@@ -1,45 +1,38 @@
-﻿@startuml
+@startuml
 skinparam defaultFontName "Times New Roman"
 skinparam shadowing false
 skinparam monochrome true
-skinparam linetype ortho
-skinparam nodesep 45
-skinparam ranksep 40
-title UC08 - Lộ trình trị liệu và thử nghiệm hành vi
+skinparam nodesep 80
+skinparam ranksep 80
 left to right direction
-actor "Bệnh nhân" as A1
-actor "Bác sĩ" as A2
-boundary "Form_GoalSetting" as B1
-boundary "Form_FearLadder" as B2
-boundary "Form_BehavioralExperiment" as B3
-control "ctrl_GoalManage" as C1
-control "ctrl_FearLadderGenerate" as C2
-control "ctrl_ExperimentManage" as C3
-entity "Ent_PatientGoal" as E1
-entity "Ent_LsasSubmission" as E2
-entity "Ent_FearLadderItem" as E3
-entity "Ent_BehavioralExperiment" as E4
-entity "Ent_PatientProfile" as E5
-B1 -[hidden]down-> B2
-B2 -[hidden]down-> B3
-C1 -[hidden]down-> C2
-C2 -[hidden]down-> C3
-E1 -[hidden]down-> E2
-E2 -[hidden]down-> E3
-E3 -[hidden]down-> E4
-E4 -[hidden]down-> E5
-A1 -- B1
-A1 -- B2
-A1 -- B3
-A2 -- B3
+title UC08 - Thực hành Thử nghiệm hành vi
+
+actor "Bệnh nhân" as Patient
+actor "Bác sĩ" as Therapist
+
+usecase "Form_Roadmap" as B1
+usecase "Form_ThietLapThuNghiem" as B2
+usecase "Form_TongKetThuNghiem" as B3
+usecase "ctrl_FearLadder" as C1
+usecase "ctrl_BehavioralExperiment" as C2
+
+usecase "Ent_FearLadderItem" as E1
+usecase "Ent_BehavioralExperiment" as E2
+usecase "Ent_PatientProfile" as E3
+
+Patient -- B1
+Patient -- B2
+Patient -- B3
+Therapist -- B1
+
 B1 -- C1
 B2 -- C2
-B3 -- C3
+B3 -- C2
+C1 -- C2
+
 C1 -- E1
+C1 -- E3
 C2 -- E1
 C2 -- E2
 C2 -- E3
-C2 -- E5
-C3 -- E3
-C3 -- E4
 @enduml

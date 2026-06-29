@@ -1,0 +1,29 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+skinparam defaultFontName Arial
+skinparam usecase {
+  BackgroundColor White
+  BorderColor Black
+}
+
+title UC08 - Viết Nhật ký suy nghĩ
+
+actor "Bệnh nhân" as Patient
+actor "Bác sĩ" as Therapist
+
+rectangle "Hệ thống ReConnect MindHealth" {
+  usecase "Viết Nhật ký suy nghĩ" as UC08
+  usecase "Viết nhật ký suy nghĩ\n6 bước" as UC081
+  usecase "Xem Thẻ đối phó" as UC082
+  usecase "Xem nhật ký suy nghĩ" as UC083
+}
+
+Patient --> UC08
+Therapist --> UC08
+
+UC08 ..> UC081 : <<include>>
+UC082 ..> UC081 : <<extend>>
+UC083 ..> UC08 : <<extend>>
+@enduml

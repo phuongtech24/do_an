@@ -1,0 +1,38 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+skinparam defaultFontName Arial
+skinparam usecase {
+  BackgroundColor White
+  BorderColor Black
+}
+
+title UC04 - Đặt lịch và tư vấn từ xa
+
+actor "Bệnh nhân" as Patient
+actor "Bác sĩ" as Therapist
+
+rectangle "Hệ thống ReConnect MindHealth" {
+  usecase "Đặt lịch và tư vấn từ xa" as UC04
+  usecase "Xem khung giờ trống" as UC041
+  usecase "Đặt lịch tư vấn từ xa" as UC042
+  usecase "Xem lịch hẹn" as UC043
+  usecase "Xem trước phiên tư vấn" as UC044
+  usecase "Tham gia tư vấn từ xa" as UC045
+  usecase "Thêm ghi chú lâm sàng" as UC046
+  usecase "Kích hoạt tốt nghiệp điều trị" as UC047
+}
+
+Patient --> UC04
+Therapist --> UC04
+
+UC04 ..> UC041 : <<include>>
+UC04 ..> UC042 : <<include>>
+UC042 ..> UC041 : <<include>>
+UC04 ..> UC043 : <<include>>
+UC04 ..> UC044 : <<include>>
+UC04 ..> UC045 : <<include>>
+UC04 ..> UC046 : <<include>>
+UC047 ..> UC044 : <<extend>>
+@enduml

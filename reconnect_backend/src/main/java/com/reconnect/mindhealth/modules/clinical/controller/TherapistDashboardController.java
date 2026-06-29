@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -99,6 +100,7 @@ public class TherapistDashboardController {
     }
 
     @GetMapping("/patients/{patientId}/pre-session-review")
+    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<TherapistPreSessionReviewDto>> getPreSessionReview(@PathVariable String patientId) {
         try {
             PatientProfile patient = therapistAssignmentService.getPatientForCurrentTherapist(java.util.UUID.fromString(patientId));
@@ -118,8 +120,7 @@ public class TherapistDashboardController {
                         .comparing((TherapistPatientListItemDto item) -> !Boolean.TRUE.equals(item.getIsRedFlagActive()))
                         .thenComparing((TherapistPatientListItemDto item) -> safe(item.getCurrentLsasScore()) < 95)
                         .thenComparing((TherapistPatientListItemDto item) -> item.getUpcomingAppointmentAt() == null)
-                        .thenComparing((TherapistPatientListItemDto item) -> !Boolean.TRUE.equals(item.getStalledProgress()))
-                        .thenComparing(item -> safe(item.getCurrentRiskScore()), Comparator.reverseOrder()))
+                        .thenComparing((TherapistPatientListItemDto item) -> !Boolean.TRUE.equals(item.getStalledProgress())))
                 .collect(Collectors.toList());
     }
 
@@ -223,7 +224,6 @@ public class TherapistDashboardController {
         int programWeek = roadmapProgramStateService.resolveProgramWeek(patient);
         dto.setProgramWeek(programWeek > 0 ? programWeek : null);
         dto.setProgramPhaseLabel(programWeek > 0 ? roadmapProgramStateService.resolvePhase(programWeek).label() : null);
-        dto.setCurrentRiskScore(patient.getCurrentRiskScore());
         dto.setRedFlagActive(patient.getIsRedFlagActive());
         dto.setUpcomingAppointmentAt(resolveUpcomingAppointment(patient));
         return dto;

@@ -1,0 +1,1041 @@
+{
+  "info": {
+    "_postman_id": "c4b7bb1d-4d4a-4d0a-8e32-8f7e6d0b9001",
+    "name": "ReConnect MindHealth - 6 Main Scenarios",
+    "description": "Bộ API Postman phục vụ 6 kịch bản kiểm thử chính của ReConnect MindHealth.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8081/api"
+    }
+  ],
+  "item": [
+    {
+      "name": "00 - Auth Quick Start",
+      "item": [
+        {
+          "name": "Login - Patient Demo",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"patient_lsas@reconnect.com\",\n  \"password\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};",
+                  "try { json = pm.response.json(); } catch (e) {}",
+                  "const token = json?.data?.accessToken || json?.data?.token;",
+                  "const refresh = json?.data?.refreshToken;",
+                  "const userId = json?.data?.user?.id || json?.data?.id;",
+                  "if (token) pm.environment.set('access_token', token);",
+                  "if (refresh) pm.environment.set('refresh_token', refresh);",
+                  "if (userId) pm.environment.set('current_user_id', userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login - Admin Demo",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@mindhealth.com\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login - Therapist Demo",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"therapist1@mindhealth.com\",\n  \"password\": \"therapist123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 - Quan ly tai khoan, ho so va danh tinh an danh",
+      "item": [
+        {
+          "name": "Register Anonymous Guest",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/auth/register-anonymous?deviceId={{device_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register-anonymous"
+              ],
+              "query": [
+                {
+                  "key": "deviceId",
+                  "value": "{{device_id}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};",
+                  "try { json = pm.response.json(); } catch (e) {}",
+                  "const guestId = json?.data?.user?.id || json?.data?.id;",
+                  "const token = json?.data?.accessToken || json?.data?.token;",
+                  "if (guestId) pm.environment.set('guest_id', guestId);",
+                  "if (token) pm.environment.set('guest_access_token', token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Link Guest Account",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"guestId\": \"{{guest_id}}\",\n  \"email\": \"{{new_patient_email}}\",\n  \"password\": \"{{new_patient_password}}\",\n  \"realFullName\": \"Nguyen Van Demo\",\n  \"phoneNumber\": \"0912345678\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/guest/link-account",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "guest",
+                "link-account"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Register Patient Directly",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{new_patient_email}}\",\n  \"password\": \"{{new_patient_password}}\",\n  \"role\": \"PATIENT\",\n  \"isAnonymous\": false,\n  \"nickname\": \"Demo Patient\",\n  \"avatarIcon\": \"avatar_1\",\n  \"anonymousModeEnabled\": true,\n  \"realFullName\": \"Nguyen Van Demo\",\n  \"dateOfBirth\": \"2001-01-01\",\n  \"gender\": \"MALE\",\n  \"phoneNumber\": \"0912345678\",\n  \"emergencyContactPhone\": \"0988888888\",\n  \"educationLevel\": \"COLLEGE\",\n  \"occupation\": \"Student\",\n  \"relationshipStatus\": \"SINGLE\",\n  \"medicalHistory\": \"Khong co\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Patient Profile",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/patient/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "patient",
+                "profile"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - Danh gia LSAS va phan luong lam sang",
+      "item": [
+        {
+          "name": "Get LSAS Situations",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/assessment/lsas/situations",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "assessment",
+                "lsas",
+                "situations"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Submit LSAS - Sample",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": \"{{patient_id}}\",\n  \"submissionType\": \"BASELINE\",\n  \"answers\": [\n    { \"situationId\": \"{{lsas_situation_01}}\", \"fearScore\": 3, \"avoidanceScore\": 3 },\n    { \"situationId\": \"{{lsas_situation_02}}\", \"fearScore\": 2, \"avoidanceScore\": 2 },\n    { \"situationId\": \"{{lsas_situation_03}}\", \"fearScore\": 3, \"avoidanceScore\": 3 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/assessment/lsas/submissions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "assessment",
+                "lsas",
+                "submissions"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Check LSAS Cooldown",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/assessment/lsas/cooldown?patientId={{patient_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "assessment",
+                "lsas",
+                "cooldown"
+              ],
+              "query": [
+                {
+                  "key": "patientId",
+                  "value": "{{patient_id}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get LSAS History",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/assessment/lsas/history?patientId={{patient_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "assessment",
+                "lsas",
+                "history"
+              ],
+              "query": [
+                {
+                  "key": "patientId",
+                  "value": "{{patient_id}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Lo trinh tri lieu va thu nghiem hanh vi",
+      "item": [
+        {
+          "name": "Get Program State",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/roadmap/program-state?patientId={{patient_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "roadmap",
+                "program-state"
+              ],
+              "query": [
+                {
+                  "key": "patientId",
+                  "value": "{{patient_id}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Fear Ladder",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/fear-ladder?patientId={{patient_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "fear-ladder"
+              ],
+              "query": [
+                {
+                  "key": "patientId",
+                  "value": "{{patient_id}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Today Experiment",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/behavioral-experiments/today?patientId={{patient_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "behavioral-experiments",
+                "today"
+              ],
+              "query": [
+                {
+                  "key": "patientId",
+                  "value": "{{patient_id}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Select Behavioral Experiment",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/behavioral-experiments/select?patientId={{patient_id}}&ladderItemId={{ladder_item_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "behavioral-experiments",
+                "select"
+              ],
+              "query": [
+                {
+                  "key": "patientId",
+                  "value": "{{patient_id}}"
+                },
+                {
+                  "key": "ladderItemId",
+                  "value": "{{ladder_item_id}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};",
+                  "try { json = pm.response.json(); } catch (e) {}",
+                  "const experimentId = json?.data?.id;",
+                  "if (experimentId) pm.environment.set('experiment_id', experimentId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Start Behavioral Experiment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prediction\": \"Moi nguoi se danh gia toi la kem tu tin\",\n  \"predictionBelief\": 80,\n  \"predictionBeliefBefore\": 80,\n  \"safetyBehaviorsJson\": \"[\\\"ne giao tiep mat\\\", \\\"noi nho\\\"]\",\n  \"dropWithoutSafetyBehaviors\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/behavioral-experiments/{{experiment_id}}/start",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "behavioral-experiments",
+                "{{experiment_id}}",
+                "start"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Debrief Behavioral Experiment",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"executionNotes\": \"Da thu chu dong hoi nhan vien quan\",\n  \"proofImageUrl\": \"\",\n  \"debrief\": \"Ket qua thuc te it tieu cuc hon du doan\",\n  \"outcome\": \"Da hoan thanh\",\n  \"learning\": \"Niem tin tieu cuc giam sau trai nghiem thuc te\",\n  \"predictionBeliefAfter\": 45,\n  \"postFearScore\": 40,\n  \"postAvoidanceScore\": 35\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/behavioral-experiments/{{experiment_id}}/debrief",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "behavioral-experiments",
+                "{{experiment_id}}",
+                "debrief"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Behavioral Experiment History",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/behavioral-experiments/history?patientId={{patient_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "behavioral-experiments",
+                "history"
+              ],
+              "query": [
+                {
+                  "key": "patientId",
+                  "value": "{{patient_id}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Diem danh cam xuc va Thought Record AI",
+      "item": [
+        {
+          "name": "Submit Mood Check-in",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": \"{{patient_id}}\",\n  \"moodScore\": 4,\n  \"anxietyScore\": 92,\n  \"avoidanceUrgeScore\": 80,\n  \"sadnessScore\": 35,\n  \"anticipatoryAnxietyScore\": 7,\n  \"postEventRuminationScore\": 6,\n  \"dailyAgenda\": \"Ngay mai phai thuyet trinh\",\n  \"safetyCheckRequired\": true,\n  \"safetyResponse\": \"SAFE\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/assessment/mood",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "assessment",
+                "mood"
+              ]
+            }
+          }
+        },
+        {
+          "name": "AI Guided Discovery",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"situation\": \"Toi phai phat bieu trong cuoc hop\",\n  \"automaticThought\": \"Moi nguoi se cuoi vi toi noi do\",\n  \"emotion\": \"Lo au\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/guided-discovery",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ai",
+                "guided-discovery"
+              ]
+            }
+          }
+        },
+        {
+          "name": "AI Cognitive Distortions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"situation\": \"Toi phai phat bieu trong cuoc hop\",\n  \"automaticThought\": \"Moi nguoi se cuoi vi toi noi do\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/cognitive-distortions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ai",
+                "cognitive-distortions"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Save Thought Record",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": \"{{patient_id}}\",\n  \"journalType\": \"THOUGHT_RECORD\",\n  \"situation\": \"Toi phai phat bieu trong cuoc hop\",\n  \"worstPrediction\": \"Toi se bi che cuoi\",\n  \"automaticThought\": \"Toi chac chan noi rat te\",\n  \"emotion\": \"Lo au\",\n  \"emotionScore\": 90,\n  \"bodySymptoms\": [\"tim dap nhanh\", \"run tay\"],\n  \"selfFocusThought\": \"Moi nguoi dang nhin vao diem yeu cua toi\",\n  \"negativeSelfImage\": \"Mot nguoi vung ve va thieu tu tin\",\n  \"safetyBehaviors\": [\"ne nhin nguoi khac\", \"noi rat nhanh\"],\n  \"distortions\": [\"MIND_READING\", \"CATASTROPHIZING\"],\n  \"adaptiveResponse\": \"Khong co bang chung chac chan rang moi nguoi se cuoi\",\n  \"safetyBehaviorCommitment\": \"Se thu giao tiep mat va noi cham hon\",\n  \"reRatedScore\": 55,\n  \"reRatedBeliefScore\": 50,\n  \"behavioralExperimentIdea\": \"Thu dat mot cau hoi ngan trong cuoc hop\",\n  \"content\": \"Thought record demo\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/journal/thought-records",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "journal",
+                "thought-records"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Thought Records",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/journal/thought-records?patientId={{patient_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "journal",
+                "thought-records"
+              ],
+              "query": [
+                {
+                  "key": "patientId",
+                  "value": "{{patient_id}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Guide Chat",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Toi cam thay khong an toan\",\n  \"screenContext\": \"home\",\n  \"sessionType\": \"PATIENT_COMPANION\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/guide-chat",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ai",
+                "guide-chat"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - Dat lich va tu van tu xa",
+      "item": [
+        {
+          "name": "Get Available Slots",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/booster/slots?patientId={{patient_id}}&date={{appointment_date}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "booster",
+                "slots"
+              ],
+              "query": [
+                {
+                  "key": "patientId",
+                  "value": "{{patient_id}}"
+                },
+                {
+                  "key": "date",
+                  "value": "{{appointment_date}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Book Appointment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": \"{{patient_id}}\",\n  \"startAt\": \"{{appointment_start_at}}\",\n  \"isAnonymous\": true,\n  \"durationMinutes\": 50,\n  \"purpose\": \"THERAPY\",\n  \"carePhaseCode\": \"THERAPIST_TRACK_14_WEEKS\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/booster/appointments/book",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "booster",
+                "appointments",
+                "book"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Book Appointment Again - Conflict Test",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": \"{{patient_id}}\",\n  \"startAt\": \"{{appointment_start_at}}\",\n  \"isAnonymous\": true,\n  \"durationMinutes\": 50,\n  \"purpose\": \"THERAPY\",\n  \"carePhaseCode\": \"THERAPIST_TRACK_14_WEEKS\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/booster/appointments/book",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "booster",
+                "appointments",
+                "book"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get My Appointments",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/booster/appointments/my?patientId={{patient_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "booster",
+                "appointments",
+                "my"
+              ],
+              "query": [
+                {
+                  "key": "patientId",
+                  "value": "{{patient_id}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - Canh bao Co do va dieu phoi lam sang",
+      "item": [
+        {
+          "name": "Admin Patients Paging",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"redFlagOnly\": true,\n  \"triageOnly\": false,\n  \"keyword\": \"\",\n  \"pageIndex\": 1,\n  \"pageSize\": 10\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/patients/paging",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "patients",
+                "paging"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Demo - Set LSAS Band Urgent Red Flag",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/admin/demo/patients/{{patient_id}}/set-lsas-band?band=URGENT_RED_FLAG",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "demo",
+                "patients",
+                "{{patient_id}}",
+                "set-lsas-band"
+              ],
+              "query": [
+                {
+                  "key": "band",
+                  "value": "URGENT_RED_FLAG"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Demo - Seed Unsafe Daily Checkin",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/admin/demo/patients/{{patient_id}}/seed-daily-checkin?template=UNSAFE",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "demo",
+                "patients",
+                "{{patient_id}}",
+                "seed-daily-checkin"
+              ],
+              "query": [
+                {
+                  "key": "template",
+                  "value": "UNSAFE"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Triage - Claim",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/admin/triage/{{patient_id}}/claim",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "triage",
+                "{{patient_id}}",
+                "claim"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Triage - Mark Called",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/admin/triage/{{patient_id}}/mark-called",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "triage",
+                "{{patient_id}}",
+                "mark-called"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Triage - Assign Therapist",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"therapistId\": \"{{therapist_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/triage/{{patient_id}}/assign",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "triage",
+                "{{patient_id}}",
+                "assign"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Triage - Close",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/admin/triage/{{patient_id}}/close",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "triage",
+                "{{patient_id}}",
+                "close"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 - Therapist UI support APIs",
+      "item": [
+        {
+          "name": "Therapist Patients Paging",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"redFlagOnly\": false,\n  \"keyword\": \"\",\n  \"pageIndex\": 1,\n  \"pageSize\": 8\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/therapist/patients/paging",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "therapist",
+                "patients",
+                "paging"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Therapist Pre-session Review",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/therapist/patients/{{patient_id}}/pre-session-review",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "therapist",
+                "patients",
+                "{{patient_id}}",
+                "pre-session-review"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Therapist Risk Analytics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/therapist/patients/{{patient_id}}/risk-analytics?days=14",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "therapist",
+                "patients",
+                "{{patient_id}}",
+                "risk-analytics"
+              ],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "14"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

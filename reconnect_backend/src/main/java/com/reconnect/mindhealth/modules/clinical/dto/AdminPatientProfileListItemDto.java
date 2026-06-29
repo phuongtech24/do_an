@@ -13,7 +13,6 @@ public class AdminPatientProfileListItemDto {
     private String email;
     private String nickname;
     private Status status;
-    private Integer currentRiskScore;
     private Integer currentLsasScore;
     private Boolean redFlagActive;
     private LocalDateTime graduatedAt;
@@ -47,7 +46,6 @@ public class AdminPatientProfileListItemDto {
         this.email = p.getUser() != null ? p.getUser().getEmail() : null;
         this.nickname = p.getNickName();
         this.status = p.getStatus();
-        this.currentRiskScore = p.getCurrentRiskScore();
         this.currentLsasScore = p.getCurrentLsasScore();
         this.redFlagActive = p.getIsRedFlagActive();
         this.graduatedAt = p.getGraduatedAt();
@@ -105,14 +103,6 @@ public class AdminPatientProfileListItemDto {
 
     public void setStatus(Status status) {
         this.status = status;
-    }
-
-    public Integer getCurrentRiskScore() {
-        return currentRiskScore;
-    }
-
-    public void setCurrentRiskScore(Integer currentRiskScore) {
-        this.currentRiskScore = currentRiskScore;
     }
 
     public Integer getCurrentLsasScore() {

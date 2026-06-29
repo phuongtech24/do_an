@@ -1,16 +1,51 @@
 @startuml
 skinparam defaultFontName "Times New Roman"
+title Biểu đồ tuần tự - Thực hành Thử nghiệm hành vi
+
 actor "Bệnh nhân" as Patient
-boundary "Màn hình Lộ trình" as RoadmapView
+boundary "Màn hình Roadmap" as RoadmapView
 control "RoadmapController" as Controller
-control "RoadmapService" as Service
-control "FearLadderService" as LadderService
+control "FearLadderService" as Service
 database "Cơ sở dữ liệu" as DB
-Patient -> RoadmapView : Mở lộ trình
-RoadmapView -> Controller : Lấy tiến độ
-Controller -> Service : Tổng hợp lộ trình
-Service -> LadderService : Lấy thang sợ hãi
-LadderService -> DB : Đọc ladder item
-DB --> LadderService : Danh sách bài đang mở
-LadderService --> RoadmapView : Hiển thị bài tập phù hợp
+
+Patient -> RoadmapView : Mở lộ trình trị liệu
+RoadmapView -> Controller : Tải Fear Ladder
+Controller -> Service : getFearLadder(patientId)
+Service -> DB : Đọc fear_ladder_items
+DB --> Service : Danh sách nấc Fear Ladder
+Service --> Controller : FearLadderItemDto[]
+Controller --> RoadmapView : Hiển thị nấc đang mở
+
+Patient -> RoadmapView : Chọn một nấc để thực hành
+RoadmapView -> Controller : selectBehavioralExperiment(patientId, ladderItemId)
+Controller -> Service : selectExperiment(patientId, ladderItemId)
+Service -> DB : Kiểm tra nấc và tìm experiment hiện có
+DB --> Service : Kết quả kiểm tra
+
+alt Nấc chưa mở hoặc đã mastered
+  Service --> Controller : IllegalStateException
+  Controller --> RoadmapView : Thông báo chưa thể bắt đầu
+else Có thể bắt đầu
+  Service -> DB : Tạo hoặc lấy BehavioralExperiment
+  DB --> Service : BehavioralExperiment
+  Service --> Controller : BehavioralExperimentDto
+  Controller --> RoadmapView : Hiển thị form thiết lập
+
+  Patient -> RoadmapView : Nhập prediction và safety behaviors
+  RoadmapView -> Controller : startBehavioralExperiment(...)
+  Controller -> Service : startExperiment(experimentId, request)
+  Service -> DB : Lưu setup và đổi trạng thái IN_PROGRESS
+  DB --> Service : Experiment đã cập nhật
+  Service --> Controller : BehavioralExperimentDto
+  Controller --> RoadmapView : Cho phép sang bước thực hành
+
+  Patient -> RoadmapView : Gửi debrief sau thực hành
+  RoadmapView -> Controller : debriefBehavioralExperiment(...)
+  Controller -> Service : debriefExperiment(experimentId, request)
+  Service -> DB : Lưu outcome, learning,\nbelief after
+  Service -> DB : Cập nhật FearLadderItem
+  DB --> Service : Dữ liệu đã cập nhật
+  Service --> Controller : BehavioralExperimentDto
+  Controller --> RoadmapView : Hiển thị kết quả và tiến độ mới
+end
 @enduml

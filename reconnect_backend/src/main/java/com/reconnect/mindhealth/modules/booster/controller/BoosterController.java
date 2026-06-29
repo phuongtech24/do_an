@@ -8,6 +8,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -68,12 +69,27 @@ public class BoosterController {
                     request != null ? request.getPatientId() : null,
                     request != null ? request.getStartAt() : null);
             return ResponseEntity.ok(ApiResponse.success("OK", boosterService.bookAppointment(request)));
+        } catch (IllegalArgumentException e) {
+            log.warn("Book appointment validation failed: patientId={}, startAt={}, err={}",
+                    request != null ? request.getPatientId() : null,
+                    request != null ? request.getStartAt() : null,
+                    e.toString());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.custom("Lỗi khi đặt lịch: " + e.getMessage(), null, HttpStatus.BAD_REQUEST));
+        } catch (IllegalStateException e) {
+            log.warn("Book appointment conflict/business rule failed: patientId={}, startAt={}, err={}",
+                    request != null ? request.getPatientId() : null,
+                    request != null ? request.getStartAt() : null,
+                    e.toString());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(ApiResponse.custom("Lỗi khi đặt lịch: " + e.getMessage(), null, HttpStatus.CONFLICT));
         } catch (Exception e) {
             log.warn("Book appointment failed: patientId={}, startAt={}, err={}",
                     request != null ? request.getPatientId() : null,
                     request != null ? request.getStartAt() : null,
                     e.toString());
-            return ResponseEntity.ok(ApiResponse.error("Lỗi khi đặt lịch: " + e.getMessage()));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.custom("Lỗi khi đặt lịch: " + e.getMessage(), null, HttpStatus.INTERNAL_SERVER_ERROR));
         }
     }
 

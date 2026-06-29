@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -16,21 +16,21 @@ class GoalSettingScreen extends StatefulWidget {
 class _GoalSettingScreenState extends State<GoalSettingScreen> {
   static const List<_GoalOption> _goalOptions = [
     _GoalOption(
-      goalType: 'SOCIAL_INTERACTION',
+      goalType: 'SOCIAL',
       title: 'Tự tin kết bạn, mở rộng quan hệ',
       subtitle: 'Ưu tiên các tình huống giao tiếp, làm quen, trò chuyện và duy trì kết nối.',
       icon: Icons.people_outline,
     ),
     _GoalOption(
-      goalType: 'PERFORMANCE',
+      goalType: 'BEHAVIORAL',
       title: 'Thể hiện tốt hơn trong công việc / học tập',
       subtitle: 'Ưu tiên thuyết trình, phát biểu, trả lời trước đám đông và các tình huống áp lực hiệu suất.',
       icon: Icons.campaign_outlined,
     ),
     _GoalOption(
-      goalType: 'GENERAL',
+      goalType: 'EMOTIONAL',
       title: 'Tự tin trong mọi tình huống hằng ngày',
-      subtitle: 'Kết hợp cả giao tiếp xã hội và tình huống hiệu suất để tạo lộ trình tổng quát.',
+      subtitle: 'Ưu tiên ổn định cảm xúc và giảm phản ứng lo âu trong các tình huống hằng ngày.',
       icon: Icons.self_improvement_outlined,
     ),
   ];

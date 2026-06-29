@@ -10,7 +10,6 @@ import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
 public class TherapistPatientListItemDto {
     private UUID patientId;
     private String nickname;
-    private Integer currentRiskScore;
     private Boolean isRedFlagActive;
     private Integer currentLsasScore;
     private Integer baselineLsasScore;
@@ -40,7 +39,6 @@ public class TherapistPatientListItemDto {
     public TherapistPatientListItemDto(PatientProfile patient, Integer baselineLsasScore, String primaryGoal) {
         this.patientId = patient.getId();
         this.nickname = patient.getNickName();
-        this.currentRiskScore = patient.getCurrentRiskScore();
         this.isRedFlagActive = patient.getIsRedFlagActive();
         this.currentLsasScore = patient.getCurrentLsasScore();
         this.baselineLsasScore = baselineLsasScore;
@@ -63,8 +61,6 @@ public class TherapistPatientListItemDto {
     public void setPatientId(UUID patientId) { this.patientId = patientId; }
     public String getNickname() { return nickname; }
     public void setNickname(String nickname) { this.nickname = nickname; }
-    public Integer getCurrentRiskScore() { return currentRiskScore; }
-    public void setCurrentRiskScore(Integer currentRiskScore) { this.currentRiskScore = currentRiskScore; }
     public Boolean getIsRedFlagActive() { return isRedFlagActive; }
     public void setIsRedFlagActive(Boolean isRedFlagActive) { this.isRedFlagActive = isRedFlagActive; }
     public Integer getCurrentLsasScore() { return currentLsasScore; }

@@ -16,7 +16,6 @@ public class TherapistPreSessionReviewDto {
     private Integer dailyCheckinsLastWeek;
     private Integer programWeek;
     private String programPhaseLabel;
-    private Integer currentRiskScore;
     private Boolean redFlagActive;
     private LocalDateTime upcomingAppointmentAt;
     private List<String> recentThoughtRecordSummaries = new ArrayList<>();
@@ -109,14 +108,6 @@ public class TherapistPreSessionReviewDto {
 
     public void setProgramPhaseLabel(String programPhaseLabel) {
         this.programPhaseLabel = programPhaseLabel;
-    }
-
-    public Integer getCurrentRiskScore() {
-        return currentRiskScore;
-    }
-
-    public void setCurrentRiskScore(Integer currentRiskScore) {
-        this.currentRiskScore = currentRiskScore;
     }
 
     public Boolean getRedFlagActive() {

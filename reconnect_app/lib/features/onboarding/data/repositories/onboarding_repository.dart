@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../../../../core/constants/api_constants.dart';
@@ -7,6 +7,14 @@ import '../models/patient_goal_model.dart';
 import '../models/therapist_directory_item_model.dart';
 
 class OnboardingRepository {
+  Map<String, dynamic> _decodeJsonResponse(http.Response response) {
+    final body = utf8.decode(response.bodyBytes);
+    if (body.trim().isEmpty) {
+      throw Exception('Phản hồi từ máy chủ đang rỗng.');
+    }
+    return jsonDecode(body) as Map<String, dynamic>;
+  }
+
   Future<PatientGoalModel> saveGoal(String patientId, String goalType, String description, {String? token}) async {
     try {
       final response = await http.post(
@@ -22,7 +30,7 @@ class OnboardingRepository {
         }),
       );
 
-      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      final json = _decodeJsonResponse(response);
       if (json['status'] == 200 && json['data'] != null) {
         return PatientGoalModel.fromJson(json['data'] as Map<String, dynamic>);
       }
@@ -42,7 +50,7 @@ class OnboardingRepository {
         },
       );
 
-      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      final json = _decodeJsonResponse(response);
       if (json['status'] == 200 && json['data'] != null) {
         final list = json['data'] as List<dynamic>;
         return list.map((e) => PatientGoalModel.fromJson(e as Map<String, dynamic>)).toList();
@@ -63,7 +71,7 @@ class OnboardingRepository {
         },
       );
 
-      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      final json = _decodeJsonResponse(response);
       if (json['status'] == 200 && json['data'] != null) {
         return OnboardingStatusModel.fromJson(json['data'] as Map<String, dynamic>);
       }
@@ -83,7 +91,7 @@ class OnboardingRepository {
         },
       );
 
-      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      final json = _decodeJsonResponse(response);
       if (json['status'] == 200 && json['data'] != null) {
         final list = json['data'] as List<dynamic>;
         return list.map((e) => TherapistDirectoryItemModel.fromJson(e as Map<String, dynamic>)).toList();
@@ -104,7 +112,7 @@ class OnboardingRepository {
         },
       );
 
-      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      final json = _decodeJsonResponse(response);
       if (json['status'] == 200 && json['data'] != null) {
         return TherapistDirectoryItemModel.fromJson(json['data'] as Map<String, dynamic>);
       }
@@ -128,7 +136,7 @@ class OnboardingRepository {
         }),
       );
 
-      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      final json = _decodeJsonResponse(response);
       if (json['status'] != 200) {
         throw Exception(json['message'] ?? 'Không thể chọn chuyên gia');
       }
@@ -147,7 +155,7 @@ class OnboardingRepository {
         },
       );
 
-      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      final json = _decodeJsonResponse(response);
       if (json['status'] != 200) {
         throw Exception(json['message'] ?? 'Không thể cập nhật psychoeducation');
       }

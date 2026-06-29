@@ -1,19 +1,42 @@
 @startuml
 skinparam defaultFontName "Times New Roman"
+skinparam wrapWidth 200
+skinparam NodePadding 20
+
+|Người dùng|
 start
-:Người dùng mở màn hình đăng nhập;
+:Truy cập màn hình đăng nhập;
 :Nhập email và mật khẩu;
-if (Có quên mật khẩu?) then (Có)
-  :Đi tới khôi phục mật khẩu;
-else (Không)
-  :Bấm Đăng nhập;
+
+|Hệ thống|
+:Kiểm tra định dạng email và mật khẩu;
+if (Định dạng hợp lệ?) then (Không)
+  :Thông báo lỗi định dạng;
+  |Người dùng|
+  :Nhập lại thông tin;
+  detach
+else (Có)
+  |Hệ thống|
+  :Kiểm tra tài khoản tồn tại\nvà trạng thái hoạt động;
+  if (Tài khoản hợp lệ?) then (Không)
+    :Thông báo tài khoản\nkhông tồn tại hoặc bị khóa;
+    |Người dùng|
+    :Nhập lại thông tin;
+    detach
+  else (Có)
+    |Hệ thống|
+    :Kiểm tra mật khẩu;
+    if (Mật khẩu đúng?) then (Không)
+      :Thông báo sai mật khẩu;
+      |Người dùng|
+      :Nhập lại thông tin;
+      detach
+    else (Có)
+      |Hệ thống|
+      :Tạo phiên đăng nhập;
+      :Điều hướng vào màn hình\nphù hợp theo vai trò;
+      stop
+    endif
+  endif
 endif
-:Hệ thống xác thực tài khoản;
-if (Hợp lệ?) then (Có)
-  :Tạo phiên đăng nhập;
-  :Điều hướng vào màn hình phù hợp;
-else (Không)
-  :Hiển thị lỗi;
-endif
-stop
 @enduml

@@ -1,0 +1,31 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+skinparam defaultFontName Arial
+skinparam usecase {
+  BackgroundColor White
+  BorderColor Black
+}
+
+title UC09 - Sử dụng Trợ lý AI và hỗ trợ nhận thức
+
+actor "Bệnh nhân" as Patient
+
+rectangle "Hệ thống ReConnect MindHealth" {
+  usecase "Sử dụng Trợ lý AI và\nhỗ trợ nhận thức" as UC09
+  usecase "Hỏi cách sử dụng ứng dụng" as UC091
+  usecase "Nhận gợi ý bước tiếp theo" as UC092
+  usecase "Nhận gợi ý phản biện" as UC093
+  usecase "Nhận diện méo mó nhận thức" as UC094
+  usecase "Nhận hỗ trợ CBT mức nhẹ" as UC095
+}
+
+Patient --> UC09
+
+UC09 ..> UC091 : <<include>>
+UC09 ..> UC092 : <<include>>
+UC09 ..> UC093 : <<include>>
+UC09 ..> UC094 : <<include>>
+UC09 ..> UC095 : <<include>>
+@enduml

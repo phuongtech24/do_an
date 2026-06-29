@@ -1,28 +1,33 @@
-﻿@startuml
+@startuml
 skinparam defaultFontName "Times New Roman"
 skinparam shadowing false
 skinparam monochrome true
-skinparam linetype ortho
-skinparam nodesep 45
-skinparam ranksep 40
+skinparam nodesep 60
+skinparam ranksep 45
+skinparam usecaseFontSize 14
 title UC06 - Trợ lý AI đồng hành
 left to right direction
+
 actor "Bệnh nhân" as A
-boundary "Form_AiChat" as B1
-boundary "Form_ChatHistory" as B2
-control "ctrl_ChatSession" as C1
-control "ctrl_AiResponse" as C2
-control "ctrl_FeedbackCollect" as C3
-entity "Ent_AiChatSession" as E1
-entity "Ent_AiChatMessage" as E2
-entity "Ent_AiChatFeedback" as E3
-entity "Ent_PatientProfile" as E4
-B1 -[hidden]down-> B2
-C1 -[hidden]down-> C2
-C2 -[hidden]down-> C3
+usecase "Form_AiChat" as B1
+usecase "Form_QuickActions" as B2
+usecase "ctrl_ChatSession" as C1
+usecase "ctrl_AiResponse" as C2
+usecase "ctrl_FeedbackCollect" as C3
+usecase "Ent_AiChatSession" as E1
+usecase "Ent_AiChatMessage" as E2
+usecase "Ent_AiChatFeedback" as E3
+usecase "Ent_PatientProfile" as E4
+
+B1 -[hidden]-> B2
+B2 -[hidden]-> C1
+C1 -[hidden]-> C2
+C2 -[hidden]-> C3
+C3 -[hidden]-> E1
 E1 -[hidden]down-> E2
 E2 -[hidden]down-> E3
 E3 -[hidden]down-> E4
+
 A -- B1
 A -- B2
 B1 -- C1

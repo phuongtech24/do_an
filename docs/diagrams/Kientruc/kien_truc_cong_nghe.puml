@@ -9,25 +9,24 @@
 !include <logos/github>
 !include <logos/google>
 
-skinparam dpi 200
+skinparam dpi 150
 skinparam defaultFontName "Segoe UI"
 skinparam componentStyle rectangle
 skinparam packageStyle rectangle
 skinparam linetype ortho
-skinparam nodesep 80
-skinparam ranksep 100
-skinparam roundcorner 15
-skinparam shadowing true
-skinparam padding 15
-skinparam ComponentPadding 25
-left to right direction
+skinparam nodesep 40
+skinparam ranksep 50
+skinparam roundcorner 12
+skinparam shadowing false
+skinparam ComponentPadding 10
+top to bottom direction
 
 skinparam Node {
     BackgroundColor #F8F9FA
     BorderColor #CED4DA
     BorderThickness 2
     FontColor #343A40
-    FontSize 16
+    FontSize 13
     FontStyle bold
 }
 
@@ -36,7 +35,7 @@ skinparam Component {
     BorderColor #ADB5BD
     BorderThickness 1.5
     FontColor #333333
-    FontSize 14
+    FontSize 12
 }
 
 skinparam Database {
@@ -44,7 +43,7 @@ skinparam Database {
     BorderColor #ADB5BD
     BorderThickness 1.5
     FontColor #333333
-    FontSize 14
+    FontSize 12
 }
 
 skinparam Cloud {
@@ -52,12 +51,12 @@ skinparam Cloud {
     BorderColor #CED4DA
     BorderThickness 2
     FontColor #343A40
-    FontSize 16
+    FontSize 13
     FontStyle bold
 }
 
 skinparam Arrow {
-    FontSize 14
+    FontSize 11
     FontColor #555555
 }
 
@@ -66,23 +65,21 @@ title Biểu đồ kiến trúc công nghệ hệ thống ReConnect MindHealth
 actor "Bệnh nhân" as Patient
 actor "Bác sĩ / Quản trị viên" as Staff
 
-cloud "<color:#181717><$github,scale=1.2></color>\nGitHub" as GitHub
-cloud "<color:#181717><$github,scale=1.2></color>\nGitHub Actions\nCI / CD" as GHA
-cloud "<color:#2496ED><$docker,scale=1.2></color>\nGHCR\nDocker Registry" as GHCR
-cloud "<color:#4285F4><$google,scale=1.2></color>\nGemini API" as Gemini
-cloud "<color:#EA4335><$google,scale=1.2></color>\nGmail SMTP" as Gmail
+cloud "<color:#181717><$github,scale=1.0></color>\nGitHub" as GitHub
+cloud "<color:#181717><$github,scale=1.0></color>\nGitHub Actions\nCI / CD" as GHA
+cloud "<color:#2496ED><$docker,scale=1.0></color>\nGHCR\nDocker Registry" as GHCR
+cloud "<color:#4285F4><$google,scale=1.0></color>\nGemini API" as Gemini
 
 frame "Lớp Client" {
-  component "<color:#02569B><$flutter,scale=1.2></color>\nFlutter Mobile App\n(reconnect_app)" as MobileApp
-  component "<color:#02569B><$flutter,scale=1.2></color>\nFlutter Web CMS\n(reconnect_web)" as WebApp
+  component "<color:#02569B><$flutter,scale=1.0></color>\nFlutter Mobile App\n(reconnect_app)" as MobileApp
+  component "<color:#02569B><$flutter,scale=1.0></color>\nFlutter Web CMS\n(reconnect_web)" as WebApp
 }
 
 node "Docker Compose / Container Runtime" as Runtime {
-  component "<color:#009639><$nginx,scale=1.2></color>\nNginx\n(Phục vụ Web / Reverse Proxy)" as Nginx
-  component "<color:#6DB33F><$spring,scale=1.2></color>\nSpring Boot REST API\nJava 17 + Spring Boot 3.2.4" as Backend
-  database "<color:#4479A1><$mysql,scale=1.2></color>\nMySQL 8\nCSDL Nghiệp vụ" as MySQL
-  database "<color:#DC382D><$redis,scale=1.2></color>\nRedis 7\nCache / Rate limit" as Redis
-  component "<color:#D44638><$google,scale=1.2></color>\nMailpit\nLocal SMTP" as Mailpit
+  component "<color:#009639><$nginx,scale=1.0></color>\nNginx\n(Reverse Proxy)" as Nginx
+  component "<color:#6DB33F><$spring,scale=1.0></color>\nSpring Boot REST API\nJava 17 + Spring Boot 3.2.4" as Backend
+  database "<color:#4479A1><$mysql,scale=1.0></color>\nMySQL 8\nCSDL Nghiệp vụ" as MySQL
+  database "<color:#DC382D><$redis,scale=1.0></color>\nRedis 7\nCache / Rate limit" as Redis
   folder "Docker Volumes" as Storage
 }
 
@@ -96,9 +93,7 @@ Nginx ---> Backend : "Proxy pass /api"
 Backend ---> MySQL : "CRUD dữ liệu"
 Backend ---> Redis : "Cache dữ liệu"
 Backend ---> Storage : "Lưu tệp Uploads"
-Backend ---> Mailpit : "Gửi mail local"
 Backend ---> Gemini : "Phân tích AI"
-Backend ...> Gmail : "Gửi mail thật"
 
 GitHub ---> GHA : "Push code"
 GHA ---> Backend : "Maven build"

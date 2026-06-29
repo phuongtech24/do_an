@@ -1,12 +1,40 @@
 @startuml
 skinparam defaultFontName "Times New Roman"
+title Biểu đồ hoạt động - Thực hành Thử nghiệm hành vi
+
+|Bệnh nhân|
 start
-:Vào lộ trình trị liệu;
-:Xem tuần hiện tại;
-:Xem thang sợ hãi;
-:Chọn bài tập đang mở;
-:Thiết lập dự đoán;
-:Thực hành;
-:Tổng kết bài học;
-stop
+:Mở lộ trình trị liệu;
+:Chọn một nấc Fear Ladder đang mở;
+
+|Hệ thống|
+:Kiểm tra nấc đã được mở khóa chưa;
+if (Nấc đã mở khóa?) then (Không)
+  |Bệnh nhân|
+  :Nhận thông báo\nchưa thể bắt đầu bài này;
+  stop
+else (Có)
+  |Hệ thống|
+  :Tạo hoặc lấy bài Thử nghiệm hành vi hiện tại;
+  |Bệnh nhân|
+  :Thiết lập dự đoán trước thử nghiệm;
+  :Nhập mức độ tin và hành vi an toàn cần bỏ;
+  |Hệ thống|
+  :Lưu phần thiết lập;
+  :Chuyển bài sang trạng thái đang thực hiện;
+  |Bệnh nhân|
+  :Thực hành trong bối cảnh thực tế;
+  :Ghi nhận điều đã xảy ra;
+  :Tổng kết bài học sau thử nghiệm;
+  |Hệ thống|
+  :Lưu debrief và kết quả sau thực hành;
+  :Cập nhật trạng thái bài thực hành;
+  :Cập nhật lại nấc Fear Ladder;
+  if (Đủ điều kiện mở nấc tiếp theo?) then (Có)
+    :Mở khóa nấc tiếp theo;
+  endif
+  |Bệnh nhân|
+  :Nhận tiến độ điều trị mới;
+  stop
+endif
 @enduml
