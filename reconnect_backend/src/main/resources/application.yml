@@ -65,6 +65,16 @@ app:
     distortions:
       call-ai-only-when-suspicious: ${AI_DISTORTIONS_CALL_AI_ONLY_WHEN_SUSPICIOUS:true}
       max-suggestions: ${AI_DISTORTIONS_MAX_SUGGESTIONS:3}
+    guide:
+      retrieval-enabled: ${AI_GUIDE_RETRIEVAL_ENABLED:true}
+      top-k: ${AI_GUIDE_TOP_K:4}
+      min-score: ${AI_GUIDE_MIN_SCORE:2}
+      screen-scope-weight: ${AI_GUIDE_SCREEN_SCOPE_WEIGHT:6}
+      route-scope-weight: ${AI_GUIDE_ROUTE_SCOPE_WEIGHT:4}
+      phase-scope-weight: ${AI_GUIDE_PHASE_SCOPE_WEIGHT:2}
+      topic-weight: ${AI_GUIDE_TOPIC_WEIGHT:2}
+      keyword-weight: ${AI_GUIDE_KEYWORD_WEIGHT:3}
+      content-term-weight: ${AI_GUIDE_CONTENT_TERM_WEIGHT:1}
   cache:
     enabled: ${APP_CACHE_ENABLED:false}
     therapist-directory-ttl-minutes: ${THERAPIST_DIRECTORY_CACHE_TTL_MINUTES:10}

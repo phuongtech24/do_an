@@ -18,6 +18,8 @@ public class AiProperties {
 
     private Distortions distortions = new Distortions();
 
+    private Guide guide = new Guide();
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -48,6 +50,14 @@ public class AiProperties {
 
     public void setDistortions(Distortions distortions) {
         this.distortions = distortions;
+    }
+
+    public Guide getGuide() {
+        return guide;
+    }
+
+    public void setGuide(Guide guide) {
+        this.guide = guide;
     }
 
     public static class Gemini {
@@ -170,6 +180,90 @@ public class AiProperties {
 
         public void setMaxSuggestions(int maxSuggestions) {
             this.maxSuggestions = maxSuggestions;
+        }
+    }
+
+    public static class Guide {
+        private boolean retrievalEnabled = true;
+        private int topK = 4;
+        private int minScore = 2;
+        private int screenScopeWeight = 6;
+        private int routeScopeWeight = 4;
+        private int phaseScopeWeight = 2;
+        private int topicWeight = 2;
+        private int keywordWeight = 3;
+        private int contentTermWeight = 1;
+
+        public boolean isRetrievalEnabled() {
+            return retrievalEnabled;
+        }
+
+        public void setRetrievalEnabled(boolean retrievalEnabled) {
+            this.retrievalEnabled = retrievalEnabled;
+        }
+
+        public int getTopK() {
+            return topK;
+        }
+
+        public void setTopK(int topK) {
+            this.topK = topK;
+        }
+
+        public int getMinScore() {
+            return minScore;
+        }
+
+        public void setMinScore(int minScore) {
+            this.minScore = minScore;
+        }
+
+        public int getScreenScopeWeight() {
+            return screenScopeWeight;
+        }
+
+        public void setScreenScopeWeight(int screenScopeWeight) {
+            this.screenScopeWeight = screenScopeWeight;
+        }
+
+        public int getRouteScopeWeight() {
+            return routeScopeWeight;
+        }
+
+        public void setRouteScopeWeight(int routeScopeWeight) {
+            this.routeScopeWeight = routeScopeWeight;
+        }
+
+        public int getPhaseScopeWeight() {
+            return phaseScopeWeight;
+        }
+
+        public void setPhaseScopeWeight(int phaseScopeWeight) {
+            this.phaseScopeWeight = phaseScopeWeight;
+        }
+
+        public int getTopicWeight() {
+            return topicWeight;
+        }
+
+        public void setTopicWeight(int topicWeight) {
+            this.topicWeight = topicWeight;
+        }
+
+        public int getKeywordWeight() {
+            return keywordWeight;
+        }
+
+        public void setKeywordWeight(int keywordWeight) {
+            this.keywordWeight = keywordWeight;
+        }
+
+        public int getContentTermWeight() {
+            return contentTermWeight;
+        }
+
+        public void setContentTermWeight(int contentTermWeight) {
+            this.contentTermWeight = contentTermWeight;
         }
     }
 }

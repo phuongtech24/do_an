@@ -1,20 +1,16 @@
 package com.reconnect.mindhealth.modules.ai.service.impl;
 
-import java.io.InputStream;
 import java.time.Duration;
 import java.text.Normalizer;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -29,6 +25,9 @@ import com.reconnect.mindhealth.modules.ai.dto.GuideChatRequestDto;
 import com.reconnect.mindhealth.modules.ai.dto.GuideChatResponseDto;
 import com.reconnect.mindhealth.modules.ai.dto.GuideChatSuggestedActionDto;
 import com.reconnect.mindhealth.modules.ai.dto.JournalAiRiskResultDto;
+import com.reconnect.mindhealth.modules.ai.model.GuideActionCard;
+import com.reconnect.mindhealth.modules.ai.model.GuideKnowledgeCard;
+import com.reconnect.mindhealth.modules.ai.service.GuideKnowledgeRetrieverService;
 import com.reconnect.mindhealth.modules.ai.service.IAiAssistantService;
 import com.reconnect.mindhealth.modules.ai.service.RuleBasedCognitiveDistortionDetector;
 import com.reconnect.mindhealth.modules.ai.service.RuleBasedJournalRiskScorer;
@@ -45,32 +44,22 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
     private static final Logger log = LoggerFactory.getLogger(GeminiAiAssistantServiceImpl.class);
 
     private final AiProperties aiProperties;
+    private final GuideKnowledgeRetrieverService guideKnowledgeRetrieverService;
     private final RuleBasedCognitiveDistortionDetector ruleBasedCognitiveDistortionDetector;
     private final RuleBasedJournalRiskScorer ruleBasedJournalRiskScorer;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final Map<String, GuideChatResponseDto> guideChatCache = new ConcurrentHashMap<>();
-    private List<GuideKnowledgeCard> guideKnowledgeCards = List.of();
 
     public GeminiAiAssistantServiceImpl(
             AiProperties aiProperties,
+            GuideKnowledgeRetrieverService guideKnowledgeRetrieverService,
             RuleBasedCognitiveDistortionDetector ruleBasedCognitiveDistortionDetector,
             RuleBasedJournalRiskScorer ruleBasedJournalRiskScorer) {
         this.aiProperties = aiProperties;
+        this.guideKnowledgeRetrieverService = guideKnowledgeRetrieverService;
         this.ruleBasedCognitiveDistortionDetector = ruleBasedCognitiveDistortionDetector;
         this.ruleBasedJournalRiskScorer = ruleBasedJournalRiskScorer;
-    }
-
-    @PostConstruct
-    void loadGuideKnowledgeCards() {
-        try (InputStream input = new ClassPathResource("ai/guide-knowledge-cards.json").getInputStream()) {
-            guideKnowledgeCards = objectMapper.readValue(input, new TypeReference<List<GuideKnowledgeCard>>() {
-            });
-            log.info("Loaded guide knowledge cards: {}", guideKnowledgeCards.size());
-        } catch (Exception exception) {
-            guideKnowledgeCards = List.of();
-            log.warn("Unable to load guide knowledge cards. {}", exception.getMessage());
-        }
     }
 
     @Override
@@ -222,7 +211,7 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
         }
 
         String intent = detectGuideIntent(request);
-        List<GuideKnowledgeCard> matchedCards = retrieveGuideKnowledge(request);
+        List<GuideKnowledgeCard> matchedCards = guideKnowledgeRetrieverService.retrieve(request);
         GuideKnowledgeCard primaryCard = matchedCards.isEmpty() ? null : matchedCards.get(0);
         String cacheKey = buildGuideCacheKey(request, intent, primaryCard);
         GuideChatResponseDto cached = guideChatCache.get(cacheKey);
@@ -271,57 +260,6 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
             return "CBT_SUPPORT_LIGHT";
         }
         return "APP_GUIDE";
-    }
-
-    private List<GuideKnowledgeCard> retrieveGuideKnowledge(GuideChatRequestDto request) {
-        String screenContext = normalizeText(request.getScreenContext());
-        String route = normalizeText(request.getPatientRoute());
-        String phase = normalizeText(request.getProgramPhaseCode());
-        String message = normalizeText(request.getUserMessage());
-
-        return guideKnowledgeCards.stream()
-                .map(card -> Map.entry(card, scoreGuideCard(card, screenContext, route, phase, message)))
-                .filter(entry -> entry.getValue() > 0)
-                .sorted((left, right) -> Integer.compare(right.getValue(), left.getValue()))
-                .limit(3)
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toList());
-    }
-
-    private int scoreGuideCard(
-            GuideKnowledgeCard card,
-            String screenContext,
-            String route,
-            String phase,
-            String message) {
-        int score = 0;
-        if (matchesScope(card.getScreenScope(), screenContext)) {
-            score += 5;
-        }
-        if (matchesScope(card.getRouteScope(), route)) {
-            score += 4;
-        }
-        if (matchesScope(card.getPhaseScope(), phase)) {
-            score += 2;
-        }
-        if (card.getKeywords() != null) {
-            for (String keyword : card.getKeywords()) {
-                if (message.contains(normalizeText(keyword))) {
-                    score += 3;
-                }
-            }
-        }
-        return score;
-    }
-
-    private boolean matchesScope(List<String> values, String actual) {
-        if (values == null || values.isEmpty()) {
-            return false;
-        }
-        if (actual == null || actual.isBlank()) {
-            return false;
-        }
-        return values.stream().map(this::normalizeText).anyMatch(actual::equals);
     }
 
     private boolean shouldUseFallbackOnly(GuideChatRequestDto request, List<GuideKnowledgeCard> matchedCards) {
@@ -396,7 +334,7 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
         String knowledgeBlock = matchedCards.isEmpty()
                 ? "Không có tri thức khớp hoàn toàn. Chỉ trả lời ở mức hướng dẫn sử dụng app và CBT nhẹ."
                 : matchedCards.stream()
-                        .limit(3)
+                        .limit(aiProperties.getGuide().getTopK())
                         .map(card -> "- " + card.getTopicCode() + ": " + card.getContent())
                         .collect(Collectors.joining("\n"));
 
@@ -826,90 +764,4 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
         return t;
     }
 
-    public static class GuideKnowledgeCard {
-        private String topicCode;
-        private List<String> screenScope = List.of();
-        private List<String> routeScope = List.of();
-        private List<String> phaseScope = List.of();
-        private List<String> keywords = List.of();
-        private String content;
-        private List<GuideActionCard> suggestedActions = List.of();
-
-        public String getTopicCode() {
-            return topicCode;
-        }
-
-        public void setTopicCode(String topicCode) {
-            this.topicCode = topicCode;
-        }
-
-        public List<String> getScreenScope() {
-            return screenScope;
-        }
-
-        public void setScreenScope(List<String> screenScope) {
-            this.screenScope = screenScope;
-        }
-
-        public List<String> getRouteScope() {
-            return routeScope;
-        }
-
-        public void setRouteScope(List<String> routeScope) {
-            this.routeScope = routeScope;
-        }
-
-        public List<String> getPhaseScope() {
-            return phaseScope;
-        }
-
-        public void setPhaseScope(List<String> phaseScope) {
-            this.phaseScope = phaseScope;
-        }
-
-        public List<String> getKeywords() {
-            return keywords;
-        }
-
-        public void setKeywords(List<String> keywords) {
-            this.keywords = keywords;
-        }
-
-        public String getContent() {
-            return content;
-        }
-
-        public void setContent(String content) {
-            this.content = content;
-        }
-
-        public List<GuideActionCard> getSuggestedActions() {
-            return suggestedActions;
-        }
-
-        public void setSuggestedActions(List<GuideActionCard> suggestedActions) {
-            this.suggestedActions = suggestedActions;
-        }
-    }
-
-    public static class GuideActionCard {
-        private String label;
-        private String route;
-
-        public String getLabel() {
-            return label;
-        }
-
-        public void setLabel(String label) {
-            this.label = label;
-        }
-
-        public String getRoute() {
-            return route;
-        }
-
-        public void setRoute(String route) {
-            this.route = route;
-        }
-    }
 }

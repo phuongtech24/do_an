@@ -36,7 +36,7 @@ public class PatientProfile extends BaseObject {
     @JoinColumn(name = "therapist_id")
     private TherapistProfile therapist;
 
-    @Column(name = "nickname", unique = true)
+    @Column(name = "nickname")
     private String nickName = "";
 
     @Enumerated(EnumType.STRING)
