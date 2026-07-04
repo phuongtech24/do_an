@@ -380,6 +380,115 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
         return parsed;
     }
 
+    private String buildGuideCacheKey(
+            GuideChatRequestDto request,
+            String intent,
+            GuideKnowledgeCard primaryCard) {
+        String screenContext = normalizeText(request.getScreenContext());
+        String patientRoute = normalizeText(request.getPatientRoute());
+        String topicCode = primaryCard != null ? normalizeText(primaryCard.getTopicCode()) : "general_guide";
+        String message = normalizeText(request.getUserMessage());
+        return String.join("|",
+                intent == null ? "" : intent,
+                screenContext,
+                patientRoute,
+                topicCode,
+                message);
+    }
+
+    private String normalizeText(String value) {
+        if (value == null) {
+            return "";
+        }
+        String normalized = Normalizer.normalize(value, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .replace('đ', 'd')
+                .replace('Đ', 'D')
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("\\s+", " ")
+                .trim();
+        return normalized;
+    }
+
+    private boolean containsAny(String text, String... keywords) {
+        if (text == null || text.isBlank() || keywords == null || keywords.length == 0) {
+            return false;
+        }
+        for (String keyword : keywords) {
+            String normalizedKeyword = normalizeText(keyword);
+            if (!normalizedKeyword.isBlank() && text.contains(normalizedKeyword)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private List<GuideChatSuggestedActionDto> buildSuggestedActions(
+            GuideKnowledgeCard primaryCard,
+            String screenContext) {
+        if (primaryCard != null
+                && primaryCard.getSuggestedActions() != null
+                && !primaryCard.getSuggestedActions().isEmpty()) {
+            return primaryCard.getSuggestedActions().stream()
+                    .filter(action -> action.getLabel() != null && !action.getLabel().isBlank())
+                    .map(action -> new GuideChatSuggestedActionDto(
+                            action.getLabel(),
+                            action.getRoute() != null ? action.getRoute() : ""))
+                    .limit(2)
+                    .collect(Collectors.toList());
+        }
+
+        String normalizedScreen = normalizeText(screenContext);
+        if (normalizedScreen.contains("thought-record") || normalizedScreen.contains("journal")) {
+            return List.of(
+                    new GuideChatSuggestedActionDto("Mở Nhật ký suy nghĩ", "/thought-record"),
+                    new GuideChatSuggestedActionDto("Xem lịch sử nhật ký", "/journal"));
+        }
+        if (normalizedScreen.contains("roadmap") || normalizedScreen.contains("fear-ladder")) {
+            return List.of(
+                    new GuideChatSuggestedActionDto("Xem lộ trình trị liệu", "/roadmap"),
+                    new GuideChatSuggestedActionDto("Mở thẻ đối phó", "/coping-cards"));
+        }
+        if (normalizedScreen.contains("telehealth") || normalizedScreen.contains("booking")) {
+            return List.of(
+                    new GuideChatSuggestedActionDto("Xem lịch hẹn", "/telehealth"),
+                    new GuideChatSuggestedActionDto("Đặt lịch tư vấn", "/booking"));
+        }
+        return List.of(
+                new GuideChatSuggestedActionDto("Về trang chủ", "/home"),
+                new GuideChatSuggestedActionDto("Xem hướng dẫn tiếp theo", "/guide"));
+    }
+
+    private GuideChatResponseDto parseGuideChatJson(String text) {
+        try {
+            String json = extractFirstJsonObject(text);
+            if (json.isBlank()) {
+                return new GuideChatResponseDto();
+            }
+
+            JsonNode node = objectMapper.readTree(json);
+            GuideChatResponseDto dto = new GuideChatResponseDto();
+            dto.setAnswer(node.path("answer").asText(""));
+            dto.setRelatedTopicCode(node.path("relatedTopicCode").asText(""));
+
+            List<GuideChatSuggestedActionDto> actions = new ArrayList<>();
+            JsonNode suggestedActions = node.path("suggestedActions");
+            if (suggestedActions.isArray()) {
+                for (JsonNode actionNode : suggestedActions) {
+                    String label = actionNode.path("label").asText("").trim();
+                    String route = actionNode.path("route").asText("").trim();
+                    if (!label.isBlank()) {
+                        actions.add(new GuideChatSuggestedActionDto(label, route));
+                    }
+                }
+            }
+            dto.setSuggestedActions(actions);
+            return dto;
+        } catch (Exception exception) {
+            return new GuideChatResponseDto();
+        }
+    }
+
     private String buildGuideChatPrompt(
             GuideChatRequestDto request,
             String intent,

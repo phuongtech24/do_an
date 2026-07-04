@@ -3,3 +3,6 @@ id,email,username,password_hash,role,is_anonymous,is_active
 11111111-1111-1111-1111-111111111111,admin@mindhealth.com,admin,admin123,ADMIN,false,true
 22222222-2222-2222-2222-222222222222,patient1@mindhealth.com,patient1,patient123,PATIENT,false,true
 33333333-3333-3333-3333-333333333333,therapist1@mindhealth.com,therapist1,therapist123,THERAPIST,false,true
+44444444-4444-4444-4444-444444444444,therapist2@mindhealth.com,therapist2,therapist123,THERAPIST,false,true
+55555555-5555-5555-5555-555555555555,therapist3@mindhealth.com,therapist3,therapist123,THERAPIST,false,true
+66666666-6666-6666-6666-666666666666,therapist4@mindhealth.com,therapist4,therapist123,THERAPIST,false,true

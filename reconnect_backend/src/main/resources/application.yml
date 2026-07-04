@@ -78,6 +78,7 @@ app:
     rag:
       enabled: ${AI_RAG_ENABLED:false}
       auto-ingest-on-startup: ${AI_RAG_AUTO_INGEST_ON_STARTUP:false}
+      qdrant-scheme: ${AI_RAG_QDRANT_SCHEME:http}
       qdrant-host: ${AI_RAG_QDRANT_HOST:localhost}
       qdrant-port: ${AI_RAG_QDRANT_PORT:6333}
       qdrant-collection: ${AI_RAG_QDRANT_COLLECTION:mindhealth_ai_knowledge}

@@ -1,6 +1,7 @@
 class TherapistDirectoryItemModel {
   final String therapistId;
   final String fullName;
+  final String? phoneNumber;
   final String? hometown;
   final int? birthYear;
   final String? voiceDescription;
@@ -17,6 +18,7 @@ class TherapistDirectoryItemModel {
   const TherapistDirectoryItemModel({
     required this.therapistId,
     required this.fullName,
+    this.phoneNumber,
     this.hometown,
     this.birthYear,
     this.voiceDescription,
@@ -40,6 +42,7 @@ class TherapistDirectoryItemModel {
     return TherapistDirectoryItemModel(
       therapistId: json['therapistId']?.toString() ?? '',
       fullName: json['fullName']?.toString() ?? '',
+      phoneNumber: nullableString(json['phoneNumber']),
       hometown: nullableString(json['hometown']),
       birthYear: (json['birthYear'] as num?)?.toInt(),
       voiceDescription: nullableString(json['voiceDescription']),

@@ -7,6 +7,7 @@ import com.reconnect.mindhealth.modules.clinical.entity.TherapistProfile;
 public class TherapistDirectoryItemDto {
     private UUID therapistId;
     private String fullName;
+    private String phoneNumber;
     private String hometown;
     private Integer birthYear;
     private String voiceDescription;
@@ -26,6 +27,7 @@ public class TherapistDirectoryItemDto {
     public TherapistDirectoryItemDto(TherapistProfile profile, long credentialCount, long caseloadCount) {
         this.therapistId = profile.getId();
         this.fullName = profile.getFullName();
+        this.phoneNumber = profile.getPhoneNumber();
         this.hometown = profile.getHometown();
         this.birthYear = profile.getBirthYear();
         this.voiceDescription = profile.getVoiceDescription();
@@ -43,6 +45,8 @@ public class TherapistDirectoryItemDto {
     public void setTherapistId(UUID therapistId) { this.therapistId = therapistId; }
     public String getFullName() { return fullName; }
     public void setFullName(String fullName) { this.fullName = fullName; }
+    public String getPhoneNumber() { return phoneNumber; }
+    public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
     public String getHometown() { return hometown; }
     public void setHometown(String hometown) { this.hometown = hometown; }
     public Integer getBirthYear() { return birthYear; }

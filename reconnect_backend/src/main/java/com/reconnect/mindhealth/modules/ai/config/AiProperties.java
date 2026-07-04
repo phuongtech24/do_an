@@ -280,6 +280,7 @@ public class AiProperties {
     public static class Rag {
         private boolean enabled = false;
         private boolean autoIngestOnStartup = false;
+        private String qdrantScheme = "http";
         private String qdrantHost = "localhost";
         private int qdrantPort = 6333;
         private String qdrantCollection = "mindhealth_ai_knowledge";
@@ -310,6 +311,14 @@ public class AiProperties {
 
         public String getQdrantHost() {
             return qdrantHost;
+        }
+
+        public String getQdrantScheme() {
+            return qdrantScheme;
+        }
+
+        public void setQdrantScheme(String qdrantScheme) {
+            this.qdrantScheme = qdrantScheme;
         }
 
         public void setQdrantHost(String qdrantHost) {

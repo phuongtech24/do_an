@@ -157,7 +157,8 @@ public class QdrantVectorStoreServiceImpl implements IVectorStoreService {
 
     private String collectionUrl() {
         AiProperties.Rag rag = aiProperties.getRag();
-        return "http://" + rag.getQdrantHost() + ":" + rag.getQdrantPort() + "/collections/" + rag.getQdrantCollection();
+        return rag.getQdrantScheme() + "://" + rag.getQdrantHost() + ":" + rag.getQdrantPort()
+                + "/collections/" + rag.getQdrantCollection();
     }
 
     private HttpResponse<String> send(String method, String url, String body) throws Exception {
