@@ -1,6 +1,8 @@
 package com.reconnect.mindhealth.modules.ai.service.impl;
 
 import java.time.Duration;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -55,6 +57,7 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final Map<String, GuideChatResponseDto> guideChatCache = new ConcurrentHashMap<>();
+    private static final Charset WINDOWS_1252 = Charset.forName("Windows-1252");
 
     public GeminiAiAssistantServiceImpl(
             AiProperties aiProperties,
@@ -102,7 +105,12 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
                     "BÃ¡ÂºÂ¡n cÃƒÂ³ bÃ¡ÂºÂ±ng chÃ¡Â»Â©ng nÃƒÂ o Ã¡Â»Â§ng hÃ¡Â»â„¢ vÃƒÂ  bÃ¡ÂºÂ±ng chÃ¡Â»Â©ng nÃƒÂ o phÃ¡ÂºÂ£n bÃƒÂ¡c suy nghÃ„Â© nÃƒÂ y?",
                     "CÃƒÂ³ cÃƒÂ¡ch giÃ¡ÂºÂ£i thÃƒÂ­ch nÃƒÂ o khÃƒÂ¡c (ÃƒÂ­t tiÃƒÂªu cÃ¡Â»Â±c hÃ†Â¡n) cho tÃƒÂ¬nh huÃ¡Â»â€˜ng nÃƒÂ y khÃƒÂ´ng?");
         }
-        return new GuidedDiscoveryResponseDto(questions);
+        if (questions.stream().anyMatch(this::hasMojibakeMarker)) {
+            questions = List.of(
+                    "Bạn có bằng chứng nào ủng hộ và bằng chứng nào phản bác suy nghĩ này?",
+                    "Có cách giải thích nào khác, ít tiêu cực hơn, cho tình huống này không?");
+        }
+        return new GuidedDiscoveryResponseDto(cleanTextList(questions));
     }
 
     @Override
@@ -194,7 +202,7 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
                     : "GÃ¡Â»Â£i ÃƒÂ½ tÃ¡Â»Â« rule-based Ã¢â‚¬â€ bÃ¡ÂºÂ¡n cÃƒÂ³ thÃ¡Â»Æ’ giÃ¡Â»Â¯ hoÃ¡ÂºÂ·c chÃ¡Â»â€°nh lÃ¡ÂºÂ¡i cÃƒÂ¡c nhÃƒÂ£n nÃƒÂ y.";
             log.info("Detect cognitive distortions fallback: source=RULE_ONLY, suggestions={}, hasHint={}",
                     rule.size(), !hint.isBlank());
-            return new CognitiveDistortionResponseDto(rule, hint);
+            return new CognitiveDistortionResponseDto(rule, cleanText(hint));
         }
 
         if (!shouldCallAi) {
@@ -248,13 +256,18 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
                 raw == null || raw.isBlank() ? "RULE_FALLBACK_AFTER_AI" : "AI_OR_MERGED",
                 out.size(),
                 hint != null && !hint.isBlank());
-        return new CognitiveDistortionResponseDto(out, hint);
+        if (hint != null && hasMojibakeMarker(hint)) {
+            hint = out.isEmpty()
+                    ? "AI chưa thấy đủ tín hiệu rõ; bạn vẫn có thể tự chọn thủ công."
+                    : "Gợi ý từ AI và bộ quy tắc; hãy chọn 1–3 lỗi tư duy phù hợp nhất.";
+        }
+        return new CognitiveDistortionResponseDto(out, cleanText(hint));
     }
 
     @Override
     public GuideChatResponseDto guideChat(GuideChatRequestDto request) {
         if (shouldEscalateSafety(request)) {
-            return buildSafetyGuideResponse(request);
+            return cleanGuideResponse(buildSafetyGuideResponse(request));
         }
 
         String intent = detectGuideIntent(request);
@@ -281,6 +294,19 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
     }
 
     private GuideChatResponseDto buildSafetyGuideResponse(GuideChatRequestDto request) {
+        return new GuideChatResponseDto(
+                "Mình sẽ ưu tiên an toàn cho bạn trước. Hệ thống đang nhận thấy mức rủi ro cao hoặc có cờ đỏ, vì vậy hãy mở hỗ trợ an toàn hoặc kết nối với chuyên gia qua mục tư vấn từ xa.",
+                List.of(
+                        new GuideChatSuggestedActionDto("Mở hỗ trợ an toàn", "/safety-support"),
+                        new GuideChatSuggestedActionDto("Xem tư vấn từ xa", "/telehealth")),
+                "SAFETY_ESCALATION",
+                true,
+                true,
+                true);
+    }
+
+    @SuppressWarnings("unused")
+    private GuideChatResponseDto buildLegacySafetyGuideResponse(GuideChatRequestDto request) {
         return new GuideChatResponseDto(
                 "MÃƒÂ¬nh sÃ¡ÂºÂ½ Ã†Â°u tiÃƒÂªn an toÃƒÂ n cho bÃ¡ÂºÂ¡n trÃ†Â°Ã¡Â»â€ºc. HiÃ¡Â»â€¡n hÃ¡Â»â€¡ thÃ¡Â»â€˜ng Ã„â€˜ang thÃ¡ÂºÂ¥y mÃ¡Â»Â©c rÃ¡Â»Â§i ro cao hoÃ¡ÂºÂ·c cÃƒÂ³ cÃ¡Â»Â Ã„â€˜Ã¡Â»Â, nÃƒÂªn mÃƒÂ¬nh khÃƒÂ´ng tiÃ¡ÂºÂ¿p tÃ¡Â»Â¥c hÃ¡Â»â€” trÃ¡Â»Â£ trÃ¡Â»â€¹ liÃ¡Â»â€¡u mÃ¡Â»Å¸ Ã¡Â»Å¸ Ã„â€˜ÃƒÂ¢y. NÃ¡ÂºÂ¿u Ã„â€˜Ã†Â°Ã¡Â»Â£c, bÃ¡ÂºÂ¡n hÃƒÂ£y mÃ¡Â»Å¸ hÃ¡Â»â€” trÃ¡Â»Â£ an toÃƒÂ n hoÃ¡ÂºÂ·c xem ngay mÃ¡Â»Â¥c tham vÃ¡ÂºÂ¥n tÃ¡Â»Â« xa Ã„â€˜Ã¡Â»Æ’ kÃ¡ÂºÂ¿t nÃ¡Â»â€˜i vÃ¡Â»â€ºi chuyÃƒÂªn gia phÃƒÂ¹ hÃ¡Â»Â£p.",
                 List.of(
@@ -342,6 +368,20 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
             answer = primaryCard.getContent();
         }
 
+        if (hasMojibakeMarker(answer)) {
+            String cleanContent = primaryCard != null ? cleanText(primaryCard.getContent()) : null;
+            if (cleanContent == null || cleanContent.isBlank() || hasMojibakeMarker(cleanContent)) {
+                cleanContent = "Mình sẽ giúp bạn hiểu công cụ CBT hiện tại và chọn một bước tiếp theo phù hợp.";
+            }
+            if ("NEXT_STEP".equals(intent)) {
+                answer = cleanContent + " Bước tiếp theo phù hợp nhất lúc này là chọn một thao tác nhỏ, rõ ràng thay vì cố làm mọi thứ cùng lúc.";
+            } else if ("CBT_SUPPORT_LIGHT".equals(intent)) {
+                answer = cleanContent + " Nếu đang thấy lo, bạn chỉ cần bắt đầu bằng một bước ngắn và trung thực với cảm xúc hiện tại của mình.";
+            } else {
+                answer = cleanContent;
+            }
+        }
+
         return new GuideChatResponseDto(
                 answer,
                 actions,
@@ -367,7 +407,7 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
         GuideChatResponseDto parsed = parseGuideChatJson(raw);
 
         if (parsed.getAnswer() == null || parsed.getAnswer().isBlank()) {
-            return buildGuideFallbackResponse(request, intent, primaryCard);
+            return cleanGuideResponse(buildGuideFallbackResponse(request, intent, primaryCard));
         }
 
         if (parsed.getSuggestedActions() == null || parsed.getSuggestedActions().isEmpty()) {
@@ -377,7 +417,7 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
             parsed.setRelatedTopicCode(primaryCard != null ? primaryCard.getTopicCode() : "GENERAL_GUIDE");
         }
         parsed.setUsedFallback(false);
-        return parsed;
+        return cleanGuideResponse(parsed);
     }
 
     private String buildGuideCacheKey(
@@ -410,6 +450,81 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
         return normalized;
     }
 
+    private List<String> cleanTextList(List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return List.of();
+        }
+        return values.stream()
+                .map(this::cleanText)
+                .filter(value -> value != null && !value.isBlank())
+                .collect(Collectors.toList());
+    }
+
+    private GuideChatResponseDto cleanGuideResponse(GuideChatResponseDto response) {
+        if (response == null) {
+            return null;
+        }
+        response.setAnswer(cleanText(response.getAnswer()));
+        if (response.getSuggestedActions() != null) {
+            response.setSuggestedActions(response.getSuggestedActions().stream()
+                    .map(action -> new GuideChatSuggestedActionDto(
+                            cleanText(action.getLabel()),
+                            action.getRoute() != null ? action.getRoute() : ""))
+                    .collect(Collectors.toList()));
+        }
+        return response;
+    }
+
+    private String cleanText(String value) {
+        if (value == null || value.isBlank() || !hasMojibakeMarker(value)) {
+            return value;
+        }
+        String current = value;
+        for (int i = 0; i < 3; i++) {
+            String repaired = repairOnce(current);
+            if (repaired == null || repaired.equals(current) || mojibakeScore(repaired) >= mojibakeScore(current)) {
+                break;
+            }
+            current = repaired;
+        }
+        return current;
+    }
+
+    private String repairOnce(String value) {
+        try {
+            return new String(value.getBytes(WINDOWS_1252), StandardCharsets.UTF_8);
+        } catch (Exception exception) {
+            return value;
+        }
+    }
+
+    private boolean hasMojibakeMarker(String value) {
+        return value.contains("Ã")
+                || value.contains("Â")
+                || value.contains("Ä")
+                || value.contains("Æ")
+                || value.contains("â€")
+                || value.contains("áº")
+                || value.contains("á»")
+                || value.contains("�");
+    }
+
+    private int mojibakeScore(String value) {
+        if (value == null || value.isBlank()) {
+            return 0;
+        }
+        int score = 0;
+        String[] markers = {"Ã", "Â", "Ä", "Æ", "â€", "áº", "á»", "�"};
+        for (String marker : markers) {
+            int index = value.indexOf(marker);
+            while (index >= 0) {
+                score++;
+                index = value.indexOf(marker, index + marker.length());
+            }
+        }
+        return score;
+    }
+
     private boolean containsAny(String text, String... keywords) {
         if (text == null || text.isBlank() || keywords == null || keywords.length == 0) {
             return false;
@@ -432,7 +547,7 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
             return primaryCard.getSuggestedActions().stream()
                     .filter(action -> action.getLabel() != null && !action.getLabel().isBlank())
                     .map(action -> new GuideChatSuggestedActionDto(
-                            action.getLabel(),
+                            cleanText(action.getLabel()),
                             action.getRoute() != null ? action.getRoute() : ""))
                     .limit(2)
                     .collect(Collectors.toList());
@@ -468,14 +583,14 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
 
             JsonNode node = objectMapper.readTree(json);
             GuideChatResponseDto dto = new GuideChatResponseDto();
-            dto.setAnswer(node.path("answer").asText(""));
+            dto.setAnswer(cleanText(node.path("answer").asText("")));
             dto.setRelatedTopicCode(node.path("relatedTopicCode").asText(""));
 
             List<GuideChatSuggestedActionDto> actions = new ArrayList<>();
             JsonNode suggestedActions = node.path("suggestedActions");
             if (suggestedActions.isArray()) {
                 for (JsonNode actionNode : suggestedActions) {
-                    String label = actionNode.path("label").asText("").trim();
+                    String label = cleanText(actionNode.path("label").asText("").trim());
                     String route = actionNode.path("route").asText("").trim();
                     if (!label.isBlank()) {
                         actions.add(new GuideChatSuggestedActionDto(label, route));
@@ -865,7 +980,7 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
             if (item != null) {
                 String s = String.valueOf(item).trim();
                 if (!s.isBlank()) {
-                    out.add(s);
+                    out.add(cleanText(s));
                 }
             }
         }
@@ -900,7 +1015,7 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
                     }
                 }
             }
-            String reason = node.path("reason").asText("");
+            String reason = cleanText(node.path("reason").asText(""));
             return new JournalAiRiskResultDto(score, severity, distortions, reason);
         } catch (Exception e) {
             return new JournalAiRiskResultDto(0, "NORMAL");
@@ -924,7 +1039,7 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
                     }
                 }
             }
-            String hint = node.path("hint").asText(null);
+            String hint = cleanText(node.path("hint").asText(null));
             return new CognitiveDistortionResponseDto(list, hint);
         } catch (Exception e) {
             return new CognitiveDistortionResponseDto(List.of(), null);

@@ -87,9 +87,9 @@ public class AiProperties {
         private String apiVersion = "v1beta";
 
         /**
-         * Model name, e.g. "gemini-1.5-flash".
+         * Model name, e.g. "gemini-2.5-flash".
          */
-        private String model = "gemini-1.5-flash";
+        private String model = "gemini-2.5-flash";
 
         /**
          * Request timeout in milliseconds.
