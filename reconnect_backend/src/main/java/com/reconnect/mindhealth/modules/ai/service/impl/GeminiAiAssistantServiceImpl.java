@@ -33,6 +33,7 @@ import com.reconnect.mindhealth.modules.ai.model.GuideActionCard;
 import com.reconnect.mindhealth.modules.ai.model.GuideKnowledgeCard;
 import com.reconnect.mindhealth.modules.ai.model.RagContextBundle;
 import com.reconnect.mindhealth.modules.ai.service.GuideKnowledgeRetrieverService;
+import com.reconnect.mindhealth.modules.ai.service.GuideChatRoutingService;
 import com.reconnect.mindhealth.modules.ai.service.IAiAssistantService;
 import com.reconnect.mindhealth.modules.ai.service.RagRetrievalService;
 import com.reconnect.mindhealth.modules.ai.service.RuleBasedCognitiveDistortionDetector;
@@ -51,6 +52,7 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
 
     private final AiProperties aiProperties;
     private final GuideKnowledgeRetrieverService guideKnowledgeRetrieverService;
+    private final GuideChatRoutingService guideChatRoutingService;
     private final RagRetrievalService ragRetrievalService;
     private final RuleBasedCognitiveDistortionDetector ruleBasedCognitiveDistortionDetector;
     private final RuleBasedJournalRiskScorer ruleBasedJournalRiskScorer;
@@ -62,11 +64,13 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
     public GeminiAiAssistantServiceImpl(
             AiProperties aiProperties,
             GuideKnowledgeRetrieverService guideKnowledgeRetrieverService,
+            GuideChatRoutingService guideChatRoutingService,
             RagRetrievalService ragRetrievalService,
             RuleBasedCognitiveDistortionDetector ruleBasedCognitiveDistortionDetector,
             RuleBasedJournalRiskScorer ruleBasedJournalRiskScorer) {
         this.aiProperties = aiProperties;
         this.guideKnowledgeRetrieverService = guideKnowledgeRetrieverService;
+        this.guideChatRoutingService = guideChatRoutingService;
         this.ragRetrievalService = ragRetrievalService;
         this.ruleBasedCognitiveDistortionDetector = ruleBasedCognitiveDistortionDetector;
         this.ruleBasedJournalRiskScorer = ruleBasedJournalRiskScorer;
@@ -270,8 +274,9 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
             return cleanGuideResponse(buildSafetyGuideResponse(request));
         }
 
-        String intent = detectGuideIntent(request);
-        List<GuideKnowledgeCard> matchedCards = guideKnowledgeRetrieverService.retrieve(request);
+        String intent = guideChatRoutingService.detectIntent(request.getUserMessage());
+        AiKnowledgeQueryDto knowledgeQuery = buildGuideKnowledgeQuery(request, intent);
+        List<GuideKnowledgeCard> matchedCards = guideKnowledgeRetrieverService.retrieve(knowledgeQuery);
         GuideKnowledgeCard primaryCard = matchedCards.isEmpty() ? null : matchedCards.get(0);
         String cacheKey = buildGuideCacheKey(request, intent, primaryCard);
         GuideChatResponseDto cached = guideChatCache.get(cacheKey);
@@ -316,23 +321,6 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
                 true,
                 true,
                 true);
-    }
-
-    private String detectGuideIntent(GuideChatRequestDto request) {
-        String normalized = normalizeText(request.getUserMessage());
-        if (containsAny(normalized, "khong an toan", "cap cuu", "khan cap", "nguy hiem", "co do")) {
-            return "SAFETY_ESCALATION";
-        }
-        if (containsAny(normalized, "lam gi tiep", "tiep theo", "bat dau tu dau", "nen lam gi")) {
-            return "NEXT_STEP";
-        }
-        if (containsAny(normalized, "giai thich", "tai sao", "y nghia", "co che")) {
-            return "FEATURE_EXPLAINER";
-        }
-        if (containsAny(normalized, "toi dang lo", "toi lo", "ho tro nhe", "tran an", "binh tinh")) {
-            return "CBT_SUPPORT_LIGHT";
-        }
-        return "APP_GUIDE";
     }
 
     private boolean shouldUseFallbackOnly(GuideChatRequestDto request, List<GuideKnowledgeCard> matchedCards) {
@@ -617,6 +605,8 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
                 + "Vai trò: hướng dẫn sử dụng app, giải thích CBT ở mức nhẹ, gợi ý bước tiếp theo cho người có lo âu xã hội.\n"
                 + "Không chẩn đoán. Không kê thuốc. Không thay thế bác sĩ hay nhà trị liệu. Không nói sang trầm cảm như một bệnh lý chính.\n"
                 + "Chỉ trả lời dựa trên tri thức nội bộ bên dưới và bối cảnh màn hình hiện tại.\n"
+                + "Ưu tiên câu hỏi hiện tại của người dùng hơn patientRoute và lịch sử phân luồng.\n"
+                + "Nếu tri thức truy hồi không trực tiếp liên quan câu hỏi, không được dùng nó để chuyển sang chủ đề khác.\n"
                 + "Câu trả lời dài khoảng 80-180 từ. Tối đa 2 gợi ý hành động.\n"
                 + "Trả về DUY NHẤT một JSON object hợp lệ theo schema.\n"
                 + "Tri thức nội bộ:\n"
@@ -804,7 +794,10 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
         query.setProgramWeek(request.getProgramWeek());
         query.setIntent(intent);
         query.setCurrentRiskScore(request.getCurrentRiskScore());
-        query.setTopicHint(request.getScreenContext());
+        query.setTopicHint(guideChatRoutingService.detectTopicHint(
+                request.getUserMessage(),
+                request.getScreenContext(),
+                intent));
         return query;
     }
 

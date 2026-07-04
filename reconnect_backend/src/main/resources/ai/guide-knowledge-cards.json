@@ -88,7 +88,9 @@
     "screenScope": ["home", "daily-checkin"],
     "routeScope": [],
     "phaseScope": [],
-    "keywords": ["diem danh", "5 chi so", "lo au", "ne tranh", "man nay"],
+    "intentScope": ["FEATURE_EXPLAINER", "APP_GUIDE"],
+    "topicAliases": ["daily-checkin", "mood-check", "cam-xuc"],
+    "keywords": ["diem danh", "diem danh cam xuc", "cam xuc", "5 chi so", "lo au", "ne tranh", "safety gate", "chot an toan", "man nay"],
     "content": "Điểm danh cảm xúc hằng ngày theo dõi 5 chỉ số: lo âu hiện tại, thôi thúc né tránh, buồn bã, lo âu dự kiến và nhai lại sau sự kiện. Từ các chỉ số này, hệ thống sẽ ưu tiên công cụ phù hợp như thẻ đối phó, nhật ký suy nghĩ hoặc hỗ trợ an toàn.",
     "suggestedActions": [
       {"label": "Mở trang chủ", "route": "/home"},

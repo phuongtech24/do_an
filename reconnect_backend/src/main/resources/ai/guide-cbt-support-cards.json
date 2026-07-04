@@ -4,7 +4,9 @@
     "screenScope": ["home", "daily-checkin", "thought-record"],
     "routeScope": [],
     "phaseScope": [],
-    "keywords": ["tran an", "ho tro nhe", "binh tinh", "coping card", "lo qua"],
+    "intentScope": ["CBT_SUPPORT_LIGHT"],
+    "topicAliases": ["support-light", "anxiety-support"],
+    "keywords": ["toi dang lo", "toi lo", "tran an", "ho tro nhe", "binh tinh", "coping card", "lo qua", "bat dau tu dau"],
     "content": "Khi mức lo âu đang tăng nhưng chưa ở vùng nguy cơ cao, hệ thống ưu tiên các hỗ trợ ngắn như thẻ đối phó, nhắc thở chậm, hoặc gợi ý một bước rất nhỏ thay vì ép người dùng xử lý quá nhiều việc cùng lúc.",
     "suggestedActions": [
       { "label": "Xem thẻ đối phó", "route": "/coping-cards" },

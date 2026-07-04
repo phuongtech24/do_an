@@ -1,0 +1,108 @@
+﻿--- SLIDE 1 ---
+Đề tài: Phát triển hệ thống quản lý và hỗ trợ trị liệu rối loạn lo âu tích hợp Trí tuệ nhân tạo
+Họ và tên: Nguyễn Khắc Nam Phương  
+Đồ án tốt nghiệp
+Thuy Loi University
+GVHD: Lê Thị Tú Kiên  
+--- SLIDE 2 ---
+Lý Do
+Thực trạng xã hội
+3 Hạn Chế Của Trị Liệu Truyền Thống
+② Rào cản phán xét & ③ Thiếu dữ liệu dọc
+Tỷ lệ rối loạn lo âu xã hội (SAD) và xu hướng tự cô lập (Hikikomori) tăng nhanh ở giới trẻ toàn cầu.
+① Điểm mù hành vi: Bác sĩ không thể giám sát việc loại bỏ "hành vi an toàn" (Safety Behaviors) ngoài thực tế hằng ngày.
+Bệnh nhân SAD e ngại khai báo danh tính thật khi đến phòng khám. Hồ sơ giấy truyền thống không thu thập được dữ liệu chuỗi thời gian liên tục phục vụ nghiên cứu.
+Chọn Đề Tài
+Giới thiệu
+Vấn đề
+Giải pháp
+--- SLIDE 3 ---
+Mục Tiêu Nghiên Cứu
+Nhà nghiên cứu
+Yael Amari
+Số hóa phác đồ CBT thành nền tảng kỹ thuật số tương tác, tích hợp AI đồng hành hỗ trợ nhận thức cho người dùng trong quá trình trị liệu.
+Phát triển kiến trúc hệ thống đa người dùng với RESTful API, đảm bảo khả năng mở rộng và kết nối giữa nhà trị liệu và thân chủ.
+--- SLIDE 4 ---
+Mô hình CBT - Judith Beck (2020)
+Tái cấu trúc nhận thức qua Nhật ký suy nghĩ (Thought Record) 6 bước: Xác định tình huống → Cảm xúc → Suy nghĩ tự động → Bằng chứng → Phản hồi thích nghi → Kết quả.
+Nghiên cứu viên
+Yael Amari
+Cơ Sở Lý Thuyết Lâm Sàng
+Mô hình Clark & Wells (1995)
+Phá vỡ vòng lặp duy trì lo âu xã hội. Cơ chế: chú ý tự hướng nội và hành vi an toàn củng cố nỗi sợ. Can thiệp: Thử nghiệm hành vi (Behavioral Experiments) để kiểm chứng niềm tin sai lệch.
+Thang đo LSAS-SR (Liebowitz, 1987)
+24 tình huống xã hội đo lường hai miền: Sợ hãi (Fear) và Né tránh (Avoidance). Công cụ chuẩn hóa đánh giá mức độ lo âu xã hội trước và sau can thiệp CBT số hóa.
+--- SLIDE 5 ---
+Phạm Vi Đề Tài & Giới Hạn
+Phạm vi hệ thống bao gồm: Hồ sơ ẩn danh Dual-Identity với PII mã hóa bảo mật, lộ trình CBT tự động dựa trên điểm LSAS, trợ lý AI hướng dẫn (không chẩn đoán), và Web CMS cho bác sĩ giám sát tiến độ & xử lý Cờ đỏ khẩn cấp. 
+Hạn chế & Loại trừ (Out of Scope): Chưa tích hợp Video Call trực tiếp (dùng link chuyển hướng Google Meet). Gemini API là mô hình tổng quát (General LLM), chưa phải mô hình chuyên gia y tế chuyên biệt.
+--- SLIDE 6 ---
+Phương Pháp Nghiên Cứu
+Bốn giai đoạn tuần tự trong quy trình nghiên cứu và phát triển phần mềm
+Nghiên Cứu Lý Thuyết
+Giai đoạn 1
+Phân Tích & Thiết Kế
+Giai đoạn 2
+Thực Nghiệm Phần Mềm
+Giai đoạn 3
+Kiểm Thử & Đánh Giá
+Giai đoạn 4
+Nghiên cứu phác đồ CBT, mô hình Clark & Wells và thang đo LSAS để số hóa nghiệp vụ y văn vào logic phần mềm
+Khảo sát yêu cầu, mô hình hóa bằng biểu đồ UML (Use Case, Activity, Sequence, Class Diagram) và thiết kế ERD
+Lập trình Backend (Spring Boot), CSDL (MySQL), Mobile App và Web CMS (Flutter), tích hợp Gemini API
+Kiểm thử hồi quy hệ thống, đo lường độ chính xác dán nhãn AI và thử nghiệm tải tương tranh đặt lịch
+--- SLIDE 7 ---
+Chức năng chính hệ thống
+Phạm vi hệ thống bao gồm: Hồ sơ ẩn danh Dual-Identity với PII mã hóa bảo mật, lộ trình CBT tự động dựa trên điểm LSAS, trợ lý AI hướng dẫn (không chẩn đoán), và Web CMS cho bác sĩ giám sát tiến độ & xử lý Cờ đỏ khẩn cấp. 
+Hạn chế & Loại trừ (Out of Scope): Chưa tích hợp Video Call trực tiếp (dùng link chuyển hướng Google Meet). Gemini API là mô hình tổng quát (General LLM), chưa phải mô hình chuyên gia y tế chuyên biệt.
+Hệ thống bao gồm hai miền chức năng chính: Miền bệnh nhân (Mobile App) và Miền bác sĩ (Web CMS).
+Miền Bệnh Nhân (Mobile App):
+Miền Bác Sĩ (Web CMS):
+Miền Quản trị viên
+--- SLIDE 8 ---
+Home
+About
+Content
+Others
+Borcelle
+Thiết kế Hệ thống & Cơ sở dữ liệu
+Kiến trúc Backend phân lớp theo module: auth, assessment, clinical, roadmap (Fear Ladder & Experiment), journal, booster. CSDL quan hệ MySQL 8 - InnoDB với 9 bảng cốt lõi: users, patient_profiles, lsas_submissions, fear_ladder_items, behavioral_experiments, journals, user_moods, appointments, therapist_schedule_slots. Ràng buộc tham chiếu chặt chẽ qua khóa ngoại và chỉ mục tối ưu.
+--- SLIDE 9 ---
+Profile
+Contact
+Gallery
+Portfolio
+--- SLIDE 10 ---
+Cá nhân hóa lộ trình & Dynamic Guidance
+Thuật toán Goal-driven Bias Sorting: Giữ nguyên LSAS baseline gốc làm thước đo khoa học bất biến.
+Áp dụng hệ số bias W=1.5 vào các tình huống tương thích với goalType (Social / Behavioral) để sắp xếp nấc thang hiển thị ưu tiên.
+Thời gian: 7:30 - 8:30
+Thực Nghiệm 1
+1
+2
+--- SLIDE 11 ---
+Kết quả đạt được
+--- SLIDE 12 ---
+Kết quả nghiên cứu và kỹ thuật
+--- SLIDE 13 ---
+KIỂM SOÁT TƯƠNG TRANH KHI ĐẶT LỊCH
+Hai request cùng chọn một khung giờ — hệ thống bảo vệ dữ liệu qua hai lớp.
+Vấn đề: 2 request đến cùng lúc (Race condition). Giải pháp 2 lớp: Lớp 1: Kiểm tra logic & bọc Transaction. Lớp 2: Chặn trùng lặp bằng UNIQUE CONSTRAINT ở MySQL. Kết quả: Một request được ghi nhận thành công; request trùng cùng slot bị từ chối với 409 Conflict 
+--- SLIDE 14 ---
+KẾT QUẢ GIAO DIỆN
+--- SLIDE 15 ---
+KẾT QUẢ ĐÁNH GIÁ AI
+--- SLIDE 16 ---
+KẾT QUẢ ĐÁNH GIÁ AI
+--- SLIDE 17 ---
+Đánh giá, kiểm thử
+Phạm vi hệ thống bao gồm: Hồ sơ ẩn danh Dual-Identity với PII mã hóa bảo mật, lộ trình CBT tự động dựa trên điểm LSAS, trợ lý AI hướng dẫn (không chẩn đoán), và Web CMS cho bác sĩ giám sát tiến độ & xử lý Cờ đỏ khẩn cấp. 
+Hạn chế & Loại trừ (Out of Scope): Chưa tích hợp Video Call trực tiếp (dùng link chuyển hướng Google Meet). Gemini API là mô hình tổng quát (General LLM), chưa phải mô hình chuyên gia y tế chuyên biệt.
+--- SLIDE 18 ---
+KẾT LUẬN & HƯỚNG PHÁT TRIỂN
+✅ Kết quả đạt được: • Số hóa thành công phác đồ điều trị Lo âu xã hội theo mô hình nhận thức Clark & Wells và Judith Beck. • Xây dựng thành công hệ sinh thái đồng bộ dữ liệu: Mobile App ẩn danh và Web CMS bảo mật. • Tích hợp thành công mô hình Trợ lý AI đồng hành an toàn có kiểm soát bằng RAG.
+🚀 Hướng phát triển: • Xây dựng kho dữ liệu Vector Database lâm sàng đầy đủ để nâng cấp cơ chế RAG. • Từng bước tinh chỉnh mô hình chuyên biệt cho lĩnh vực sức khỏe tâm thần (Specialized Medical LLM). • Triển khai thêm cơ chế xác minh email qua mã OTP để hoàn thiện bảo mật đăng ký.
+--- SLIDE 19 ---
+CẢM ƠN QUÝ VỊ!
+Nhóm Nghiên Cứu & Phát Triển
+Lo Âu Xã Hội AI

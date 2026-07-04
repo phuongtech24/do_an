@@ -140,7 +140,10 @@ public class GuideKnowledgeRetrieverService {
             score += guide.getTopicWeight();
         }
         if (matchesTopicHint(card, topicHint)) {
-            score += guide.getTopicWeight() + 1;
+            score += guide.getScreenScopeWeight()
+                    + guide.getRouteScopeWeight()
+                    + guide.getTopicWeight()
+                    + 1;
         }
         if (card.getTopicCode() != null && message.contains(normalizeText(card.getTopicCode().replace('_', ' ')))) {
             score += guide.getTopicWeight();
