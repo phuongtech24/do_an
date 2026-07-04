@@ -21,6 +21,7 @@ import com.reconnect.mindhealth.modules.ai.dto.GuideChatRequestDto;
 import com.reconnect.mindhealth.modules.ai.dto.GuideChatResponseDto;
 import com.reconnect.mindhealth.modules.ai.service.AiChatHistoryService;
 import com.reconnect.mindhealth.modules.ai.service.IAiAssistantService;
+import com.reconnect.mindhealth.modules.ai.service.KnowledgeIngestionService;
 
 @RestController
 @RequestMapping("/api/ai")
@@ -31,14 +32,17 @@ public class AiController {
     private final IAiAssistantService aiAssistantService;
     private final AuthContextService authContextService;
     private final AiChatHistoryService aiChatHistoryService;
+    private final KnowledgeIngestionService knowledgeIngestionService;
 
     public AiController(
             IAiAssistantService aiAssistantService,
             AuthContextService authContextService,
-            AiChatHistoryService aiChatHistoryService) {
+            AiChatHistoryService aiChatHistoryService,
+            KnowledgeIngestionService knowledgeIngestionService) {
         this.aiAssistantService = aiAssistantService;
         this.authContextService = authContextService;
         this.aiChatHistoryService = aiChatHistoryService;
+        this.knowledgeIngestionService = knowledgeIngestionService;
     }
 
     /**
@@ -88,5 +92,15 @@ public class AiController {
         User currentUser = authContextService.requireCurrentUser();
         aiChatHistoryService.saveFeedback(currentUser, request);
         return ResponseEntity.ok(ApiResponse.success("OK", null));
+    }
+
+    @PostMapping("/rag/reindex")
+    public ResponseEntity<ApiResponse<java.util.Map<String, Object>>> reindexRagKnowledge() {
+        int chunksIndexed = knowledgeIngestionService.reindexAll();
+        return ResponseEntity.ok(ApiResponse.success(
+                "RAG reindex completed",
+                java.util.Map.of(
+                        "chunksIndexed", chunksIndexed,
+                        "ragEnabled", chunksIndexed > 0)));
     }
 }

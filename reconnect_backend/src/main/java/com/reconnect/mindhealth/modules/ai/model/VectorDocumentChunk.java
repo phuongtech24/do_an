@@ -2,9 +2,11 @@ package com.reconnect.mindhealth.modules.ai.model;
 
 import java.util.List;
 
-public class GuideKnowledgeCard {
+public class VectorDocumentChunk {
+    private String id;
+    private String sourceType;
+    private String sourcePath;
     private String topicCode;
-    private List<String> topicAliases = List.of();
     private List<String> screenScope = List.of();
     private List<String> routeScope = List.of();
     private List<String> phaseScope = List.of();
@@ -12,7 +14,30 @@ public class GuideKnowledgeCard {
     private List<String> journalTypes = List.of();
     private List<String> keywords = List.of();
     private String content;
-    private List<GuideActionCard> suggestedActions = List.of();
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getSourceType() {
+        return sourceType;
+    }
+
+    public void setSourceType(String sourceType) {
+        this.sourceType = sourceType;
+    }
+
+    public String getSourcePath() {
+        return sourcePath;
+    }
+
+    public void setSourcePath(String sourcePath) {
+        this.sourcePath = sourcePath;
+    }
 
     public String getTopicCode() {
         return topicCode;
@@ -20,14 +45,6 @@ public class GuideKnowledgeCard {
 
     public void setTopicCode(String topicCode) {
         this.topicCode = topicCode;
-    }
-
-    public List<String> getTopicAliases() {
-        return topicAliases;
-    }
-
-    public void setTopicAliases(List<String> topicAliases) {
-        this.topicAliases = topicAliases;
     }
 
     public List<String> getScreenScope() {
@@ -84,13 +101,5 @@ public class GuideKnowledgeCard {
 
     public void setContent(String content) {
         this.content = content;
-    }
-
-    public List<GuideActionCard> getSuggestedActions() {
-        return suggestedActions;
-    }
-
-    public void setSuggestedActions(List<GuideActionCard> suggestedActions) {
-        this.suggestedActions = suggestedActions;
     }
 }

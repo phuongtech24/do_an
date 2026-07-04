@@ -918,7 +918,6 @@ class _SituationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isPerformance = situation.group == 'PERFORMANCE';
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -944,11 +943,6 @@ class _SituationCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(situation.title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 4),
-                    Text(
-                      isPerformance ? 'Hiệu suất/biểu diễn' : 'Tương tác xã hội',
-                      style: TextStyle(color: isPerformance ? Colors.deepPurple : const Color(0xFF0F8B7F)),
-                    ),
                   ],
                 ),
               ),

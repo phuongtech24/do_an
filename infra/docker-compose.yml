@@ -22,6 +22,15 @@ services:
     ports:
       - "6379:6379"
 
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: mindhealth-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
   mailpit:
     image: axllent/mailpit:latest
     container_name: mindhealth-mailpit
@@ -38,6 +47,7 @@ services:
     depends_on:
       - mysql
       - redis
+      - qdrant
       - mailpit
     environment:
       DB_HOST: mysql
@@ -48,6 +58,11 @@ services:
       SERVER_PORT: 8080
       JWT_SECRET: mindhealth-docker-secret-change-this-32chars-min
       AI_ENABLED: "false"
+      AI_RAG_ENABLED: "false"
+      AI_RAG_AUTO_INGEST_ON_STARTUP: "false"
+      AI_RAG_QDRANT_HOST: qdrant
+      AI_RAG_QDRANT_PORT: 6333
+      AI_RAG_QDRANT_COLLECTION: mindhealth_ai_knowledge
       REDIS_HOST: redis
       REDIS_PORT: 6379
       APP_CACHE_ENABLED: "true"
@@ -76,5 +91,6 @@ services:
 
 volumes:
   mysql_data:
+  qdrant_data:
   backend_uploads:
   backend_proofs:

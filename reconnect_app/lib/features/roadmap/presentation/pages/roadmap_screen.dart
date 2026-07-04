@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../shared/widgets/mindhealth_scaffold.dart';
@@ -196,6 +197,119 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
         .toList();
   }
 
+  bool _isSocialGoal(FearLadderItemModel item) => item.goalContextLabel.toUpperCase() == 'SOCIAL';
+
+  bool _isBehavioralGoal(FearLadderItemModel item) =>
+      item.goalContextLabel.toUpperCase() == 'BEHAVIORAL';
+
+  bool _isEmotionalGoal(FearLadderItemModel item) => item.goalContextLabel.toUpperCase() == 'EMOTIONAL';
+
+  String _goalGuidanceTitle(FearLadderItemModel item) {
+    if (_isSocialGoal(item)) {
+      return 'Gợi ý theo mục tiêu tương tác xã hội';
+    }
+    if (_isBehavioralGoal(item)) {
+      return 'Gợi ý theo mục tiêu thực hành hành vi';
+    }
+    if (_isEmotionalGoal(item)) {
+      return 'Gợi ý theo mục tiêu điều hòa cảm xúc';
+    }
+    return 'Gợi ý trước khi bắt đầu bài thực hành';
+  }
+
+  List<String> _goalGuidanceBullets(FearLadderItemModel item) {
+    if (_isSocialGoal(item)) {
+      return const [
+        'Tạm bỏ việc nhẩm trước kịch bản hoặc tự kiểm duyệt câu nói trong đầu.',
+        'Chuyển chú ý ra bên ngoài: lắng nghe người đối diện và quan sát tình huống thật.',
+        'Ưu tiên tương tác tự nhiên hơn là cố kiểm soát hoàn hảo từng câu chữ.',
+      ];
+    }
+    if (_isBehavioralGoal(item)) {
+      return const [
+        'Ghi rõ dự đoán ban đầu và so sánh lại với kết quả thực tế sau khi làm xong.',
+        'Cam kết bỏ bớt các hành vi an toàn mang tính né tránh hoặc che giấu.',
+        'Ưu tiên một hành động cụ thể, quan sát được và có thể đối chiếu bằng chứng.',
+      ];
+    }
+    if (_isEmotionalGoal(item)) {
+      return const [
+        'Nếu đang quá căng, hãy hạ nhiệt cơ thể trước bằng thở ngắn hoặc grounding.',
+        'Mục tiêu là giữ đủ bình tĩnh để tiếp cận tình huống, không phải làm hoàn hảo ngay.',
+        'Bạn có thể mở Thẻ đối phó trước khi bắt đầu nếu cần tự trấn an.',
+      ];
+    }
+    return const [
+      'Giữ nhịp thực hành vừa sức và tập trung vào bằng chứng thực tế.',
+      'So sánh dự đoán ban đầu với điều thực sự xảy ra sau bài tập.',
+    ];
+  }
+
+  Widget _buildGoalGuidanceCard(BuildContext context, FearLadderItemModel item) {
+    final bullets = _goalGuidanceBullets(item);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.primary.withOpacity(0.12)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _goalGuidanceTitle(item),
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          if (item.goalPriorityReason.trim().isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              item.goalPriorityReason,
+              style: const TextStyle(color: AppColors.textSecondary, height: 1.4),
+            ),
+          ],
+          const SizedBox(height: 8),
+          ...bullets.map(
+            (bullet) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(top: 5),
+                    child: Icon(Icons.circle, size: 6, color: AppColors.primary),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      bullet,
+                      style: const TextStyle(color: AppColors.textSecondary, height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (_isEmotionalGoal(item)) ...[
+            const SizedBox(height: 4),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: () => context.push('/coping-cards'),
+                icon: const Icon(Icons.favorite_border_rounded),
+                label: const Text('Mở Thẻ đối phó'),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Future<void> _showSetupDialog(
     BuildContext context,
     BehavioralExperimentModel experiment,
@@ -223,6 +337,8 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                 children: [
                   const Text('1. Lời tiên tri tiêu cực', style: TextStyle(fontWeight: FontWeight.w800)),
                   const SizedBox(height: 8),
+                  _buildGoalGuidanceCard(context, experiment.ladderItem),
+                  const SizedBox(height: 14),
                   TextField(
                     controller: predictionController,
                     decoration: const InputDecoration(
@@ -739,6 +855,13 @@ class _OpenExerciseTile extends StatelessWidget {
               if (item.goalMatch) _SoftPill(label: 'Khớp mục tiêu'),
             ],
           ),
+          if (item.goalPriorityReason.trim().isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              item.goalPriorityReason,
+              style: const TextStyle(color: AppColors.textSecondary, height: 1.4),
+            ),
+          ],
           if ((experiment?.learning ?? experiment?.debrief ?? '').trim().isNotEmpty) ...[
             const SizedBox(height: 10),
             Text(

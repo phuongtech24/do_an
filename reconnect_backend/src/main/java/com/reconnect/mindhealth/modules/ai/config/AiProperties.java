@@ -20,6 +20,8 @@ public class AiProperties {
 
     private Guide guide = new Guide();
 
+    private Rag rag = new Rag();
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -58,6 +60,14 @@ public class AiProperties {
 
     public void setGuide(Guide guide) {
         this.guide = guide;
+    }
+
+    public Rag getRag() {
+        return rag;
+    }
+
+    public void setRag(Rag rag) {
+        this.rag = rag;
     }
 
     public static class Gemini {
@@ -264,6 +274,126 @@ public class AiProperties {
 
         public void setContentTermWeight(int contentTermWeight) {
             this.contentTermWeight = contentTermWeight;
+        }
+    }
+
+    public static class Rag {
+        private boolean enabled = false;
+        private boolean autoIngestOnStartup = false;
+        private String qdrantHost = "localhost";
+        private int qdrantPort = 6333;
+        private String qdrantCollection = "mindhealth_ai_knowledge";
+        private String qdrantApiKey = "";
+        private String embeddingModel = "text-embedding-004";
+        private int vectorSize = 768;
+        private int topK = 4;
+        private int candidateLimit = 12;
+        private double minScore = 0.25d;
+        private int chunkSize = 600;
+        private int chunkOverlap = 80;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public boolean isAutoIngestOnStartup() {
+            return autoIngestOnStartup;
+        }
+
+        public void setAutoIngestOnStartup(boolean autoIngestOnStartup) {
+            this.autoIngestOnStartup = autoIngestOnStartup;
+        }
+
+        public String getQdrantHost() {
+            return qdrantHost;
+        }
+
+        public void setQdrantHost(String qdrantHost) {
+            this.qdrantHost = qdrantHost;
+        }
+
+        public int getQdrantPort() {
+            return qdrantPort;
+        }
+
+        public void setQdrantPort(int qdrantPort) {
+            this.qdrantPort = qdrantPort;
+        }
+
+        public String getQdrantCollection() {
+            return qdrantCollection;
+        }
+
+        public void setQdrantCollection(String qdrantCollection) {
+            this.qdrantCollection = qdrantCollection;
+        }
+
+        public String getQdrantApiKey() {
+            return qdrantApiKey;
+        }
+
+        public void setQdrantApiKey(String qdrantApiKey) {
+            this.qdrantApiKey = qdrantApiKey;
+        }
+
+        public String getEmbeddingModel() {
+            return embeddingModel;
+        }
+
+        public void setEmbeddingModel(String embeddingModel) {
+            this.embeddingModel = embeddingModel;
+        }
+
+        public int getVectorSize() {
+            return vectorSize;
+        }
+
+        public void setVectorSize(int vectorSize) {
+            this.vectorSize = vectorSize;
+        }
+
+        public int getTopK() {
+            return topK;
+        }
+
+        public void setTopK(int topK) {
+            this.topK = topK;
+        }
+
+        public int getCandidateLimit() {
+            return candidateLimit;
+        }
+
+        public void setCandidateLimit(int candidateLimit) {
+            this.candidateLimit = candidateLimit;
+        }
+
+        public double getMinScore() {
+            return minScore;
+        }
+
+        public void setMinScore(double minScore) {
+            this.minScore = minScore;
+        }
+
+        public int getChunkSize() {
+            return chunkSize;
+        }
+
+        public void setChunkSize(int chunkSize) {
+            this.chunkSize = chunkSize;
+        }
+
+        public int getChunkOverlap() {
+            return chunkOverlap;
+        }
+
+        public void setChunkOverlap(int chunkOverlap) {
+            this.chunkOverlap = chunkOverlap;
         }
     }
 }

@@ -21,6 +21,15 @@ services:
     ports:
       - "${REDIS_PORT:-6379}:6379"
 
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: mindhealth-qdrant
+    restart: unless-stopped
+    ports:
+      - "${QDRANT_PORT:-6333}:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
   backend:
     image: ${BACKEND_IMAGE}
     container_name: mindhealth-backend
@@ -28,6 +37,7 @@ services:
     depends_on:
       - mysql
       - redis
+      - qdrant
     environment:
       DB_HOST: mysql
       DB_PORT: 3306
@@ -37,6 +47,12 @@ services:
       SERVER_PORT: 8080
       JWT_SECRET: ${JWT_SECRET}
       AI_ENABLED: ${AI_ENABLED:-false}
+      AI_RAG_ENABLED: ${AI_RAG_ENABLED:-false}
+      AI_RAG_AUTO_INGEST_ON_STARTUP: ${AI_RAG_AUTO_INGEST_ON_STARTUP:-false}
+      AI_RAG_QDRANT_HOST: qdrant
+      AI_RAG_QDRANT_PORT: 6333
+      AI_RAG_QDRANT_COLLECTION: ${AI_RAG_QDRANT_COLLECTION:-mindhealth_ai_knowledge}
+      AI_RAG_QDRANT_API_KEY: ${AI_RAG_QDRANT_API_KEY:-}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       APP_CACHE_ENABLED: ${APP_CACHE_ENABLED:-true}
@@ -58,5 +74,6 @@ services:
 
 volumes:
   mysql_data:
+  qdrant_data:
   backend_uploads:
   backend_proofs:

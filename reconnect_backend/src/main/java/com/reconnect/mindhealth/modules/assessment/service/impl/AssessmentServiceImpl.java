@@ -125,7 +125,7 @@ public class AssessmentServiceImpl implements IAssessmentService {
         List<LsasAnswer> answers = new ArrayList<>();
         for (LsasAnswerRequestDto answerDto : dto.getAnswers()) {
             LsasSituation situation = lsasSituationRepository.findById(answerDto.getSituationId())
-                    .orElseThrow(() -> new EntityNotFoundException("Kh?ng t?m th?y t?nh hu?ng LSAS."));
+                    .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy tình huống LSAS."));
             int fear = normalizeLsasScore(answerDto.getFearScore());
             int avoidance = normalizeLsasScore(answerDto.getAvoidanceScore());
             LsasAnswer answer = new LsasAnswer();

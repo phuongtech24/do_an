@@ -75,6 +75,20 @@ app:
       topic-weight: ${AI_GUIDE_TOPIC_WEIGHT:2}
       keyword-weight: ${AI_GUIDE_KEYWORD_WEIGHT:3}
       content-term-weight: ${AI_GUIDE_CONTENT_TERM_WEIGHT:1}
+    rag:
+      enabled: ${AI_RAG_ENABLED:false}
+      auto-ingest-on-startup: ${AI_RAG_AUTO_INGEST_ON_STARTUP:false}
+      qdrant-host: ${AI_RAG_QDRANT_HOST:localhost}
+      qdrant-port: ${AI_RAG_QDRANT_PORT:6333}
+      qdrant-collection: ${AI_RAG_QDRANT_COLLECTION:mindhealth_ai_knowledge}
+      qdrant-api-key: ${AI_RAG_QDRANT_API_KEY:}
+      embedding-model: ${AI_RAG_EMBEDDING_MODEL:text-embedding-004}
+      vector-size: ${AI_RAG_VECTOR_SIZE:768}
+      top-k: ${AI_RAG_TOP_K:4}
+      candidate-limit: ${AI_RAG_CANDIDATE_LIMIT:8}
+      min-score: ${AI_RAG_MIN_SCORE:0.25}
+      chunk-size: ${AI_RAG_CHUNK_SIZE:900}
+      chunk-overlap: ${AI_RAG_CHUNK_OVERLAP:180}
   cache:
     enabled: ${APP_CACHE_ENABLED:false}
     therapist-directory-ttl-minutes: ${THERAPIST_DIRECTORY_CACHE_TTL_MINUTES:10}

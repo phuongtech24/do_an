@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reconnect.mindhealth.modules.ai.config.AiProperties;
+import com.reconnect.mindhealth.modules.ai.dto.AiKnowledgeQueryDto;
 import com.reconnect.mindhealth.modules.ai.dto.GuideChatRequestDto;
 import com.reconnect.mindhealth.modules.ai.model.GuideKnowledgeCard;
 
@@ -31,7 +32,8 @@ public class GuideKnowledgeRetrieverService {
             "lam", "gi", "nao", "nay", "kia", "roi", "se", "can", "muon", "minh", "cua");
     private static final List<String> GUIDE_RESOURCE_PATHS = List.of(
             "ai/guide-knowledge-cards.json",
-            "ai/guide-cbt-support-cards.json");
+            "ai/guide-cbt-support-cards.json",
+            "ai/thought-record-rag-cards.json");
 
     private final AiProperties aiProperties;
     private final ObjectMapper objectMapper;
@@ -60,18 +62,47 @@ public class GuideKnowledgeRetrieverService {
     }
 
     public List<GuideKnowledgeCard> retrieve(GuideChatRequestDto request) {
+        AiKnowledgeQueryDto query = new AiKnowledgeQueryDto();
+        query.setUserMessage(request.getUserMessage());
+        query.setScreenContext(request.getScreenContext());
+        query.setPatientRoute(request.getPatientRoute());
+        query.setProgramPhaseCode(request.getProgramPhaseCode());
+        query.setProgramWeek(request.getProgramWeek());
+        query.setCurrentRiskScore(request.getCurrentRiskScore());
+        return retrieve(query);
+    }
+
+    public List<GuideKnowledgeCard> retrieve(AiKnowledgeQueryDto query) {
         if (!aiProperties.getGuide().isRetrievalEnabled()) {
             return List.of();
         }
 
-        String screenContext = normalizeText(request.getScreenContext());
-        String route = normalizeText(request.getPatientRoute());
-        String phase = normalizeText(request.getProgramPhaseCode());
-        String message = normalizeText(request.getUserMessage());
+        String screenContext = normalizeText(query.getScreenContext());
+        String route = normalizeText(query.getPatientRoute());
+        String phase = normalizeText(query.getProgramPhaseCode());
+        String intent = normalizeText(query.getIntent());
+        String journalType = normalizeText(query.getJournalType());
+        String topicHint = normalizeText(query.getTopicHint());
+        String message = normalizeText(query.getUserMessage());
         Set<String> queryTerms = extractQueryTerms(message);
+        if (query.getKeywords() != null) {
+            queryTerms.addAll(query.getKeywords().stream()
+                    .map(this::normalizeText)
+                    .filter(term -> !term.isBlank())
+                    .collect(Collectors.toSet()));
+        }
 
         return guideKnowledgeCards.stream()
-                .map(card -> new ScoredCard(card, scoreCard(card, screenContext, route, phase, message, queryTerms)))
+                .map(card -> new ScoredCard(card, scoreCard(
+                        card,
+                        screenContext,
+                        route,
+                        phase,
+                        intent,
+                        journalType,
+                        topicHint,
+                        message,
+                        queryTerms)))
                 .filter(scored -> scored.score() >= aiProperties.getGuide().getMinScore())
                 .sorted(Comparator.comparingInt(ScoredCard::score).reversed()
                         .thenComparing(scored -> scored.card().getTopicCode(), String.CASE_INSENSITIVE_ORDER))
@@ -85,6 +116,9 @@ public class GuideKnowledgeRetrieverService {
             String screenContext,
             String route,
             String phase,
+            String intent,
+            String journalType,
+            String topicHint,
             String message,
             Set<String> queryTerms) {
         int score = 0;
@@ -98,6 +132,15 @@ public class GuideKnowledgeRetrieverService {
         }
         if (matchesScope(card.getPhaseScope(), phase)) {
             score += guide.getPhaseScopeWeight();
+        }
+        if (matchesScope(card.getIntentScope(), intent)) {
+            score += guide.getTopicWeight();
+        }
+        if (matchesScope(card.getJournalTypes(), journalType)) {
+            score += guide.getTopicWeight();
+        }
+        if (matchesTopicHint(card, topicHint)) {
+            score += guide.getTopicWeight() + 1;
         }
         if (card.getTopicCode() != null && message.contains(normalizeText(card.getTopicCode().replace('_', ' ')))) {
             score += guide.getTopicWeight();
@@ -118,6 +161,19 @@ public class GuideKnowledgeRetrieverService {
             }
         }
         return score;
+    }
+
+    private boolean matchesTopicHint(GuideKnowledgeCard card, String topicHint) {
+        if (topicHint == null || topicHint.isBlank()) {
+            return false;
+        }
+        if (topicHint.equals(normalizeText(card.getTopicCode()))) {
+            return true;
+        }
+        return card.getTopicAliases() != null
+                && card.getTopicAliases().stream()
+                        .map(this::normalizeText)
+                        .anyMatch(topicHint::equals);
     }
 
     private Set<String> extractQueryTerms(String message) {

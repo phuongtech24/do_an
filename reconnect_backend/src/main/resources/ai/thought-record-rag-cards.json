@@ -1,0 +1,92 @@
+[
+  {
+    "topicCode": "THOUGHT_RECORD_AUTOMATIC_THOUGHT",
+    "topicAliases": ["THOUGHT_RECORD", "AUTOMATIC_THOUGHT"],
+    "screenScope": ["thought-record", "journal"],
+    "routeScope": [],
+    "phaseScope": [],
+    "intentScope": ["COGNITIVE_DISTORTIONS", "GUIDED_DISCOVERY"],
+    "journalTypes": ["THOUGHT_RECORD"],
+    "keywords": ["automatic thought", "suy nghi tu dong", "mind reading", "catastrophizing", "rumination"],
+    "content": "Trong CBT, automatic thought la suy nghi xuat hien rat nhanh khi nguoi benh gap tinh huong xa hoi. Muc tieu cua Thought Record la dua automatic thought ra anh sang de kiem tra bang chung, thay vi chap nhan no nhu mot su that tuyet doi.",
+    "suggestedActions": [
+      { "label": "Mo Thought Record", "route": "/thought-record" },
+      { "label": "Xem nhat ky", "route": "/journal" }
+    ]
+  },
+  {
+    "topicCode": "THOUGHT_RECORD_DISTORTIONS",
+    "topicAliases": ["DISTORTIONS", "COGNITIVE_DISTORTIONS"],
+    "screenScope": ["thought-record", "journal"],
+    "routeScope": [],
+    "phaseScope": [],
+    "intentScope": ["COGNITIVE_DISTORTIONS"],
+    "journalTypes": ["THOUGHT_RECORD"],
+    "keywords": ["distortion", "meo mo nhan thuc", "mind reading", "catastrophizing", "all or nothing"],
+    "content": "Khi goi y meo mo nhan thuc, AI phai bam sat noi dung situation va automatic thought. Chi nen goi y 1-3 nhan that su co bang chung. Uu tien cac meo mo pho bien trong lo au xa hoi nhu mind reading, catastrophizing, labeling, emotional reasoning va overgeneralization.",
+    "suggestedActions": [
+      { "label": "Tiep tuc Thought Record", "route": "/thought-record" },
+      { "label": "Xem the doi pho", "route": "/coping-cards" }
+    ]
+  },
+  {
+    "topicCode": "THOUGHT_RECORD_GUIDED_DISCOVERY",
+    "topicAliases": ["GUIDED_DISCOVERY", "SOCRATIC"],
+    "screenScope": ["thought-record", "journal"],
+    "routeScope": [],
+    "phaseScope": [],
+    "intentScope": ["GUIDED_DISCOVERY"],
+    "journalTypes": ["THOUGHT_RECORD"],
+    "keywords": ["guided discovery", "socratic", "phan bien", "bang chung", "goc nhin khac"],
+    "content": "Guided discovery trong CBT khong dua ra dap an thay benh nhan. AI nen dat 1-2 cau hoi ngan de nguoi dung tu xem lai bang chung, tim cach giai thich it tieu cuc hon, va rut ngan khoang cach giua du doan tham hoa va thuc te.",
+    "suggestedActions": [
+      { "label": "Mo Thought Record", "route": "/thought-record" },
+      { "label": "Quay lai nhat ky", "route": "/journal" }
+    ]
+  },
+  {
+    "topicCode": "THOUGHT_RECORD_SAD_MECHANISMS",
+    "topicAliases": ["SAD", "ANTICIPATORY_ANXIETY", "RUMINATION"],
+    "screenScope": ["thought-record", "daily-checkin", "journal"],
+    "routeScope": [],
+    "phaseScope": [],
+    "intentScope": ["COGNITIVE_DISTORTIONS", "GUIDED_DISCOVERY", "JOURNAL_RISK"],
+    "journalTypes": ["THOUGHT_RECORD"],
+    "keywords": ["anticipatory anxiety", "post-event rumination", "lo au du doan", "nhai lai su kien"],
+    "content": "Voi roi loan lo au xa hoi, Thought Record dac biet huu ich khi nguoi dung mac ket trong anticipatory anxiety truoc su kien hoac post-event rumination sau su kien. AI nen giup nguoi dung quay ve bang chung thuc te, tranh de ho bi ket chat trong du doan tham hoa hay tu phan xet keo dai.",
+    "suggestedActions": [
+      { "label": "Viet Thought Record", "route": "/thought-record" },
+      { "label": "Xem lo trinh", "route": "/roadmap" }
+    ]
+  },
+  {
+    "topicCode": "THOUGHT_RECORD_RISK_TRIAGE",
+    "topicAliases": ["THOUGHT_RECORD_RISK", "JOURNAL_RISK", "SAFETY"],
+    "screenScope": ["thought-record", "journal"],
+    "routeScope": [],
+    "phaseScope": [],
+    "intentScope": ["JOURNAL_RISK"],
+    "journalTypes": ["THOUGHT_RECORD"],
+    "keywords": ["tu sat", "bien mat", "het hy vong", "khong an toan", "self harm", "life threat"],
+    "content": "AI risk scoring trong Thought Record la co che safety metadata, khong phai chan doan. Neu noi dung chi the hien lo au, buon ba thong thuong thi muc NORMAL. Neu the hien tuyet vong sau sac, be tac cung cuc, muon bien mat thi CORE_BELIEF. Neu co y dinh tu sat, tu hai hay nhac truc tiep den cai chet thi LIFE_THREAT va uu tien red flag.",
+    "suggestedActions": [
+      { "label": "Mo ho tro an toan", "route": "/safety-support" },
+      { "label": "Xem tham van tu xa", "route": "/telehealth" }
+    ]
+  },
+  {
+    "topicCode": "THOUGHT_RECORD_ADAPTIVE_RESPONSE",
+    "topicAliases": ["ADAPTIVE_RESPONSE", "REFRAME"],
+    "screenScope": ["thought-record", "journal"],
+    "routeScope": [],
+    "phaseScope": [],
+    "intentScope": ["GUIDED_DISCOVERY"],
+    "journalTypes": ["THOUGHT_RECORD"],
+    "keywords": ["adaptive response", "phan hoi thich nghi", "tai cau truc nhan thuc", "reframe"],
+    "content": "Adaptive response khong can qua hoan hao. Muc tieu la viet mot cau can bang hon, sat bang chung hon, giup muc tin vao du doan tieu cuc giam xuong. AI nen huong nguoi dung toi mot goc nhin hop ly hon thay vi co gang ep ho nghi tich cuc gia tao.",
+    "suggestedActions": [
+      { "label": "Hoan thanh Thought Record", "route": "/thought-record" },
+      { "label": "Xem lai nhat ky", "route": "/journal" }
+    ]
+  }
+]

@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.reconnect.mindhealth.modules.assessment.enums.LsasSituationGroup;
 import com.reconnect.mindhealth.modules.assessment.entity.LsasAnswer;
 import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
@@ -65,10 +66,14 @@ public class FearLadderService {
     @Transactional
     public List<FearLadderItemDto> rebuildFromBaseline(PatientProfile patient, List<LsasAnswer> answers) {
         fearLadderItemRepository.deleteByPatientProfile_Id(patient.getId());
+        PatientGoalType activeGoalType = resolveActiveGoalType(patient.getId());
         List<LsasAnswer> scored = answers.stream()
                 .filter(answer -> answer.getTotalScore() != null && answer.getTotalScore() > 0)
                 .sorted(Comparator
-                        .comparing(LsasAnswer::getTotalScore)
+                        .comparing(
+                                (LsasAnswer answer) -> isGoalMatch(activeGoalType, answer.getSituation().getSituationGroup()),
+                                Comparator.reverseOrder())
+                        .thenComparing(LsasAnswer::getTotalScore)
                         .thenComparing(answer -> answer.getSituation().getSituationNumber()))
                 .toList();
 
@@ -96,13 +101,14 @@ public class FearLadderService {
     @Transactional(readOnly = true)
     public List<FearLadderItemDto> getFearLadder(UUID patientId) {
         requirePatient(patientId);
+        PatientGoalType activeGoalType = resolveActiveGoalType(patientId);
         List<FearLadderItem> items = fearLadderItemRepository.findByPatientProfile_IdOrderByLadderOrderAsc(patientId);
         int unlockedUntilIndex = resolveUnlockedUntilIndex(items);
         List<FearLadderItemDto> dtos = new ArrayList<>();
         for (int index = 0; index < items.size(); index++) {
             FearLadderItem item = items.get(index);
             FearLadderItemDto dto = new FearLadderItemDto(item);
-            dto.setGoalMatch(true);
+            applyGoalContext(dto, activeGoalType);
             dto.setUnlocked(index <= unlockedUntilIndex);
             dto.setMasteredAt(item.getStatus() == FearLadderStatus.MASTERED ? item.getModifyDate() : null);
             dtos.add(dto);
@@ -192,17 +198,19 @@ public class FearLadderService {
     @Transactional
     public BehavioralExperimentDto getTodayExperiment(UUID patientId) {
         PatientProfile patient = requirePatient(patientId);
+        PatientGoalType activeGoalType = resolveActiveGoalType(patientId);
         return behavioralExperimentRepository
                 .findTopByPatientProfile_IdAndStatusInOrderByAssignedAtDesc(
                         patientId,
                         List.of(BehavioralExperimentStatus.PLANNED, BehavioralExperimentStatus.IN_PROGRESS))
-                .map(BehavioralExperimentDto::new)
-                .orElseGet(() -> new BehavioralExperimentDto(createNextExperiment(patient)));
+                .map(experiment -> buildBehavioralExperimentDto(experiment, activeGoalType))
+                .orElseGet(() -> buildBehavioralExperimentDto(createNextExperiment(patient), activeGoalType));
     }
 
     @Transactional
     public BehavioralExperimentDto selectExperiment(UUID patientId, UUID ladderItemId) {
         PatientProfile patient = requirePatient(patientId);
+        PatientGoalType activeGoalType = resolveActiveGoalType(patientId);
         FearLadderItem ladderItem = fearLadderItemRepository.findById(ladderItemId)
                 .orElseThrow(() -> new EntityNotFoundException("KhÃ´ng tÃ¬m tháº¥y báº­c thá»±c hÃ nh."));
 
@@ -226,16 +234,17 @@ public class FearLadderService {
                         patientId,
                         ladderItemId,
                         List.of(BehavioralExperimentStatus.PLANNED, BehavioralExperimentStatus.IN_PROGRESS))
-                .map(BehavioralExperimentDto::new)
-                .orElseGet(() -> new BehavioralExperimentDto(createExperimentForItem(patient, ladderItem)));
+                .map(experiment -> buildBehavioralExperimentDto(experiment, activeGoalType))
+                .orElseGet(() -> buildBehavioralExperimentDto(createExperimentForItem(patient, ladderItem), activeGoalType));
     }
 
     @Transactional(readOnly = true)
     public List<BehavioralExperimentDto> getExperimentHistory(UUID patientId) {
         requirePatient(patientId);
+        PatientGoalType activeGoalType = resolveActiveGoalType(patientId);
         return behavioralExperimentRepository.findByPatientProfile_IdOrderByAssignedAtDesc(patientId)
                 .stream()
-                .map(BehavioralExperimentDto::new)
+                .map(experiment -> buildBehavioralExperimentDto(experiment, activeGoalType))
                 .toList();
     }
 
@@ -268,7 +277,7 @@ public class FearLadderService {
                 saved.getFearLadderItem() != null ? saved.getFearLadderItem().getId() : null,
                 saved.getPredictionBeliefBefore(),
                 normalizedSafetyBehaviorsJson);
-        return new BehavioralExperimentDto(saved);
+        return buildBehavioralExperimentDto(saved, resolveActiveGoalType(saved.getPatientProfile().getId()));
     }
 
     @Transactional
@@ -310,7 +319,7 @@ public class FearLadderService {
                 saved.getPostFearScore(),
                 saved.getPostAvoidanceScore(),
                 ladderItem.getStatus());
-        return new BehavioralExperimentDto(saved);
+        return buildBehavioralExperimentDto(saved, resolveActiveGoalType(saved.getPatientProfile().getId()));
     }
 
     private BehavioralExperiment createNextExperiment(PatientProfile patient) {
@@ -373,6 +382,72 @@ public class FearLadderService {
             }
         }
         return items.isEmpty() ? -1 : items.size() - 1;
+    }
+
+    private PatientGoalType resolveActiveGoalType(UUID patientId) {
+        return patientGoalRepository.findByPatientProfile_IdAndStatusOrderByCreateDateDesc(
+                patientId,
+                PatientGoalStatus.ACTIVE)
+                .stream()
+                .findFirst()
+                .map(PatientGoal::getGoalType)
+                .orElse(null);
+    }
+
+    private BehavioralExperimentDto buildBehavioralExperimentDto(
+            BehavioralExperiment experiment,
+            PatientGoalType activeGoalType) {
+        BehavioralExperimentDto dto = new BehavioralExperimentDto(experiment);
+        if (dto.getLadderItem() != null) {
+            applyGoalContext(dto.getLadderItem(), activeGoalType);
+        }
+        return dto;
+    }
+
+    private void applyGoalContext(FearLadderItemDto dto, PatientGoalType activeGoalType) {
+        boolean goalMatch = isGoalMatch(activeGoalType, dto.getSituationGroup());
+        dto.setGoalMatch(goalMatch);
+        dto.setGoalContextLabel(resolveGoalContextLabel(activeGoalType));
+        dto.setGoalPriorityReason(resolveGoalPriorityReason(activeGoalType, dto.getSituationGroup(), goalMatch));
+    }
+
+    private boolean isGoalMatch(PatientGoalType activeGoalType, LsasSituationGroup situationGroup) {
+        if (activeGoalType == null || situationGroup == null) {
+            return false;
+        }
+        return switch (activeGoalType) {
+            case SOCIAL -> situationGroup == LsasSituationGroup.SOCIAL_INTERACTION;
+            case BEHAVIORAL -> situationGroup == LsasSituationGroup.PERFORMANCE;
+            case EMOTIONAL, COGNITIVE -> false;
+        };
+    }
+
+    private String resolveGoalContextLabel(PatientGoalType activeGoalType) {
+        if (activeGoalType == null) {
+            return "GENERAL";
+        }
+        return activeGoalType.name();
+    }
+
+    private String resolveGoalPriorityReason(
+            PatientGoalType activeGoalType,
+            LsasSituationGroup situationGroup,
+            boolean goalMatch) {
+        if (activeGoalType == null) {
+            return "Ưu tiên mặc định theo mức độ lo âu hiện tại";
+        }
+        return switch (activeGoalType) {
+            case SOCIAL -> goalMatch
+                    ? "Ưu tiên theo mục tiêu tương tác xã hội"
+                    : "Vẫn giữ trong ladder để bảo đảm bao phủ đầy đủ các tình huống LSAS";
+            case BEHAVIORAL -> goalMatch
+                    ? "Ưu tiên theo mục tiêu thực hành hành vi"
+                    : "Vẫn giữ trong ladder để bệnh nhân không bỏ sót các tình huống còn né tránh";
+            case EMOTIONAL -> "Ưu tiên cân bằng theo mức độ lo âu hiện tại";
+            case COGNITIVE -> situationGroup == LsasSituationGroup.PERFORMANCE
+                    ? "Ưu tiên trung tính, kết hợp phản biện dự đoán và đối chiếu kết quả"
+                    : "Ưu tiên trung tính, kết hợp điều chỉnh chú ý và nhận diện tự phán xét";
+        };
     }
 
     private FearLadderBucket resolveBucket(int total) {
