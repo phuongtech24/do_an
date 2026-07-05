@@ -18,6 +18,7 @@ class JournalModel {
   final List<String>? safetyBehaviors;
   final List<String>? distortions;
   final String? adaptiveResponse;
+  final String? outcome;
   final String? safetyBehaviorCommitment;
   final int? reRatedScore;
   final int? reRatedBeliefScore;
@@ -44,6 +45,7 @@ class JournalModel {
     this.safetyBehaviors,
     this.distortions,
     this.adaptiveResponse,
+    this.outcome,
     this.safetyBehaviorCommitment,
     this.reRatedScore,
     this.reRatedBeliefScore,
@@ -77,6 +79,7 @@ class JournalModel {
       safetyBehaviors: toStringList(json['safetyBehaviors']),
       distortions: toStringList(json['distortions']),
       adaptiveResponse: json['adaptiveResponse']?.toString(),
+      outcome: json['outcome']?.toString(),
       safetyBehaviorCommitment: json['safetyBehaviorCommitment']?.toString(),
       reRatedScore: (json['reRatedScore'] as num?)?.toInt(),
       reRatedBeliefScore: (json['reRatedBeliefScore'] as num?)?.toInt(),
@@ -105,6 +108,7 @@ class JournalModel {
       if (safetyBehaviors != null) 'safetyBehaviors': safetyBehaviors,
       if (distortions != null) 'distortions': distortions,
       if (adaptiveResponse != null) 'adaptiveResponse': adaptiveResponse,
+      if (outcome != null) 'outcome': outcome,
       if (safetyBehaviorCommitment != null) 'safetyBehaviorCommitment': safetyBehaviorCommitment,
       if (reRatedScore != null) 'reRatedScore': reRatedScore,
       if (reRatedBeliefScore != null) 'reRatedBeliefScore': reRatedBeliefScore,

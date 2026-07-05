@@ -79,6 +79,7 @@ public class JournalServiceImpl implements IJournalService {
                 contentMap.put("safetyBehaviors", dto.getSafetyBehaviors());
                 contentMap.put("distortions", dto.getDistortions());
                 contentMap.put("adaptiveResponse", dto.getAdaptiveResponse());
+                contentMap.put("outcome", dto.getOutcome());
                 contentMap.put("safetyBehaviorCommitment", dto.getSafetyBehaviorCommitment());
                 contentMap.put("reRatedScore", dto.getReRatedScore());
                 contentMap.put("reRatedBeliefScore", dto.getReRatedBeliefScore());
@@ -225,6 +226,7 @@ public class JournalServiceImpl implements IJournalService {
                             dto.setDistortions(codes);
                         }
                         dto.setAdaptiveResponse((String) contentMap.get("adaptiveResponse"));
+                        dto.setOutcome((String) contentMap.get("outcome"));
                         dto.setSafetyBehaviorCommitment((String) contentMap.get("safetyBehaviorCommitment"));
                         dto.setReRatedScore((Integer) contentMap.get("reRatedScore"));
                         dto.setReRatedBeliefScore((Integer) contentMap.get("reRatedBeliefScore"));

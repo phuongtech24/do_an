@@ -106,13 +106,13 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
         if (questions.isEmpty()) {
             log.warn("Guided discovery parse empty, using fallback.");
             questions = List.of(
-                    "BÃ¡ÂºÂ¡n cÃƒÂ³ bÃ¡ÂºÂ±ng chÃ¡Â»Â©ng nÃƒÂ o Ã¡Â»Â§ng hÃ¡Â»â„¢ vÃƒÂ  bÃ¡ÂºÂ±ng chÃ¡Â»Â©ng nÃƒÂ o phÃ¡ÂºÂ£n bÃƒÂ¡c suy nghÃ„Â© nÃƒÂ y?",
-                    "CÃƒÂ³ cÃƒÂ¡ch giÃ¡ÂºÂ£i thÃƒÂ­ch nÃƒÂ o khÃƒÂ¡c (ÃƒÂ­t tiÃƒÂªu cÃ¡Â»Â±c hÃ†Â¡n) cho tÃƒÂ¬nh huÃ¡Â»â€˜ng nÃƒÂ y khÃƒÂ´ng?");
+                    "Bang chung nao dang ung ho suy nghi nay, va bang chung nao dang phan bien lai no?",
+                    "Co cach giai thich nao khac, can bang hon va it tieu cuc hon, cho tinh huong nay khong?");
         }
         if (questions.stream().anyMatch(this::hasMojibakeMarker)) {
             questions = List.of(
-                    "Bạn có bằng chứng nào ủng hộ và bằng chứng nào phản bác suy nghĩ này?",
-                    "Có cách giải thích nào khác, ít tiêu cực hơn, cho tình huống này không?");
+                    "Bang chung nao dang ung ho suy nghi nay, va bang chung nao dang phan bien lai no?",
+                    "Co cach giai thich nao khac, can bang hon va it tieu cuc hon, cho tinh huong nay khong?");
         }
         return new GuidedDiscoveryResponseDto(cleanTextList(questions));
     }
@@ -202,15 +202,11 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
 
         if (!shouldCallAi) {
             String hint = rule.isEmpty()
-                    ? "ChÃ†Â°a thÃ¡ÂºÂ¥y mÃ¡ÂºÂ«u lÃ¡Â»â€”i tÃ†Â° duy quÃƒÂ¡ rÃƒÂµ tÃ¡Â»Â« rule hiÃ¡Â»â€¡n tÃ¡ÂºÂ¡i; bÃ¡ÂºÂ¡n vÃ¡ÂºÂ«n cÃƒÂ³ thÃ¡Â»Æ’ tÃ¡Â»Â± chÃ¡Â»Ân thÃ¡Â»Â§ cÃƒÂ´ng."
-                    : "GÃ¡Â»Â£i ÃƒÂ½ tÃ¡Â»Â« rule-based Ã¢â‚¬â€ bÃ¡ÂºÂ¡n cÃƒÂ³ thÃ¡Â»Æ’ giÃ¡Â»Â¯ hoÃ¡ÂºÂ·c chÃ¡Â»â€°nh lÃ¡ÂºÂ¡i cÃƒÂ¡c nhÃƒÂ£n nÃƒÂ y.";
+                    ? "Chua thay mau loi tu duy qua ro tu bo quy tac hien tai; ban van co the tu chon thu cong."
+                    : "Day la goi y tu bo quy tac; ban co the giu lai hoac chinh lai cac nhan nay.";
             log.info("Detect cognitive distortions fallback: source=RULE_ONLY, suggestions={}, hasHint={}",
                     rule.size(), !hint.isBlank());
             return new CognitiveDistortionResponseDto(rule, cleanText(hint));
-        }
-
-        if (!shouldCallAi) {
-            return new CognitiveDistortionResponseDto(rule, rule.isEmpty() ? null : "GÃ¡Â»Â£i ÃƒÂ½ (rule-based) Ã¢â‚¬â€ bÃ¡ÂºÂ¡n cÃƒÂ³ thÃ¡Â»Æ’ chÃ¡Â»â€°nh lÃ¡ÂºÂ¡i.");
         }
 
         List<GuideKnowledgeCard> matchedCards = retrieveThoughtRecordKnowledge(
@@ -230,7 +226,7 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
                                 null,
                                 "COGNITIVE_DISTORTIONS"),
                         matchedCards,
-                        "KhÃ´ng cÃ³ tri thá»©c retrieve khá»›p rÃµ. Chá»‰ gá»£i Ã½ distortion khi cÃ³ báº±ng chá»©ng tá»« thought vÃ  situation."));
+                        "Khong co tri thuc retrieve khop ro. Chi goi y distortion khi co bang chung tu thought va situation."));
         String raw = generateContent(prompt, 256, 0.2);
         CognitiveDistortionResponseDto parsed = parseDistortionsJson(raw);
 
@@ -244,17 +240,14 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
 
         String hint = parsed.getHint();
         if (hint == null || hint.isBlank()) {
-            hint = out.isEmpty() ? null : "GÃ¡Â»Â£i ÃƒÂ½ Ã¢â‚¬â€ bÃ¡ÂºÂ¡n chÃ¡Â»Ân 1Ã¢â‚¬â€œ3 lÃ¡Â»â€”i tÃ†Â° duy phÃƒÂ¹ hÃ¡Â»Â£p nhÃ¡ÂºÂ¥t.";
+            hint = out.isEmpty()
+                    ? "AI chua thay du tin hieu ro; ban van co the tu chon thu cong."
+                    : "Day la goi y tu AI va bo quy tac; hay chon 1-3 loi tu duy phu hop nhat.";
         }
         if (hint == null || hint.isBlank()) {
             hint = out.isEmpty()
-                    ? "AI chÃ†Â°a thÃ¡ÂºÂ¥y Ã„â€˜Ã¡Â»Â§ tÃƒÂ­n hiÃ¡Â»â€¡u rÃƒÂµ; bÃ¡ÂºÂ¡n vÃ¡ÂºÂ«n cÃƒÂ³ thÃ¡Â»Æ’ tÃ¡Â»Â± chÃ¡Â»Ân thÃ¡Â»Â§ cÃƒÂ´ng."
-                    : "GÃ¡Â»Â£i ÃƒÂ½ tÃ¡Â»Â« AI/rule Ã¢â‚¬â€ bÃ¡ÂºÂ¡n chÃ¡Â»Ân 1-3 lÃ¡Â»â€”i tÃ†Â° duy phÃƒÂ¹ hÃ¡Â»Â£p nhÃ¡ÂºÂ¥t.";
-        }
-        if (hint != null && (hint.contains("ÃƒÆ’") || hint.contains("ÃƒÂ¡Ã‚Â»"))) {
-            hint = out.isEmpty()
-                    ? "AI chÃ†Â°a thÃ¡ÂºÂ¥y Ã„â€˜Ã¡Â»Â§ tÃƒÂ­n hiÃ¡Â»â€¡u rÃƒÂµ; bÃ¡ÂºÂ¡n vÃ¡ÂºÂ«n cÃƒÂ³ thÃ¡Â»Æ’ tÃ¡Â»Â± chÃ¡Â»Ân thÃ¡Â»Â§ cÃƒÂ´ng."
-                    : "GÃ¡Â»Â£i ÃƒÂ½ tÃ¡Â»Â« AI/rule Ã¢â‚¬â€ bÃ¡ÂºÂ¡n chÃ¡Â»Ân 1-3 lÃ¡Â»â€”i tÃ†Â° duy phÃƒÂ¹ hÃ¡Â»Â£p nhÃ¡ÂºÂ¥t.";
+                    ? "AI chua thay du tin hieu ro; ban van co the tu chon thu cong."
+                    : "Day la goi y tu AI va bo quy tac; hay chon 1-3 loi tu duy phu hop nhat.";
         }
         log.info("Detect cognitive distortions completed: source={}, suggestions={}, hasHint={}",
                 raw == null || raw.isBlank() ? "RULE_FALLBACK_AFTER_AI" : "AI_OR_MERGED",
@@ -262,8 +255,8 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
                 hint != null && !hint.isBlank());
         if (hint != null && hasMojibakeMarker(hint)) {
             hint = out.isEmpty()
-                    ? "AI chưa thấy đủ tín hiệu rõ; bạn vẫn có thể tự chọn thủ công."
-                    : "Gợi ý từ AI và bộ quy tắc; hãy chọn 1–3 lỗi tư duy phù hợp nhất.";
+                    ? "AI chua thay du tin hieu ro; ban van co the tu chon thu cong."
+                    : "Day la goi y tu AI va bo quy tac; hay chon 1-3 loi tu duy phu hop nhat.";
         }
         return new CognitiveDistortionResponseDto(out, cleanText(hint));
     }
@@ -300,23 +293,10 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
 
     private GuideChatResponseDto buildSafetyGuideResponse(GuideChatRequestDto request) {
         return new GuideChatResponseDto(
-                "Mình sẽ ưu tiên an toàn cho bạn trước. Hệ thống đang nhận thấy mức rủi ro cao hoặc có cờ đỏ, vì vậy hãy mở hỗ trợ an toàn hoặc kết nối với chuyên gia qua mục tư vấn từ xa.",
+                "Minh se uu tien an toan cho ban truoc. He thong dang nhan thay muc rui ro cao hoac co co do, vi vay hay mo ho tro an toan hoac ket noi voi chuyen gia qua muc tu van tu xa.",
                 List.of(
-                        new GuideChatSuggestedActionDto("Mở hỗ trợ an toàn", "/safety-support"),
-                        new GuideChatSuggestedActionDto("Xem tư vấn từ xa", "/telehealth")),
-                "SAFETY_ESCALATION",
-                true,
-                true,
-                true);
-    }
-
-    @SuppressWarnings("unused")
-    private GuideChatResponseDto buildLegacySafetyGuideResponse(GuideChatRequestDto request) {
-        return new GuideChatResponseDto(
-                "MÃƒÂ¬nh sÃ¡ÂºÂ½ Ã†Â°u tiÃƒÂªn an toÃƒÂ n cho bÃ¡ÂºÂ¡n trÃ†Â°Ã¡Â»â€ºc. HiÃ¡Â»â€¡n hÃ¡Â»â€¡ thÃ¡Â»â€˜ng Ã„â€˜ang thÃ¡ÂºÂ¥y mÃ¡Â»Â©c rÃ¡Â»Â§i ro cao hoÃ¡ÂºÂ·c cÃƒÂ³ cÃ¡Â»Â Ã„â€˜Ã¡Â»Â, nÃƒÂªn mÃƒÂ¬nh khÃƒÂ´ng tiÃ¡ÂºÂ¿p tÃ¡Â»Â¥c hÃ¡Â»â€” trÃ¡Â»Â£ trÃ¡Â»â€¹ liÃ¡Â»â€¡u mÃ¡Â»Å¸ Ã¡Â»Å¸ Ã„â€˜ÃƒÂ¢y. NÃ¡ÂºÂ¿u Ã„â€˜Ã†Â°Ã¡Â»Â£c, bÃ¡ÂºÂ¡n hÃƒÂ£y mÃ¡Â»Å¸ hÃ¡Â»â€” trÃ¡Â»Â£ an toÃƒÂ n hoÃ¡ÂºÂ·c xem ngay mÃ¡Â»Â¥c tham vÃ¡ÂºÂ¥n tÃ¡Â»Â« xa Ã„â€˜Ã¡Â»Æ’ kÃ¡ÂºÂ¿t nÃ¡Â»â€˜i vÃ¡Â»â€ºi chuyÃƒÂªn gia phÃƒÂ¹ hÃ¡Â»Â£p.",
-                List.of(
-                        new GuideChatSuggestedActionDto("MÃ¡Â»Å¸ hÃ¡Â»â€” trÃ¡Â»Â£ an toÃƒÂ n", "/safety-support"),
-                        new GuideChatSuggestedActionDto("Xem tham vÃ¡ÂºÂ¥n tÃ¡Â»Â« xa", "/telehealth")),
+                        new GuideChatSuggestedActionDto("Mo ho tro an toan", "/safety-support"),
+                        new GuideChatSuggestedActionDto("Xem tu van tu xa", "/telehealth")),
                 "SAFETY_ESCALATION",
                 true,
                 true,
@@ -345,31 +325,28 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
         List<GuideChatSuggestedActionDto> actions = buildSuggestedActions(primaryCard, request.getScreenContext());
         String topicCode = primaryCard != null ? primaryCard.getTopicCode() : "GENERAL_GUIDE";
         String answer;
-
         if (primaryCard == null) {
-            answer = "MÃƒÂ¬nh lÃƒÂ  trÃ¡Â»Â£ lÃƒÂ½ Ã„â€˜Ã¡Â»â€œng hÃƒÂ nh giÃƒÂºp bÃ¡ÂºÂ¡n hiÃ¡Â»Æ’u mÃƒÂ n hiÃ¡Â»â€¡n tÃ¡ÂºÂ¡i, biÃ¡ÂºÂ¿t nÃƒÂªn lÃƒÂ m gÃƒÂ¬ tiÃ¡ÂºÂ¿p theo vÃƒÂ  giÃ¡ÂºÂ£i thÃƒÂ­ch cÃƒÂ¡c cÃƒÂ´ng cÃ¡Â»Â¥ CBT mÃ¡Â»Â©c nhÃ¡ÂºÂ¹. NÃ¡ÂºÂ¿u bÃ¡ÂºÂ¡n muÃ¡Â»â€˜n, hÃƒÂ£y thÃ¡Â»Â­ hÃ¡Â»Âi theo kiÃ¡Â»Æ’u: mÃƒÂ n nÃƒÂ y dÃƒÂ¹ng Ã„â€˜Ã¡Â»Æ’ lÃƒÂ m gÃƒÂ¬, tÃƒÂ´i nÃƒÂªn lÃƒÂ m gÃƒÂ¬ tiÃ¡ÂºÂ¿p theo, hoÃ¡ÂºÂ·c giÃ¡ÂºÂ£i thÃƒÂ­ch bÃƒÂ i tÃ¡ÂºÂ­p nÃƒÂ y.";
+            answer = "Minh la tro ly dong hanh, giup ban hieu man hien tai, biet nen lam gi tiep theo va giai thich cac cong cu CBT o muc nhe. Neu muon, ban co the hoi: man nay dung de lam gi, toi nen lam gi tiep theo, hoac giai thich bai tap nay.";
         } else if ("NEXT_STEP".equals(intent)) {
-            answer = primaryCard.getContent() + " BÃ†Â°Ã¡Â»â€ºc tiÃ¡ÂºÂ¿p theo phÃƒÂ¹ hÃ¡Â»Â£p nhÃ¡ÂºÂ¥t lÃƒÂºc nÃƒÂ y lÃƒÂ  chÃ¡Â»Ân mÃ¡Â»â„¢t thao tÃƒÂ¡c nhÃ¡Â»Â, rÃƒÂµ rÃƒÂ ng thay vÃƒÂ¬ cÃ¡Â»â€˜ lÃƒÂ m mÃ¡Â»Âi thÃ¡Â»Â© cÃƒÂ¹ng lÃƒÂºc.";
+            answer = primaryCard.getContent() + " Buoc tiep theo phu hop nhat luc nay la chon mot thao tac nho, ro rang thay vi co lam moi thu cung luc.";
         } else if ("CBT_SUPPORT_LIGHT".equals(intent)) {
-            answer = primaryCard.getContent() + " NÃ¡ÂºÂ¿u Ã„â€˜ang thÃ¡ÂºÂ¥y lo, bÃ¡ÂºÂ¡n chÃ¡Â»â€° cÃ¡ÂºÂ§n bÃ¡ÂºÂ¯t Ã„â€˜Ã¡ÂºÂ§u bÃ¡ÂºÂ±ng mÃ¡Â»â„¢t bÃ†Â°Ã¡Â»â€ºc ngÃ¡ÂºÂ¯n vÃƒÂ  trung thÃ¡Â»Â±c vÃ¡Â»â€ºi cÃ¡ÂºÂ£m xÃƒÂºc hiÃ¡Â»â€¡n tÃ¡ÂºÂ¡i cÃ¡Â»Â§a mÃƒÂ¬nh.";
+            answer = primaryCard.getContent() + " Neu dang thay lo, ban chi can bat dau bang mot buoc ngan va trung thuc voi cam xuc hien tai cua minh.";
         } else {
             answer = primaryCard.getContent();
         }
-
         if (hasMojibakeMarker(answer)) {
             String cleanContent = primaryCard != null ? cleanText(primaryCard.getContent()) : null;
             if (cleanContent == null || cleanContent.isBlank() || hasMojibakeMarker(cleanContent)) {
-                cleanContent = "Mình sẽ giúp bạn hiểu công cụ CBT hiện tại và chọn một bước tiếp theo phù hợp.";
+                cleanContent = "Minh se giup ban hieu cong cu CBT hien tai va chon mot buoc tiep theo phu hop.";
             }
             if ("NEXT_STEP".equals(intent)) {
-                answer = cleanContent + " Bước tiếp theo phù hợp nhất lúc này là chọn một thao tác nhỏ, rõ ràng thay vì cố làm mọi thứ cùng lúc.";
+                answer = cleanContent + " Buoc tiep theo phu hop nhat luc nay la chon mot thao tac nho, ro rang thay vi co lam moi thu cung luc.";
             } else if ("CBT_SUPPORT_LIGHT".equals(intent)) {
-                answer = cleanContent + " Nếu đang thấy lo, bạn chỉ cần bắt đầu bằng một bước ngắn và trung thực với cảm xúc hiện tại của mình.";
+                answer = cleanContent + " Neu dang thay lo, ban chi can bat dau bang mot buoc ngan va trung thuc voi cam xuc hien tai cua minh.";
             } else {
                 answer = cleanContent;
             }
         }
-
         return new GuideChatResponseDto(
                 answer,
                 actions,
@@ -390,7 +367,7 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
                 resolveKnowledgeBlock(
                         buildGuideKnowledgeQuery(request, intent),
                         matchedCards,
-                        "KhÃ´ng cÃ³ tri thá»©c khá»›p hoÃ n toÃ n. Chá»‰ tráº£ lá»i á»Ÿ má»©c hÆ°á»›ng dáº«n sá»­ dá»¥ng app vÃ  CBT nháº¹."));
+                        "Khong co tri thuc khop hoan toan. Chi tra loi o muc huong dan su dung app va CBT nhe."));
         String raw = generateContent(prompt, 512, 0.2, guideChatResponseSchema());
         GuideChatResponseDto parsed = parseGuideChatJson(raw);
 
@@ -1067,6 +1044,8 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
     }
 
 }
+
+
 
 
 
