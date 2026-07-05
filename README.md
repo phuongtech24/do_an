@@ -1,60 +1,95 @@
-# MindHealth Monorepo
+# 🧠 ReConnect MindHealth
 
-Monorepo nay gom 3 thanh phan chinh:
+**ReConnect MindHealth** is a mental-health therapy management SaaS platform designed to support CBT-based self-help journeys, therapist matching, AI-assisted guidance, and telehealth appointment workflows. 
 
-- `reconnect_app`: Flutter mobile app cho Patient.
-- `reconnect_web`: Flutter web CMS cho Admin va Therapist.
-- `reconnect_backend`: Spring Boot backend + MySQL.
+The system is built as a graduation thesis project with a strong focus on secure patient data handling, clinical flow alignment, and scalable backend architecture.
 
-Muc tieu cua repo nay la giu cau truc ro rang de ban tu code tung use case theo dung module, thay vi de code nam lon xon theo man hinh.
+---
 
-## Cau truc muc tieu
+## ✨ Key Features
+* **Clinical Workflows:** LSAS-based social anxiety assessment flow, Fear Ladder, and Behavioral Experiment workflows.
+* **Patient Toolkit:** Goal setting, therapist matching, daily mood check-in, and CBT thought record support.
+* **Telehealth:** Appointment booking and therapist management.
+* **Security & Access:** Role-based access control (Patient, Therapist, Admin) and secure authentication with JWT.
+* **Performance:** Redis caching for therapist directory APIs.
+* **Modern DevOps:** Dockerized development/deployment workflow and CI/CD pipelines with GitHub Actions.
 
-```text
-DOAN/
-|- docs/                         Tai lieu nghiep vu, API, diagram, task
-|- infra/                        Docker/MySQL/Postman/local infra
-|- reconnect_backend/            Spring Boot API
-|- reconnect_app/                Flutter mobile app
-|- reconnect_web/                Flutter web CMS
-|- SETUP_GUIDE.md                Huong dan cai moi truong
-|- IMPLEMENTATION_CHECKLIST.md   Lo trinh code theo 10 use case
-```
+## 🛠 Tech Stack
 
-## Stack chinh
+### Backend
+* **Language & Framework:** Java 17, Spring Boot, Spring Security
+* **Database & ORM:** MySQL, Spring Data JPA / Hibernate
+* **Caching & API:** Redis, REST APIs
 
-- Backend: Java 17, Spring Boot 3.2.4, Spring Security, Spring Data JPA, MySQL
-- Mobile App: Flutter, Dart `^3.11.0`
-- Web CMS: Flutter Web, Dart `^3.11.0`
-- Auth: JWT Bearer Token
-- Database: MySQL 8
+### Frontend
+* **Mobile App:** Flutter (`reconnect_app`)
+* **Web Portal:** Flutter Web (`reconnect_web`)
 
-## Cach bat dau
+### DevOps & Infra
+* Docker, Docker Compose
+* GitHub Actions
+* GHCR (GitHub Container Registry)
 
-1. Doc [SETUP_GUIDE.md](/d:/DOAN/SETUP_GUIDE.md)
-2. Doc [IMPLEMENTATION_CHECKLIST.md](/d:/DOAN/IMPLEMENTATION_CHECKLIST.md)
-3. Doc guide rieng cua tung project:
-   - [backend](/d:/DOAN/reconnect_backend/DEVELOPMENT_GUIDE.md)
-   - [app](/d:/DOAN/reconnect_app/DEVELOPMENT_GUIDE.md)
-   - [web](/d:/DOAN/reconnect_web/DEVELOPMENT_GUIDE.md)
+## 🏗 Architecture Overview
+The project is organized into core modules:
+* `reconnect_backend`: Spring Boot backend APIs and business logic.
+* `reconnect_app`: Flutter patient application.
+* `reconnect_web`: Flutter web portal for management surfaces.
+* `infra`: Docker Compose and deployment-related configuration.
 
-## Nguyen tac lam do an
+## 🚀 Technical Highlights
+* Optimized backend performance by eliminating **N+1 query issues** using JPA `EntityGraph` and aggregated repository queries.
+* Integrated **Redis caching** (`@Cacheable` / `@CacheEvict`) to reduce repeated database load.
+* Ensured consistency in sensitive scheduling flows using `@Transactional` and **pessimistic locking**.
+* Designed structured business flows based on LSAS-first CBT treatment logic.
+* Built CI/CD pipelines for automated build, test, Docker validation, and image publishing.
 
-- Code theo module/use case, khong code theo kieu "tat ca trong 1 file".
-- Backend viet entity/repository/service/controller tach lop.
-- Flutter tach `core`, `shared`, `features`.
-- Moi use case phai co:
-  - API/backend task
-  - UI task
-  - model/request/response task
-  - test task toi thieu
+## ⚙️ Getting Started
 
-## Thu muc moi da tao san
+### Prerequisites
+* Java 17 & Maven
+* Flutter SDK
+* Docker Desktop
+* MySQL / Redis (or use the provided Docker Compose)
 
-- `docs/tasks`, `docs/api`, `docs/diagrams`
-- `infra/mysql/init`
-- `reconnect_backend/src/main/java/com/reconnect/platform/modules/*`
-- `reconnect_app/lib/core`, `reconnect_app/lib/shared`, `reconnect_app/lib/features/*`
-- `reconnect_web/lib/core`, `reconnect_web/lib/shared`, `reconnect_web/lib/features/*`
+### Run Locally
 
-Ban co the tu dien code vao dung module ma khong can sap xep lai repo nua.
+**1. Infrastructure (Docker Compose)**
+```bash
+cd infra
+docker compose up --build -d
+2. Backend
+cd reconnect_backend
+mvn spring-boot:run
+3. Web Portal
+cd reconnect_web
+flutter pub get
+flutter run -d chrome
+4. Patient App
+cd reconnect_app
+flutter pub get
+flutter run
+🔄 CI/CD
+This repository includes automated pipelines:
+
+CI Pipeline: For backend verification, Flutter analyze/test/build, and Docker validation.
+
+CD Pipeline: For publishing backend and web Docker images to GHCR.
+
+🎯 Project Purpose
+This project was developed as a graduation thesis and a practical software engineering portfolio project, focusing on:
+
+Backend system design & Performance optimization
+
+Business workflow implementation
+
+Secure API development
+
+Modern DevOps practices
+
+👨‍💻 Author
+Nguyễn Khắc Nam Phương
+
+Intern Software Engineer
+
+GitHub: @phuongtech24
