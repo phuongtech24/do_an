@@ -155,7 +155,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
                                         Text(
-                                          isSideQuest ? 'Side Quest' : 'Trạm ${node['order']}',
+                                          isSideQuest ? 'Nhiệm vụ phụ' : 'Trạm ${node['order']}',
                                           style: TextStyle(
                                             color: isLocked ? Colors.grey : (isSideQuest ? Colors.deepPurple : AppColors.primary),
                                             fontWeight: FontWeight.bold,

@@ -13,10 +13,15 @@ public class AdminPatientProfileListItemDto {
     private String email;
     private String nickname;
     private Status status;
-    private Integer currentRiskScore;
+    private Integer currentLsasScore;
     private Boolean redFlagActive;
     private LocalDateTime graduatedAt;
     private Boolean active;
+    private String taperingStage;
+    private Boolean triageRequired;
+    private String triageStatus;
+    private Integer triagePriority;
+    private LocalDateTime triageTriggeredAt;
 
     private String therapistId;
     private String therapistName;
@@ -41,10 +46,15 @@ public class AdminPatientProfileListItemDto {
         this.email = p.getUser() != null ? p.getUser().getEmail() : null;
         this.nickname = p.getNickName();
         this.status = p.getStatus();
-        this.currentRiskScore = p.getCurrentRiskScore();
+        this.currentLsasScore = p.getCurrentLsasScore();
         this.redFlagActive = p.getIsRedFlagActive();
         this.graduatedAt = p.getGraduatedAt();
         this.active = p.getUser() != null ? p.getUser().getIsActive() : null;
+        this.taperingStage = p.getTaperingStage() != null ? p.getTaperingStage().name() : null;
+        this.triageRequired = p.getTriageRequired();
+        this.triageStatus = p.getTriageStatus() != null ? p.getTriageStatus().name() : null;
+        this.triagePriority = p.getTriagePriority();
+        this.triageTriggeredAt = p.getTriageTriggeredAt();
         this.avatarIcon = p.getAvatarIcon();
         this.anonymousModeEnabled = p.getAnonymousModeEnabled();
         this.realFullName = p.getRealFullName();
@@ -95,12 +105,12 @@ public class AdminPatientProfileListItemDto {
         this.status = status;
     }
 
-    public Integer getCurrentRiskScore() {
-        return currentRiskScore;
+    public Integer getCurrentLsasScore() {
+        return currentLsasScore;
     }
 
-    public void setCurrentRiskScore(Integer currentRiskScore) {
-        this.currentRiskScore = currentRiskScore;
+    public void setCurrentLsasScore(Integer currentLsasScore) {
+        this.currentLsasScore = currentLsasScore;
     }
 
     public Boolean getRedFlagActive() {
@@ -125,6 +135,46 @@ public class AdminPatientProfileListItemDto {
 
     public void setActive(Boolean active) {
         this.active = active;
+    }
+
+    public String getTaperingStage() {
+        return taperingStage;
+    }
+
+    public void setTaperingStage(String taperingStage) {
+        this.taperingStage = taperingStage;
+    }
+
+    public Boolean getTriageRequired() {
+        return triageRequired;
+    }
+
+    public void setTriageRequired(Boolean triageRequired) {
+        this.triageRequired = triageRequired;
+    }
+
+    public String getTriageStatus() {
+        return triageStatus;
+    }
+
+    public void setTriageStatus(String triageStatus) {
+        this.triageStatus = triageStatus;
+    }
+
+    public Integer getTriagePriority() {
+        return triagePriority;
+    }
+
+    public void setTriagePriority(Integer triagePriority) {
+        this.triagePriority = triagePriority;
+    }
+
+    public LocalDateTime getTriageTriggeredAt() {
+        return triageTriggeredAt;
+    }
+
+    public void setTriageTriggeredAt(LocalDateTime triageTriggeredAt) {
+        this.triageTriggeredAt = triageTriggeredAt;
     }
 
     public String getTherapistId() {

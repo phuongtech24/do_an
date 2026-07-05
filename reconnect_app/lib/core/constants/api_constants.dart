@@ -32,6 +32,7 @@ class ApiConstants {
   static const String getOnboardingStatus = '$baseUrl/clinical/onboarding-status';
   static const String completePsychoeducation = '$baseUrl/clinical/psychoeducation/complete';
   static const String therapistAssignmentStatus = '$baseUrl/clinical/therapist-assignment-status';
+  static const String lsasProgress = '$baseUrl/clinical/patient/progress/lsas';
   static const String patientGoals = '$baseUrl/patient/goals';
   static const String patientTherapists = '$baseUrl/patient/therapists';
   static const String selectTherapist = '$baseUrl/patient/therapist-selection';
@@ -42,6 +43,7 @@ class ApiConstants {
   // Roadmap Endpoints
   static const String getDailyQuests = '$baseUrl/roadmap/daily';
   static const String roadmapHistory = '$baseUrl/roadmap/history';
+  static const String roadmapProgramState = '$baseUrl/roadmap/program-state';
   static const String roadmapSafetyOverlay = '$baseUrl/roadmap/safety-overlay';
   static String completeQuest(String id) => '$baseUrl/roadmap/quests/$id/complete';
   static String verifyQuestProof(String id) => '$baseUrl/roadmap/quests/$id/proof/verify';
@@ -50,6 +52,7 @@ class ApiConstants {
   static const String fearLadder = '$baseUrl/fear-ladder';
   static const String behavioralExperimentToday = '$baseUrl/behavioral-experiments/today';
   static const String behavioralExperimentHistory = '$baseUrl/behavioral-experiments/history';
+  static const String behavioralExperimentSelect = '$baseUrl/behavioral-experiments/select';
   static String startBehavioralExperiment(String id) => '$baseUrl/behavioral-experiments/$id/start';
   static String debriefBehavioralExperiment(String id) => '$baseUrl/behavioral-experiments/$id/debrief';
 
@@ -61,6 +64,7 @@ class ApiConstants {
   // AI Endpoints
   static const String guidedDiscovery = '$baseUrl/ai/guided-discovery';
   static const String cognitiveDistortions = '$baseUrl/ai/cognitive-distortions';
+  static const String guideChat = '$baseUrl/ai/guide-chat';
 
   // Telehealth / Booster Endpoints
   static const String getAvailableSlots = '$baseUrl/booster/slots';

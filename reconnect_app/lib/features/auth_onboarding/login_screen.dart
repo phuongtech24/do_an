@@ -23,7 +23,7 @@ class LoginScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Re-Connect',
+                  'ReConnect',
                   style: Theme.of(context).textTheme.displayMedium?.copyWith(
                         color: AppColors.primary,
                         fontWeight: FontWeight.bold,
@@ -83,7 +83,7 @@ class LoginScreen extends StatelessWidget {
                     ),
                     child: const Text(
                       'ĐĂNG NHẬP',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                     ),
                   ),
                 ),

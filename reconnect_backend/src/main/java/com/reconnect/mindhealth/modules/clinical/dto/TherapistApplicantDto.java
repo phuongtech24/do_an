@@ -8,6 +8,7 @@ import com.reconnect.mindhealth.modules.clinical.enums.ApprovalStatus;
 public class TherapistApplicantDto {
     private UUID therapistId;
     private String fullName;
+    private String phoneNumber;
     private String email;
     private String hometown;
     private Integer birthYear;
@@ -35,6 +36,7 @@ public class TherapistApplicantDto {
         if (profile != null) {
             this.therapistId = profile.getId();
             this.fullName = profile.getFullName();
+            this.phoneNumber = profile.getPhoneNumber();
             this.hometown = profile.getHometown();
             this.birthYear = profile.getBirthYear();
             this.voiceDescription = profile.getVoiceDescription();
@@ -72,6 +74,14 @@ public class TherapistApplicantDto {
 
     public void setFullName(String fullName) {
         this.fullName = fullName;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
     }
 
     public String getEmail() {

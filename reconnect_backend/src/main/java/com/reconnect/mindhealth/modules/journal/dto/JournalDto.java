@@ -27,6 +27,7 @@ public class JournalDto extends BaseObjectDto {
     private List<String> safetyBehaviors;
     private List<String> distortions;
     private String adaptiveResponse;
+    private String outcome;
     private String safetyBehaviorCommitment;
     private Integer reRatedScore;
     private Integer reRatedBeliefScore;
@@ -189,6 +190,14 @@ public class JournalDto extends BaseObjectDto {
 
     public void setAdaptiveResponse(String adaptiveResponse) {
         this.adaptiveResponse = adaptiveResponse;
+    }
+
+    public String getOutcome() {
+        return outcome;
+    }
+
+    public void setOutcome(String outcome) {
+        this.outcome = outcome;
     }
 
     public String getSafetyBehaviorCommitment() {

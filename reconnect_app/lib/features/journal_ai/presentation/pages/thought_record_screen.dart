@@ -75,6 +75,7 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
   final TextEditingController _selfFocusController = TextEditingController();
   final TextEditingController _negativeImageController = TextEditingController();
   final TextEditingController _adaptiveResponseController = TextEditingController();
+  final TextEditingController _outcomeController = TextEditingController();
   final TextEditingController _behaviorExperimentController = TextEditingController();
   final TextEditingController _customBodySymptomController = TextEditingController();
   final TextEditingController _customSafetyBehaviorController = TextEditingController();
@@ -135,6 +136,7 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
     _selfFocusController.dispose();
     _negativeImageController.dispose();
     _adaptiveResponseController.dispose();
+    _outcomeController.dispose();
     _behaviorExperimentController.dispose();
     _customBodySymptomController.dispose();
     _customSafetyBehaviorController.dispose();
@@ -162,11 +164,11 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
 
   void _onPageChanged(int index) {
     setState(() => _currentStep = index);
-    if (index == 4 && !_distortionsRequested) {
+    if (index == 3 && !_distortionsRequested) {
       _distortionsRequested = true;
       _requestDistortions();
     }
-    if (index == 5 && !_guidedDiscoveryRequested) {
+    if (index == 4 && !_guidedDiscoveryRequested) {
       _guidedDiscoveryRequested = true;
       _requestGuidedDiscovery();
     }
@@ -196,15 +198,15 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
       case 0:
         return _situationController.text.trim().isNotEmpty;
       case 1:
-        return _emotionLabel.trim().isNotEmpty;
-      case 2:
-        return _effectiveSafetyBehaviors.isNotEmpty;
-      case 3:
         return _thoughtController.text.trim().isNotEmpty;
-      case 4:
+      case 2:
+        return _emotionLabel.trim().isNotEmpty;
+      case 3:
         return _selectedDistortions.isNotEmpty;
+      case 4:
+        return _adaptiveResponseController.text.trim().isNotEmpty;
       case 5:
-        return _adaptiveResponseController.text.trim().isNotEmpty && _selectedCommitment.trim().isNotEmpty;
+        return _finalBelief >= 0 && _finalIntensity >= 0;
       default:
         return true;
     }
@@ -294,7 +296,8 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
         safetyBehaviors: _effectiveSafetyBehaviors.isEmpty ? null : _effectiveSafetyBehaviors,
         distortions: _selectedDistortions.isEmpty ? null : _selectedDistortions,
         adaptiveResponse: _adaptiveResponseController.text.trim(),
-        safetyBehaviorCommitment: _selectedCommitment.trim(),
+        outcome: _outcomeController.text.trim().isEmpty ? null : _outcomeController.text.trim(),
+        safetyBehaviorCommitment: _selectedCommitment.trim().isEmpty ? null : _selectedCommitment.trim(),
         reRatedScore: _finalIntensity.toInt(),
         reRatedBeliefScore: _finalBelief.toInt(),
         behavioralExperimentIdea: _behaviorExperimentController.text.trim().isEmpty
@@ -360,15 +363,15 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
     final aiRisk = savedJournal?.aiRiskScore;
     final severity = savedJournal?.severityLevel;
     final riskLine = aiRisk == null
-        ? 'AI Risk: chưa có dữ liệu.'
+        ? 'Đánh giá rủi ro: chưa có dữ liệu.'
         : aiRisk >= 70
-            ? 'AI Risk: $aiRisk/100 - hệ thống đã ưu tiên theo dõi.'
-            : 'AI Risk: $aiRisk/100.';
-    final severityLine = severity == null || severity.isEmpty ? '' : '\nMức AI: $severity.';
+            ? 'Đánh giá rủi ro: $aiRisk/100 - hệ thống đã ưu tiên theo dõi.'
+            : 'Đánh giá rủi ro: $aiRisk/100.';
+    final severityLine = severity == null || severity.isEmpty ? '' : '\nMức độ: $severity.';
     final baseMessage = _saveAsCopingCard
-        ? 'Bạn đã hoàn thành Thought Record 6 bước. Phản hồi cân bằng này có thể dùng lại như một thẻ đối phó.'
-        : 'Bạn đã hoàn thành Thought Record 6 bước và có thêm một góc nhìn thực tế hơn.';
-    return '$baseMessage\n\nGợi ý lỗi tư duy được xử lý riêng ở Bước 5; AI Risk chỉ được chấm khi bạn bấm lưu cuối phiên.\n\n$riskLine$severityLine';
+        ? 'Bạn đã hoàn thành nhật ký suy nghĩ 6 bước. Phản hồi cân bằng này có thể dùng lại như một thẻ đối phó.'
+        : 'Bạn đã hoàn thành nhật ký suy nghĩ 6 bước và có thêm một góc nhìn thực tế hơn.';
+    return '$baseMessage\n\nCác lỗi tư duy được xử lý ở Bước 5; đánh giá rủi ro chỉ được tính khi bạn lưu.\n\n$riskLine$severityLine';
   }
 
   String _distortionLabel(String code) {
@@ -446,12 +449,12 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
                 physics: const NeverScrollableScrollPhysics(),
                 onPageChanged: _onPageChanged,
                 children: [
-                  _buildSituationStep(),
-                  _buildEmotionStep(),
-                  _buildSafetyBehaviorStep(),
-                  _buildAutomaticThoughtStep(),
-                  _buildDistortionStep(),
-                  _buildAdaptiveResponseStep(),
+                  _buildSituationStepV2(),
+                  _buildAutomaticThoughtStepV2(),
+                  _buildEmotionStepV2(),
+                  _buildDistortionStepV2(),
+                  _buildAdaptiveResponseStepV2(),
+                  _buildOutcomeStep(),
                 ],
               ),
             ),
@@ -751,7 +754,7 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: const Text(
-                    'Đang phân tích suy nghĩ của bạn để gợi ý lỗi tư duy phù hợp...',
+                    'Đang phân tích suy nghĩ của bạn...',
                     style: TextStyle(
                       color: AppColors.textPrimary,
                       height: 1.45,
@@ -883,7 +886,7 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
                 Padding(
                   padding: const EdgeInsets.only(top: 14),
                   child: Text(
-                    'AI gợi ý đang tạm lỗi: ${provider.errorMessage}',
+                    'Tính năng AI đang tạm thời gián đoạn: ${provider.errorMessage}',
                     style: const TextStyle(color: AppColors.alert),
                   ),
                 ),
@@ -924,7 +927,7 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
-                    'AI gợi câu hỏi đang tạm lỗi: ${provider.errorMessage}',
+                    'Tính năng AI đang tạm thời gián đoạn: ${provider.errorMessage}',
                     style: const TextStyle(color: AppColors.alert),
                   ),
                 ),
@@ -999,6 +1002,477 @@ class _ThoughtRecordScreenState extends State<ThoughtRecordScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildAutomaticThoughtStepV2() {
+    return _buildStepContainer(
+      stepLabel: 'Bước 2',
+      title: 'Suy nghĩ tự động',
+      description: 'Ý nghĩ tiêu cực nào bật ra ngay lúc đó? Hãy chấm luôn mức độ bạn đang tin vào ý nghĩ này.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const TherapyGuideCard(
+            title: 'Gợi ý khi bạn bí ý',
+            message: 'Nếu chưa rõ câu chữ, hãy thử hỏi mình: “Lúc đó điều gì vừa xẹt qua đầu mình?”',
+            icon: Icons.lightbulb_outline_rounded,
+            accentColor: AppColors.primary,
+          ),
+          const SizedBox(height: 18),
+          _buildTextField(
+            controller: _thoughtController,
+            label: 'Suy nghĩ tự động cốt lõi',
+            hint: 'Ví dụ: Mọi người sẽ nghĩ mình nói dở và đánh giá mình rất tệ.',
+            minLines: 4,
+            onChanged: (value) => _thought = value,
+          ),
+          const SizedBox(height: 18),
+          _buildSliderCard(
+            title: 'Mức độ bạn đang tin vào suy nghĩ này',
+            subtitle: '0 = không tin • 100 = tin hoàn toàn',
+            value: _belief,
+            onChanged: (value) => setState(() => _belief = value),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmotionStepV2() {
+    return _buildStepContainer(
+      stepLabel: 'Bước 3',
+      title: 'Cảm xúc',
+      description: 'Hãy ghi lại cảm xúc đang xuất hiện và cường độ của nó.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: _emotionOptions.map((emotion) {
+              final selected = _emotionLabel == emotion;
+              return ChoiceChip(
+                label: Text(emotion),
+                selected: selected,
+                selectedColor: AppColors.primary,
+                labelStyle: TextStyle(
+                  color: selected ? Colors.white : AppColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+                onSelected: (_) => setState(() => _emotionLabel = emotion),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 20),
+          _buildSliderCard(
+            title: 'Mức độ ${_emotionLabel.toLowerCase()}',
+            subtitle: '0 = rất nhẹ • 100 = rất mạnh',
+            value: _intensity,
+            onChanged: (value) => setState(() => _intensity = value),
+          ),
+          const SizedBox(height: 18),
+          const Text(
+            'Phản ứng cơ thể đi kèm (tùy chọn)',
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _bodySymptomOptions.map((item) {
+              final selected = _selectedBodySymptoms.contains(item);
+              return FilterChip(
+                label: Text(item),
+                selected: selected,
+                onSelected: (value) {
+                  setState(() {
+                    if (value) {
+                      _selectedBodySymptoms.add(item);
+                    } else {
+                      _selectedBodySymptoms.remove(item);
+                    }
+                  });
+                },
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 12),
+          _buildTextField(
+            controller: _customBodySymptomController,
+            label: 'Triệu chứng khác (nếu có)',
+            hint: 'Ví dụ: Khô miệng, đau bụng, chóng mặt...',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDistortionStepV2() {
+    return Consumer<CognitiveDistortionsProvider>(
+      builder: (context, provider, _) {
+        return _buildStepContainer(
+          stepLabel: 'Bước 4',
+          title: 'Méo mó nhận thức',
+          description: 'AI gợi ý nhanh từ suy nghĩ tự động ở bước 2, nhưng bạn là người chọn nhãn cuối cùng.',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (provider.status == CognitiveDistortionsStatus.loading)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 16),
+                  child: LinearProgressIndicator(color: AppColors.primary),
+                ),
+              if (provider.status == CognitiveDistortionsStatus.loading)
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Text(
+                    'Đang phân tích suy nghĩ của bạn...',
+                    style: TextStyle(color: AppColors.textPrimary, height: 1.45),
+                  ),
+                ),
+              if (provider.status != CognitiveDistortionsStatus.loading && _suggestedDistortions.isNotEmpty)
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8F8F6),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.primary.withOpacity(0.14)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Đã gợi ý ${_suggestedDistortions.length} lỗi tư duy',
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _distortionReasonSummary(_suggestedDistortions),
+                        style: const TextStyle(color: AppColors.textPrimary, height: 1.45),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _suggestedDistortions.map((code) {
+                          return Chip(
+                            label: Text(_distortionLabel(code)),
+                            avatar: const Icon(
+                              Icons.auto_awesome_rounded,
+                              size: 16,
+                              color: AppColors.primary,
+                            ),
+                            backgroundColor: Colors.white,
+                            side: BorderSide(color: AppColors.primary.withOpacity(0.18)),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
+                ),
+              if (provider.status == CognitiveDistortionsStatus.success && _suggestedDistortions.isEmpty)
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF7EA),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.warning.withOpacity(0.24)),
+                  ),
+                  child: const Text(
+                    'Chưa thấy mẫu lỗi tư duy quá rõ từ câu bạn vừa viết. Bạn vẫn có thể tự chọn thủ công 1–3 nhãn sát nhất với trải nghiệm của mình.',
+                    style: TextStyle(color: AppColors.textPrimary, height: 1.45),
+                  ),
+                ),
+              if (provider.hint != null && provider.hint!.trim().isNotEmpty)
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    provider.hint!,
+                    style: const TextStyle(color: AppColors.textPrimary, height: 1.45),
+                  ),
+                ),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: _distortions.map((item) {
+                  final code = item['code']!;
+                  final label = item['label']!;
+                  final selected = _selectedDistortions.contains(code);
+                  final suggestedBySystem = _suggestedDistortions.contains(code);
+                  return FilterChip(
+                    label: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(label),
+                        if (suggestedBySystem) ...[
+                          const SizedBox(width: 6),
+                          const Icon(
+                            Icons.auto_awesome_rounded,
+                            size: 16,
+                            color: AppColors.primary,
+                          ),
+                        ],
+                      ],
+                    ),
+                    selected: selected,
+                    selectedColor: const Color(0xFFE0F4F2),
+                    checkmarkColor: AppColors.primary,
+                    onSelected: (value) {
+                      setState(() {
+                        if (value) {
+                          _selectedDistortions.add(code);
+                        } else {
+                          _selectedDistortions.remove(code);
+                        }
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+              if (provider.status == CognitiveDistortionsStatus.error)
+                Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: Text(
+                    'Tính năng AI đang tạm thời gián đoạn: ${provider.errorMessage}',
+                    style: const TextStyle(color: AppColors.alert),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAdaptiveResponseStepV2() {
+    return Consumer<GuidedDiscoveryProvider>(
+      builder: (context, provider, _) {
+        return _buildStepContainer(
+          stepLabel: 'Bước 5',
+          title: 'Phản hồi thích nghi',
+          description: 'Dùng câu hỏi Socratic để viết lại một phản hồi cân bằng hơn, dựa trên bằng chứng khách quan.',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Câu hỏi gợi mở',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 10),
+              if (provider.status == GuidedDiscoveryStatus.loading)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 16),
+                  child: LinearProgressIndicator(color: AppColors.primary),
+                ),
+              if (provider.questions.isEmpty)
+                _buildQuestionCard('Bạn có bằng chứng nào chắc chắn 100% cho suy nghĩ này không?'),
+              ...provider.questions.take(3).map(_buildQuestionCard),
+              if (provider.status == GuidedDiscoveryStatus.error)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Tính năng AI đang tạm thời gián đoạn: ${provider.errorMessage}',
+                    style: const TextStyle(color: AppColors.alert),
+                  ),
+                ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                controller: _adaptiveResponseController,
+                label: 'Phản hồi thích nghi',
+                hint: 'Ví dụ: Mình chưa có bằng chứng chắc chắn rằng mọi người sẽ đánh giá mình tệ như vậy.',
+                minLines: 4,
+                onChanged: (value) => _adaptiveResponse = value,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSituationStepV2() {
+    return _buildStepContainer(
+      stepLabel: 'Bước 1',
+      title: 'Tình huống',
+      description: 'Sự kiện, ký ức hoặc hình ảnh nào vừa kích hoạt lo âu ở bạn? Lúc đó bạn đang ở đâu, đang làm gì?',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_hasCheckInContext) _buildCheckInContextCardV2(),
+          _buildTextField(
+            controller: _situationController,
+            label: 'Tình huống đang xảy ra',
+            hint: 'Ví dụ: Đang ngồi trong cuộc họp và sếp bất ngờ gọi tên mình.',
+            minLines: 4,
+            onChanged: (value) => _situation = value,
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Gợi ý bấm nhanh',
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _quickSuggestions.map((item) {
+              return ActionChip(
+                label: Text(item),
+                backgroundColor: Colors.white,
+                side: BorderSide(color: AppColors.primary.withOpacity(0.18)),
+                onPressed: () {
+                  setState(() {
+                    _situationController.text = item;
+                    _situationController.selection = TextSelection.fromPosition(
+                      TextPosition(offset: _situationController.text.length),
+                    );
+                    _situation = item;
+                  });
+                },
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 18),
+          _buildTextField(
+            controller: _worstPredictionController,
+            label: 'Điều tệ nhất bạn sợ sẽ xảy ra là gì? (tùy chọn)',
+            hint: 'Ví dụ: Mọi người sẽ nghĩ mình kém cỏi hoặc cười mình.',
+            minLines: 3,
+            onChanged: (value) => _worstPrediction = value,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCheckInContextCardV2() {
+    final anticipatory = widget.initialAnticipatoryAnxietyScore ?? 0;
+    final rumination = widget.initialPostEventRuminationScore ?? 0;
+    final anxiety = widget.initialAnxietyScore ?? 0;
+    final avoidance = widget.initialAvoidanceUrgeScore ?? 0;
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFE9F8F6), Color(0xFFF7FCFB)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.primary.withOpacity(0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.auto_awesome_rounded, color: AppColors.primary),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'AI vừa gợi ý bạn viết nhật ký',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Check-in gần nhất: Lo âu $anxiety/100 • Né tránh $avoidance/100 • Lo âu dự kiến $anticipatory/8 • Nhai lại $rumination/8.',
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              height: 1.45,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOutcomeStep() {
+    return _buildStepContainer(
+      stepLabel: 'Bước 6',
+      title: 'Kết quả và đánh giá lại',
+      description: 'Sau khi phản biện lại suy nghĩ, hãy ghi kết quả và chấm lại mức độ tin cũng như cường độ cảm xúc.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildTextField(
+            controller: _outcomeController,
+            label: 'Kết quả / điều gì thực tế hơn bạn vừa nhận ra?',
+            hint: 'Ví dụ: Mình nhận ra chưa có bằng chứng chắc chắn rằng mọi người sẽ cười mình.',
+            minLines: 3,
+          ),
+          const SizedBox(height: 18),
+          _buildSliderCard(
+            title: 'Chấm lại mức độ cảm xúc sau can thiệp',
+            subtitle: '0 = đã dịu đi • 100 = vẫn rất mạnh',
+            value: _finalIntensity,
+            onChanged: (value) => setState(() => _finalIntensity = value),
+          ),
+          const SizedBox(height: 14),
+          _buildSliderCard(
+            title: 'Chấm lại mức độ tin vào suy nghĩ ban đầu',
+            subtitle: '0 = không còn tin • 100 = vẫn tin hoàn toàn',
+            value: _finalBelief,
+            onChanged: (value) => setState(() => _finalBelief = value),
+          ),
+          const SizedBox(height: 14),
+          _buildTextField(
+            controller: _behaviorExperimentController,
+            label: 'Ý tưởng thử nghiệm hành vi tiếp theo (tùy chọn)',
+            hint: 'Ví dụ: Tuần tới mình sẽ chủ động phát biểu một câu ngắn trong cuộc họp.',
+            minLines: 2,
+          ),
+          const SizedBox(height: 12),
+          SwitchListTile.adaptive(
+            value: _saveAsCopingCard,
+            activeColor: AppColors.primary,
+            contentPadding: EdgeInsets.zero,
+            title: const Text(
+              'Lưu phản hồi này thành thẻ đối phó',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+            subtitle: const Text('Để bạn có thể xem lại khi lo âu quay trở lại.'),
+            onChanged: (value) => setState(() => _saveAsCopingCard = value),
+          ),
+        ],
+      ),
     );
   }
 

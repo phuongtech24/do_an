@@ -1,6 +1,17 @@
-spring:
+﻿spring:
   application:
     name: reconnect_backend
+  mail:
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:true}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS_ENABLE:true}
   cache:
     type: ${SPRING_CACHE_TYPE:none}
   servlet:
@@ -12,6 +23,10 @@ spring:
     username: ${DB_USER:root}
     password: ${DB_PASSWORD:123456}
     driver-class-name: com.mysql.cj.jdbc.Driver
+  flyway:
+    enabled: ${FLYWAY_ENABLED:false}
+    locations: classpath:db/migration
+    baseline-on-migrate: true
   jpa:
     open-in-view: false
     hibernate:
@@ -50,12 +65,43 @@ app:
     distortions:
       call-ai-only-when-suspicious: ${AI_DISTORTIONS_CALL_AI_ONLY_WHEN_SUSPICIOUS:true}
       max-suggestions: ${AI_DISTORTIONS_MAX_SUGGESTIONS:3}
+    guide:
+      retrieval-enabled: ${AI_GUIDE_RETRIEVAL_ENABLED:true}
+      top-k: ${AI_GUIDE_TOP_K:4}
+      min-score: ${AI_GUIDE_MIN_SCORE:2}
+      screen-scope-weight: ${AI_GUIDE_SCREEN_SCOPE_WEIGHT:6}
+      route-scope-weight: ${AI_GUIDE_ROUTE_SCOPE_WEIGHT:4}
+      phase-scope-weight: ${AI_GUIDE_PHASE_SCOPE_WEIGHT:2}
+      topic-weight: ${AI_GUIDE_TOPIC_WEIGHT:2}
+      keyword-weight: ${AI_GUIDE_KEYWORD_WEIGHT:3}
+      content-term-weight: ${AI_GUIDE_CONTENT_TERM_WEIGHT:1}
+    rag:
+      enabled: ${AI_RAG_ENABLED:false}
+      auto-ingest-on-startup: ${AI_RAG_AUTO_INGEST_ON_STARTUP:false}
+      qdrant-scheme: ${AI_RAG_QDRANT_SCHEME:http}
+      qdrant-host: ${AI_RAG_QDRANT_HOST:localhost}
+      qdrant-port: ${AI_RAG_QDRANT_PORT:6333}
+      qdrant-collection: ${AI_RAG_QDRANT_COLLECTION:mindhealth_ai_knowledge}
+      qdrant-api-key: ${AI_RAG_QDRANT_API_KEY:}
+      embedding-model: ${AI_RAG_EMBEDDING_MODEL:text-embedding-004}
+      vector-size: ${AI_RAG_VECTOR_SIZE:768}
+      top-k: ${AI_RAG_TOP_K:4}
+      candidate-limit: ${AI_RAG_CANDIDATE_LIMIT:8}
+      min-score: ${AI_RAG_MIN_SCORE:0.25}
+      chunk-size: ${AI_RAG_CHUNK_SIZE:900}
+      chunk-overlap: ${AI_RAG_CHUNK_OVERLAP:180}
   cache:
     enabled: ${APP_CACHE_ENABLED:false}
     therapist-directory-ttl-minutes: ${THERAPIST_DIRECTORY_CACHE_TTL_MINUTES:10}
+  mail:
+    enabled: ${APP_MAIL_ENABLED:false}
+    from: ${MAIL_FROM:no-reply@mindhealth.local}
+    reset-password-subject: ${MAIL_RESET_PASSWORD_SUBJECT:MindHealth - Đặt lại mật khẩu}
+    reset-password-url-base: ${MAIL_RESET_PASSWORD_URL_BASE:}
 
 # Encryption configuration
 # Keys are loaded from environment variables (ENCRYPTION_KEY, ENCRYPTION_IV)
 encryption:
   key: ${ENCRYPTION_KEY:ReconnectMindH78}
   iv: ${ENCRYPTION_IV:MindHealthIv1234}
+

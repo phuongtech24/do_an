@@ -12,6 +12,8 @@ class FearLadderItemModel {
   final int ladderOrder;
   final String status;
   final bool goalMatch;
+  final String goalContextLabel;
+  final String goalPriorityReason;
   final bool unlocked;
 
   const FearLadderItemModel({
@@ -28,6 +30,8 @@ class FearLadderItemModel {
     required this.ladderOrder,
     required this.status,
     required this.goalMatch,
+    required this.goalContextLabel,
+    required this.goalPriorityReason,
     required this.unlocked,
   });
 
@@ -46,6 +50,8 @@ class FearLadderItemModel {
       ladderOrder: (json['ladderOrder'] as num?)?.toInt() ?? 0,
       status: json['status']?.toString() ?? 'ACTIVE',
       goalMatch: json['goalMatch'] == true,
+      goalContextLabel: json['goalContextLabel']?.toString() ?? 'GENERAL',
+      goalPriorityReason: json['goalPriorityReason']?.toString() ?? '',
       unlocked: json['unlocked'] != false,
     );
   }

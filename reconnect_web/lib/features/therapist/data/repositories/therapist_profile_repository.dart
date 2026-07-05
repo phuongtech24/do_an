@@ -26,6 +26,7 @@ class TherapistProfileRepository {
   Future<TherapistProfileModel> updateMyProfile({
     required String token,
     required String fullName,
+    required String phoneNumber,
     required String hometown,
     required String birthYear,
     required String voiceDescription,
@@ -39,6 +40,7 @@ class TherapistProfileRepository {
       headers: {'Authorization': 'Bearer $token'},
       body: {
         'fullName': fullName,
+        'phoneNumber': phoneNumber,
         'hometown': hometown,
         'birthYear': birthYear.trim().isEmpty ? null : int.tryParse(birthYear.trim()),
         'voiceDescription': voiceDescription,

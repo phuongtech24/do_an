@@ -1,0 +1,15 @@
+-- ReConnect MindHealth
+-- V6 - Roadmap / 14-week progression foundation
+--
+-- Mục đích:
+-- - Đánh dấu mốc chuyển các thay đổi schema của roadmap sang Flyway.
+-- - Chuẩn bị nền cho:
+--   program_week, program_phase_code, unlock metadata, patient quests.
+--
+-- Các bảng/liên quan chính:
+-- - patient_profiles
+-- - patient_quests
+-- - quest_templates
+--
+-- Batch hiện tại chỉ tạo marker migration an toàn.
+

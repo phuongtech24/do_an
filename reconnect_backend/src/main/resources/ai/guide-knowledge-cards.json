@@ -1,0 +1,148 @@
+[
+  {
+    "topicCode": "LSAS_OVERVIEW",
+    "screenScope": ["lsas"],
+    "routeScope": [],
+    "phaseScope": [],
+    "keywords": ["lsas", "danh gia", "thang do", "cham", "man nay la gi"],
+    "content": "LSAS là bài đánh giá lo âu xã hội gồm 24 tình huống. Bạn chấm theo 2 trục: mức sợ hoặc lo âu, và mức né tránh. Mục tiêu của màn này là giúp hệ thống hiểu mức độ lo âu xã hội hiện tại để phân luồng hỗ trợ phù hợp, không phải để phán xét bạn.",
+    "suggestedActions": [
+      {"label": "Tiếp tục làm LSAS", "route": "/lsas"},
+      {"label": "Xem kết quả gần nhất", "route": "/progress"}
+    ]
+  },
+  {
+    "topicCode": "LSAS_ROUTING",
+    "screenScope": ["lsas", "home"],
+    "routeScope": ["REASSURANCE", "SELF_HELP", "THERAPIST_TRACK_14_WEEKS", "URGENT_RED_FLAG"],
+    "phaseScope": [],
+    "keywords": ["ket qua", "phan luong", "nhanh", "route", "tiep theo"],
+    "content": "Sau LSAS, hệ thống phân thành 4 nhánh: an tâm cơ bản, tự hỗ trợ có hướng dẫn, lộ trình 14 tuần cùng chuyên gia, hoặc ưu tiên lâm sàng khi mức độ rất cao. Mỗi nhánh mở ra các công cụ khác nhau để bạn bắt đầu từ mức phù hợp nhất.",
+    "suggestedActions": [
+      {"label": "Xem lộ trình của tôi", "route": "/roadmap"},
+      {"label": "Mở trang chủ", "route": "/home"}
+    ]
+  },
+  {
+    "topicCode": "GOAL_SETTING",
+    "screenScope": ["goal-setting"],
+    "routeScope": [],
+    "phaseScope": [],
+    "keywords": ["muc tieu", "chon muc tieu", "goal"],
+    "content": "Mục tiêu trị liệu giúp hệ thống ưu tiên các tình huống xã hội bạn muốn cải thiện nhất, ví dụ tự tin kết bạn, giao tiếp trong học tập hoặc bớt né tránh hằng ngày. Bạn chỉ cần chọn mục tiêu gần đúng nhất, không cần phải chọn hoàn hảo ngay từ đầu.",
+    "suggestedActions": [
+      {"label": "Chọn mục tiêu trị liệu", "route": "/goal-setting"},
+      {"label": "Tiếp tục chọn chuyên gia", "route": "/therapist-matching"}
+    ]
+  },
+  {
+    "topicCode": "THERAPIST_MATCHING",
+    "screenScope": ["therapist-matching"],
+    "routeScope": ["THERAPIST_TRACK_14_WEEKS", "URGENT_RED_FLAG"],
+    "phaseScope": [],
+    "keywords": ["chon chuyen gia", "bac si", "therapist", "dong hanh"],
+    "content": "Màn chọn chuyên gia giúp bạn ghép với người phù hợp để đồng hành trong lộ trình CBT. Bạn có thể xem giới thiệu, mức độ đang nhận bệnh nhân và chọn người khiến bạn thấy an tâm hơn khi bắt đầu trị liệu.",
+    "suggestedActions": [
+      {"label": "Xem chuyên gia", "route": "/therapist-matching"},
+      {"label": "Xem tham vấn từ xa", "route": "/telehealth"}
+    ]
+  },
+  {
+    "topicCode": "ROADMAP_OVERVIEW",
+    "screenScope": ["roadmap"],
+    "routeScope": ["SELF_HELP", "THERAPIST_TRACK_14_WEEKS"],
+    "phaseScope": [],
+    "keywords": ["lo trinh", "fear ladder", "thang so", "nac", "khoa", "mo"],
+    "content": "Lộ trình tiếp xúc hiển thị các nấc Fear Ladder từ dễ đến khó. Bạn chỉ thấy các nấc đã mở phù hợp với tiến độ hiện tại. Một nấc đang khóa thường có nghĩa là bạn chưa tới đúng giai đoạn, chưa đủ điều kiện tiên quyết, hoặc chưa cần làm bước đó ngay.",
+    "suggestedActions": [
+      {"label": "Xem lộ trình", "route": "/roadmap"},
+      {"label": "Mở bài đang làm", "route": "/roadmap"}
+    ]
+  },
+  {
+    "topicCode": "BEHAVIORAL_EXPERIMENT_SETUP",
+    "screenScope": ["roadmap", "behavioral-experiment"],
+    "routeScope": ["SELF_HELP", "THERAPIST_TRACK_14_WEEKS"],
+    "phaseScope": [],
+    "keywords": ["thiet lap", "bai thuc hanh", "du doan", "hanh vi an toan"],
+    "content": "Thiết lập bài thực hành có 3 phần chính: điều bạn sợ sẽ xảy ra, mức độ bạn tin vào dự đoán đó, và các hành vi an toàn bạn muốn bỏ bớt. Mục tiêu không phải ép bạn chịu đựng lo âu, mà là tạo một thử nghiệm đủ rõ để so sánh dự đoán với thực tế.",
+    "suggestedActions": [
+      {"label": "Quay lại lộ trình", "route": "/roadmap"},
+      {"label": "Viết nhật ký suy nghĩ", "route": "/thought-record"}
+    ]
+  },
+  {
+    "topicCode": "BEHAVIORAL_EXPERIMENT_DEBRIEF",
+    "screenScope": ["roadmap", "behavioral-experiment"],
+    "routeScope": ["SELF_HELP", "THERAPIST_TRACK_14_WEEKS"],
+    "phaseScope": [],
+    "keywords": ["tong ket", "debrief", "thuc te", "bai hoc", "sau bai"],
+    "content": "Tổng kết bài thực hành giúp bạn nhìn lại điều gì thực sự đã xảy ra, mức độ còn tin vào dự đoán cũ, và bài học mới rút ra. Đây là bước quan trọng để giảm dần niềm tin sai lệch về việc bị đánh giá trong các tình huống xã hội.",
+    "suggestedActions": [
+      {"label": "Tổng kết bài thực hành", "route": "/roadmap"},
+      {"label": "Xem lịch sử bài đã làm", "route": "/roadmap"}
+    ]
+  },
+  {
+    "topicCode": "DAILY_CHECKIN",
+    "screenScope": ["home", "daily-checkin"],
+    "routeScope": [],
+    "phaseScope": [],
+    "intentScope": ["FEATURE_EXPLAINER", "APP_GUIDE"],
+    "topicAliases": ["daily-checkin", "mood-check", "cam-xuc"],
+    "keywords": ["diem danh", "diem danh cam xuc", "cam xuc", "5 chi so", "lo au", "ne tranh", "safety gate", "chot an toan", "man nay"],
+    "content": "Điểm danh cảm xúc hằng ngày theo dõi 5 chỉ số: lo âu hiện tại, thôi thúc né tránh, buồn bã, lo âu dự kiến và nhai lại sau sự kiện. Từ các chỉ số này, hệ thống sẽ ưu tiên công cụ phù hợp như thẻ đối phó, nhật ký suy nghĩ hoặc hỗ trợ an toàn.",
+    "suggestedActions": [
+      {"label": "Mở trang chủ", "route": "/home"},
+      {"label": "Viết nhật ký suy nghĩ", "route": "/thought-record"}
+    ]
+  },
+  {
+    "topicCode": "THOUGHT_RECORD",
+    "screenScope": ["thought-record", "journal"],
+    "routeScope": [],
+    "phaseScope": [],
+    "keywords": ["nhat ky suy nghi", "6 buoc", "thought record", "buoc nay"],
+    "content": "Nhật ký suy nghĩ 6 bước giúp bạn đi từ tình huống, cảm xúc, hành vi an toàn, suy nghĩ tự động, lỗi tư duy đến phản hồi thích nghi. Đây là công cụ để gỡ vòng lặp lo âu xã hội bằng cách nhìn rõ suy nghĩ của mình hơn, chứ không phải để ép bạn viết cho đủ.",
+    "suggestedActions": [
+      {"label": "Mở nhật ký suy nghĩ", "route": "/thought-record"},
+      {"label": "Xem trang nhật ký", "route": "/journal"}
+    ]
+  },
+  {
+    "topicCode": "TELEHEALTH",
+    "screenScope": ["telehealth"],
+    "routeScope": ["THERAPIST_TRACK_14_WEEKS", "URGENT_RED_FLAG"],
+    "phaseScope": [],
+    "keywords": ["tham van", "dat lich", "telehealth", "booster"],
+    "content": "Tham vấn từ xa là nơi bạn xem lịch hẹn và đặt phiên phù hợp với giai đoạn điều trị. Ở lộ trình chuẩn, buổi hẹn thường đi theo nhịp hằng tuần, sau đó giãn cách dần và chuyển sang các buổi tăng cường khi bước vào giai đoạn duy trì.",
+    "suggestedActions": [
+      {"label": "Mở tham vấn từ xa", "route": "/telehealth"},
+      {"label": "Xem lịch hẹn của tôi", "route": "/telehealth/my-appointments"}
+    ]
+  },
+  {
+    "topicCode": "MAINTENANCE_BOOSTER",
+    "screenScope": ["home", "telehealth"],
+    "routeScope": ["THERAPIST_TRACK_14_WEEKS"],
+    "phaseScope": [],
+    "keywords": ["tot nghiep", "duy tri", "booster", "sau dieu tri"],
+    "content": "Khi hoàn tất lộ trình chính, bạn có thể chuyển sang giai đoạn duy trì. Lúc này hệ thống ưu tiên các buổi tăng cường theo mốc 3, 6 và 12 tháng để giúp bạn giữ vững kỹ năng và phát hiện sớm dấu hiệu quay lại của lo âu xã hội.",
+    "suggestedActions": [
+      {"label": "Xem lịch tăng cường", "route": "/telehealth/my-appointments"},
+      {"label": "Quay lại trang chủ", "route": "/home"}
+    ]
+  },
+  {
+    "topicCode": "SAFETY_ESCALATION",
+    "screenScope": ["home", "thought-record", "roadmap", "telehealth"],
+    "routeScope": ["URGENT_RED_FLAG"],
+    "phaseScope": [],
+    "keywords": ["khong an toan", "co do", "nguy co", "khan cap"],
+    "content": "Khi hệ thống phát hiện cờ đỏ hoặc bạn đang ở trạng thái không an toàn, ưu tiên lớn nhất là kết nối bạn với hỗ trợ phù hợp. Trợ lý chỉ nhắc lại bước an toàn và không tiếp tục trò chuyện trị liệu mở trong tình huống này.",
+    "suggestedActions": [
+      {"label": "Mở hỗ trợ an toàn", "route": "/safety-support"},
+      {"label": "Xem tham vấn từ xa", "route": "/telehealth"}
+    ]
+  }
+]

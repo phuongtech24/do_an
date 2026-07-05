@@ -21,6 +21,8 @@ public class FearLadderItemDto {
     private Integer ladderOrder;
     private FearLadderStatus status;
     private Boolean goalMatch;
+    private String goalContextLabel;
+    private String goalPriorityReason;
     private Boolean unlocked;
     private java.util.Date masteredAt;
 
@@ -68,6 +70,10 @@ public class FearLadderItemDto {
     public void setStatus(FearLadderStatus status) { this.status = status; }
     public Boolean getGoalMatch() { return goalMatch; }
     public void setGoalMatch(Boolean goalMatch) { this.goalMatch = goalMatch; }
+    public String getGoalContextLabel() { return goalContextLabel; }
+    public void setGoalContextLabel(String goalContextLabel) { this.goalContextLabel = goalContextLabel; }
+    public String getGoalPriorityReason() { return goalPriorityReason; }
+    public void setGoalPriorityReason(String goalPriorityReason) { this.goalPriorityReason = goalPriorityReason; }
     public Boolean getUnlocked() { return unlocked; }
     public void setUnlocked(Boolean unlocked) { this.unlocked = unlocked; }
     public java.util.Date getMasteredAt() { return masteredAt; }

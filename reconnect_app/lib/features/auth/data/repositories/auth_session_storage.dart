@@ -14,6 +14,17 @@ class AuthSessionStorage {
   }) : _storage = storage;
 
   Future<void> saveSession(LoginResponse response) {
+    return saveSessionWithPreference(response, rememberMe: true);
+  }
+
+  Future<void> saveSessionWithPreference(
+    LoginResponse response, {
+    required bool rememberMe,
+  }) async {
+    if (!rememberMe) {
+      await clearSession();
+      return;
+    }
     return _storage.write(
       key: _sessionKey,
       value: jsonEncode(response.toJson()),

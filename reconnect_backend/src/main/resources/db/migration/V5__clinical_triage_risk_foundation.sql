@@ -1,0 +1,15 @@
+-- ReConnect MindHealth
+-- V5 - Clinical triage / risk foundation
+--
+-- Mục đích:
+-- - Chuẩn bị nền Flyway cho các thay đổi schema liên quan:
+--   triage queue, red flag, daily risk, clinical routing.
+--
+-- Các bảng/liên quan chính:
+-- - patient_profiles
+-- - daily_risk_logs
+-- - lsas_submissions
+-- - journals
+--
+-- Batch hiện tại chỉ tạo marker migration an toàn.
+

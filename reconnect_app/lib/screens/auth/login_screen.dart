@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+
 import '../../theme/app_colors.dart';
 import '../../widgets/custom_button.dart';
 import '../user/user_home_screen.dart';
@@ -15,7 +16,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
 
   void _login(BuildContext context) {
-    // Mock login logic
     if (_emailController.text.isNotEmpty && _passwordController.text.isNotEmpty) {
       Navigator.pushReplacement(
         context,
@@ -23,7 +23,10 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng nhập Email và Mật khẩu'), backgroundColor: AppColors.alert),
+        const SnackBar(
+          content: Text('Vui lòng nhập Email và Mật khẩu'),
+          backgroundColor: AppColors.alert,
+        ),
       );
     }
   }
@@ -64,7 +67,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 16),
               const Text(
-                'Nền tảng Tái hòa nhập dành riêng cho bạn',
+                'Nền tảng tái hòa nhập dành riêng cho bạn',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
@@ -72,8 +75,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 48),
-              
-              // Form đăng nhập
               TextField(
                 controller: _emailController,
                 decoration: InputDecoration(
@@ -105,12 +106,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              
               CustomButton(
                 text: 'Đăng nhập',
                 onPressed: () => _login(context),
               ),
-              
               const SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -120,7 +119,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: () {
                       // Navigate to Register Screen
                     },
-                    child: const Text('Đăng ký ngay', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                    child: const Text(
+                      'Đăng ký ngay',
+                      style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary),
+                    ),
                   )
                 ],
               )

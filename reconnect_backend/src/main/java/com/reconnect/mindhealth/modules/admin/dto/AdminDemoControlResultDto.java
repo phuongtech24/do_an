@@ -7,8 +7,19 @@ public class AdminDemoControlResultDto {
     private String action;
     private String message;
     private Integer currentRiskScore;
+    private Integer currentLsasScore;
     private Boolean redFlagActive;
-    private Integer createdQuests;
+    private String clinicalRoute;
+    private Boolean clinicalAttention;
+    private String taperingStage;
+    private String graduatedAt;
+    private String guestState;
+    private Integer programWeek;
+    private String programPhaseCode;
+    private String programPhaseLabel;
+    private Integer fearLadderUnlockedCount;
+    private Integer fearLadderMasteredCount;
+    private Boolean graduationReady;
 
     public AdminDemoControlResultDto() {
     }
@@ -51,6 +62,14 @@ public class AdminDemoControlResultDto {
         this.currentRiskScore = currentRiskScore;
     }
 
+    public Integer getCurrentLsasScore() {
+        return currentLsasScore;
+    }
+
+    public void setCurrentLsasScore(Integer currentLsasScore) {
+        this.currentLsasScore = currentLsasScore;
+    }
+
     public Boolean getRedFlagActive() {
         return redFlagActive;
     }
@@ -59,11 +78,91 @@ public class AdminDemoControlResultDto {
         this.redFlagActive = redFlagActive;
     }
 
-    public Integer getCreatedQuests() {
-        return createdQuests;
+    public String getClinicalRoute() {
+        return clinicalRoute;
     }
 
-    public void setCreatedQuests(Integer createdQuests) {
-        this.createdQuests = createdQuests;
+    public void setClinicalRoute(String clinicalRoute) {
+        this.clinicalRoute = clinicalRoute;
+    }
+
+    public Boolean getClinicalAttention() {
+        return clinicalAttention;
+    }
+
+    public void setClinicalAttention(Boolean clinicalAttention) {
+        this.clinicalAttention = clinicalAttention;
+    }
+
+    public String getTaperingStage() {
+        return taperingStage;
+    }
+
+    public void setTaperingStage(String taperingStage) {
+        this.taperingStage = taperingStage;
+    }
+
+    public String getGraduatedAt() {
+        return graduatedAt;
+    }
+
+    public void setGraduatedAt(String graduatedAt) {
+        this.graduatedAt = graduatedAt;
+    }
+
+    public String getGuestState() {
+        return guestState;
+    }
+
+    public void setGuestState(String guestState) {
+        this.guestState = guestState;
+    }
+
+    public Integer getProgramWeek() {
+        return programWeek;
+    }
+
+    public void setProgramWeek(Integer programWeek) {
+        this.programWeek = programWeek;
+    }
+
+    public String getProgramPhaseCode() {
+        return programPhaseCode;
+    }
+
+    public void setProgramPhaseCode(String programPhaseCode) {
+        this.programPhaseCode = programPhaseCode;
+    }
+
+    public String getProgramPhaseLabel() {
+        return programPhaseLabel;
+    }
+
+    public void setProgramPhaseLabel(String programPhaseLabel) {
+        this.programPhaseLabel = programPhaseLabel;
+    }
+
+    public Integer getFearLadderUnlockedCount() {
+        return fearLadderUnlockedCount;
+    }
+
+    public void setFearLadderUnlockedCount(Integer fearLadderUnlockedCount) {
+        this.fearLadderUnlockedCount = fearLadderUnlockedCount;
+    }
+
+    public Integer getFearLadderMasteredCount() {
+        return fearLadderMasteredCount;
+    }
+
+    public void setFearLadderMasteredCount(Integer fearLadderMasteredCount) {
+        this.fearLadderMasteredCount = fearLadderMasteredCount;
+    }
+
+    public Boolean getGraduationReady() {
+        return graduationReady;
+    }
+
+    public void setGraduationReady(Boolean graduationReady) {
+        this.graduationReady = graduationReady;
     }
 }

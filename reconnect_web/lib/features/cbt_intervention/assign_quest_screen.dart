@@ -41,7 +41,10 @@ class _AssignQuestScreenState extends State<AssignQuestScreen> {
       _error = null;
     });
     try {
-      final list = await _repo.listQuestTemplates(token: token);
+      final list = await _repo.listQuestTemplates(
+        token: token,
+        patientId: widget.patientId,
+      );
       if (!mounted) return;
       setState(() => _templates = list);
     } catch (e) {
@@ -87,7 +90,9 @@ class _AssignQuestScreenState extends State<AssignQuestScreen> {
       return quest.title.toLowerCase().contains(keyword) ||
           quest.description.toLowerCase().contains(keyword) ||
           quest.category.toLowerCase().contains(keyword) ||
-          quest.difficulty.toLowerCase().contains(keyword);
+          quest.difficulty.toLowerCase().contains(keyword) ||
+          quest.programPhaseCode.toLowerCase().contains(keyword) ||
+          quest.moduleCode.toLowerCase().contains(keyword);
     }).toList();
 
     return Scaffold(
@@ -189,6 +194,8 @@ class _QuestTemplateCard extends StatelessWidget {
                     children: [
                       _pill(quest.category),
                       _pill(quest.difficulty),
+                      if (quest.programWeek != null) _pill('Tuần ${quest.programWeek}'),
+                      if (quest.programPhaseCode.isNotEmpty) _pill(quest.programPhaseCode),
                     ],
                   ),
                 ],

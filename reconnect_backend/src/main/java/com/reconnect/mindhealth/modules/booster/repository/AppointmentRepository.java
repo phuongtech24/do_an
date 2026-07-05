@@ -12,6 +12,7 @@ import org.springframework.stereotype.Repository;
 
 import com.reconnect.mindhealth.modules.booster.entity.Appointment;
 import com.reconnect.mindhealth.modules.booster.enums.AppointmentPurpose;
+import com.reconnect.mindhealth.modules.booster.enums.AppointmentStatus;
 
 @Repository
 public interface AppointmentRepository extends JpaRepository<Appointment, UUID> {
@@ -24,7 +25,14 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
 
     List<Appointment> findByPatientProfile_IdOrderByStartAtDesc(UUID patientId);
 
+    List<Appointment> findTop5ByPatientProfile_IdOrderByStartAtDesc(UUID patientId);
+
     List<Appointment> findByTherapistProfile_IdOrderByStartAtDesc(UUID therapistId);
+
+    Appointment findTopByPatientProfile_IdAndStatusAndStartAtAfterOrderByStartAtAsc(
+            UUID patientId,
+            AppointmentStatus status,
+            LocalDateTime startAt);
 
 
     Appointment findTopByPatientProfile_IdAndPurposeOrderByStartAtDesc(UUID patientId, AppointmentPurpose purpose);

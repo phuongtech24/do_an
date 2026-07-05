@@ -1,9 +1,16 @@
 package com.reconnect.mindhealth.modules.ai.service.impl;
 
 import java.time.Duration;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.text.Normalizer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Locale;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,12 +20,22 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.reconnect.mindhealth.modules.ai.config.AiProperties;
+import com.reconnect.mindhealth.modules.ai.dto.AiKnowledgeQueryDto;
 import com.reconnect.mindhealth.modules.ai.dto.CognitiveDistortionRequestDto;
 import com.reconnect.mindhealth.modules.ai.dto.CognitiveDistortionResponseDto;
 import com.reconnect.mindhealth.modules.ai.dto.GuidedDiscoveryRequestDto;
 import com.reconnect.mindhealth.modules.ai.dto.GuidedDiscoveryResponseDto;
+import com.reconnect.mindhealth.modules.ai.dto.GuideChatRequestDto;
+import com.reconnect.mindhealth.modules.ai.dto.GuideChatResponseDto;
+import com.reconnect.mindhealth.modules.ai.dto.GuideChatSuggestedActionDto;
 import com.reconnect.mindhealth.modules.ai.dto.JournalAiRiskResultDto;
+import com.reconnect.mindhealth.modules.ai.model.GuideActionCard;
+import com.reconnect.mindhealth.modules.ai.model.GuideKnowledgeCard;
+import com.reconnect.mindhealth.modules.ai.model.RagContextBundle;
+import com.reconnect.mindhealth.modules.ai.service.GuideKnowledgeRetrieverService;
+import com.reconnect.mindhealth.modules.ai.service.GuideChatRoutingService;
 import com.reconnect.mindhealth.modules.ai.service.IAiAssistantService;
+import com.reconnect.mindhealth.modules.ai.service.RagRetrievalService;
 import com.reconnect.mindhealth.modules.ai.service.RuleBasedCognitiveDistortionDetector;
 import com.reconnect.mindhealth.modules.ai.service.RuleBasedJournalRiskScorer;
 import com.reconnect.mindhealth.modules.journal.enums.JournalType;
@@ -34,16 +51,27 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
     private static final Logger log = LoggerFactory.getLogger(GeminiAiAssistantServiceImpl.class);
 
     private final AiProperties aiProperties;
+    private final GuideKnowledgeRetrieverService guideKnowledgeRetrieverService;
+    private final GuideChatRoutingService guideChatRoutingService;
+    private final RagRetrievalService ragRetrievalService;
     private final RuleBasedCognitiveDistortionDetector ruleBasedCognitiveDistortionDetector;
     private final RuleBasedJournalRiskScorer ruleBasedJournalRiskScorer;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final Map<String, GuideChatResponseDto> guideChatCache = new ConcurrentHashMap<>();
+    private static final Charset WINDOWS_1252 = Charset.forName("Windows-1252");
 
     public GeminiAiAssistantServiceImpl(
             AiProperties aiProperties,
+            GuideKnowledgeRetrieverService guideKnowledgeRetrieverService,
+            GuideChatRoutingService guideChatRoutingService,
+            RagRetrievalService ragRetrievalService,
             RuleBasedCognitiveDistortionDetector ruleBasedCognitiveDistortionDetector,
             RuleBasedJournalRiskScorer ruleBasedJournalRiskScorer) {
         this.aiProperties = aiProperties;
+        this.guideKnowledgeRetrieverService = guideKnowledgeRetrieverService;
+        this.guideChatRoutingService = guideChatRoutingService;
+        this.ragRetrievalService = ragRetrievalService;
         this.ruleBasedCognitiveDistortionDetector = ruleBasedCognitiveDistortionDetector;
         this.ruleBasedJournalRiskScorer = ruleBasedJournalRiskScorer;
     }
@@ -52,20 +80,41 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
     public GuidedDiscoveryResponseDto guidedDiscovery(GuidedDiscoveryRequestDto request) {
         if (!aiProperties.isEnabled()) {
             return new GuidedDiscoveryResponseDto(List.of(
-                    "Điều gì khiến bạn tin rằng suy nghĩ đó chắc chắn là đúng?",
-                    "Nếu một người bạn thân ở trong tình huống này, bạn sẽ nói gì để giúp họ nhìn khác đi?"));
+                    "Ã„ÂiÃ¡Â»Âu gÃƒÂ¬ khiÃ¡ÂºÂ¿n bÃ¡ÂºÂ¡n tin rÃ¡ÂºÂ±ng suy nghÃ„Â© Ã„â€˜ÃƒÂ³ chÃ¡ÂºÂ¯c chÃ¡ÂºÂ¯n lÃƒÂ  Ã„â€˜ÃƒÂºng?",
+                    "NÃ¡ÂºÂ¿u mÃ¡Â»â„¢t ngÃ†Â°Ã¡Â»Âi bÃ¡ÂºÂ¡n thÃƒÂ¢n Ã¡Â»Å¸ trong tÃƒÂ¬nh huÃ¡Â»â€˜ng nÃƒÂ y, bÃ¡ÂºÂ¡n sÃ¡ÂºÂ½ nÃƒÂ³i gÃƒÂ¬ Ã„â€˜Ã¡Â»Æ’ giÃƒÂºp hÃ¡Â»Â nhÃƒÂ¬n khÃƒÂ¡c Ã„â€˜i?"));
         }
 
-        String prompt = buildGuidedDiscoveryPrompt(request);
+        List<GuideKnowledgeCard> matchedCards = retrieveThoughtRecordKnowledge(
+                request.getSituation(),
+                request.getAutomaticThought(),
+                request.getEmotion(),
+                null,
+                "GUIDED_DISCOVERY");
+        String prompt = buildGuidedDiscoveryPrompt(
+                request,
+                resolveKnowledgeBlock(
+                        buildThoughtRecordKnowledgeQuery(
+                                request.getSituation(),
+                                request.getAutomaticThought(),
+                                request.getEmotion(),
+                                null,
+                                "GUIDED_DISCOVERY"),
+                        matchedCards,
+                        "KhÃ´ng cÃ³ tri thá»©c retrieve khá»›p rÃµ. HÃ£y Ä‘áº·t cÃ¢u há»i CBT an toÃ n, ngáº¯n vÃ  trung tÃ­nh."));
         String raw = generateContent(prompt, 1024, 0.1, guidedDiscoveryResponseSchema());
         List<String> questions = parseQuestionsJson(raw);
         if (questions.isEmpty()) {
             log.warn("Guided discovery parse empty, using fallback.");
             questions = List.of(
-                    "Bạn có bằng chứng nào ủng hộ và bằng chứng nào phản bác suy nghĩ này?",
-                    "Có cách giải thích nào khác (ít tiêu cực hơn) cho tình huống này không?");
+                    "Bang chung nao dang ung ho suy nghi nay, va bang chung nao dang phan bien lai no?",
+                    "Co cach giai thich nao khac, can bang hon va it tieu cuc hon, cho tinh huong nay khong?");
         }
-        return new GuidedDiscoveryResponseDto(questions);
+        if (questions.stream().anyMatch(this::hasMojibakeMarker)) {
+            questions = List.of(
+                    "Bang chung nao dang ung ho suy nghi nay, va bang chung nao dang phan bien lai no?",
+                    "Co cach giai thich nao khac, can bang hon va it tieu cuc hon, cho tinh huong nay khong?");
+        }
+        return new GuidedDiscoveryResponseDto(cleanTextList(questions));
     }
 
     @Override
@@ -101,7 +150,14 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
                     ruleScore >= 70 ? "Rule-based safety filter detected high-risk hopelessness signals." : "");
         }
 
-        String prompt = buildStandardRiskPrompt(journalType, journalJsonContent);
+        List<GuideKnowledgeCard> matchedCards = retrieveJournalRiskKnowledge(journalType, journalJsonContent, ruleScore);
+        String prompt = buildStandardRiskPrompt(
+                journalType,
+                journalJsonContent,
+                resolveKnowledgeBlock(
+                        buildJournalRiskKnowledgeQuery(journalType, journalJsonContent, ruleScore),
+                        matchedCards,
+                        "KhÃ´ng cÃ³ tri thá»©c CBT / safety retrieve khá»›p rÃµ. HÃ£y cháº¥m risk theo nguyÃªn táº¯c an toÃ n, Æ°u tiÃªn khÃ´ng bá» sÃ³t."));
         String raw = generateContent(prompt, 512, 0.1, riskScoringResponseSchema());
 
         JournalAiRiskResultDto parsed = parseRiskJson(raw);
@@ -146,18 +202,31 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
 
         if (!shouldCallAi) {
             String hint = rule.isEmpty()
-                    ? "Chưa thấy mẫu lỗi tư duy quá rõ từ rule hiện tại; bạn vẫn có thể tự chọn thủ công."
-                    : "Gợi ý từ rule-based — bạn có thể giữ hoặc chỉnh lại các nhãn này.";
+                    ? "Chua thay mau loi tu duy qua ro tu bo quy tac hien tai; ban van co the tu chon thu cong."
+                    : "Day la goi y tu bo quy tac; ban co the giu lai hoac chinh lai cac nhan nay.";
             log.info("Detect cognitive distortions fallback: source=RULE_ONLY, suggestions={}, hasHint={}",
                     rule.size(), !hint.isBlank());
-            return new CognitiveDistortionResponseDto(rule, hint);
+            return new CognitiveDistortionResponseDto(rule, cleanText(hint));
         }
 
-        if (!shouldCallAi) {
-            return new CognitiveDistortionResponseDto(rule, rule.isEmpty() ? null : "Gợi ý (rule-based) — bạn có thể chỉnh lại.");
-        }
-
-        String prompt = buildCognitiveDistortionsPrompt(request, max);
+        List<GuideKnowledgeCard> matchedCards = retrieveThoughtRecordKnowledge(
+                request.getSituation(),
+                request.getAutomaticThought(),
+                null,
+                null,
+                "COGNITIVE_DISTORTIONS");
+        String prompt = buildCognitiveDistortionsPrompt(
+                request,
+                max,
+                resolveKnowledgeBlock(
+                        buildThoughtRecordKnowledgeQuery(
+                                request.getSituation(),
+                                request.getAutomaticThought(),
+                                null,
+                                null,
+                                "COGNITIVE_DISTORTIONS"),
+                        matchedCards,
+                        "Khong co tri thuc retrieve khop ro. Chi goi y distortion khi co bang chung tu thought va situation."));
         String raw = generateContent(prompt, 256, 0.2);
         CognitiveDistortionResponseDto parsed = parseDistortionsJson(raw);
 
@@ -171,26 +240,380 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
 
         String hint = parsed.getHint();
         if (hint == null || hint.isBlank()) {
-            hint = out.isEmpty() ? null : "Gợi ý — bạn chọn 1–3 lỗi tư duy phù hợp nhất.";
+            hint = out.isEmpty()
+                    ? "AI chua thay du tin hieu ro; ban van co the tu chon thu cong."
+                    : "Day la goi y tu AI va bo quy tac; hay chon 1-3 loi tu duy phu hop nhat.";
         }
         if (hint == null || hint.isBlank()) {
             hint = out.isEmpty()
-                    ? "AI chưa thấy đủ tín hiệu rõ; bạn vẫn có thể tự chọn thủ công."
-                    : "Gợi ý từ AI/rule — bạn chọn 1-3 lỗi tư duy phù hợp nhất.";
-        }
-        if (hint != null && (hint.contains("Ã") || hint.contains("á»"))) {
-            hint = out.isEmpty()
-                    ? "AI chưa thấy đủ tín hiệu rõ; bạn vẫn có thể tự chọn thủ công."
-                    : "Gợi ý từ AI/rule — bạn chọn 1-3 lỗi tư duy phù hợp nhất.";
+                    ? "AI chua thay du tin hieu ro; ban van co the tu chon thu cong."
+                    : "Day la goi y tu AI va bo quy tac; hay chon 1-3 loi tu duy phu hop nhat.";
         }
         log.info("Detect cognitive distortions completed: source={}, suggestions={}, hasHint={}",
                 raw == null || raw.isBlank() ? "RULE_FALLBACK_AFTER_AI" : "AI_OR_MERGED",
                 out.size(),
                 hint != null && !hint.isBlank());
-        return new CognitiveDistortionResponseDto(out, hint);
+        if (hint != null && hasMojibakeMarker(hint)) {
+            hint = out.isEmpty()
+                    ? "AI chua thay du tin hieu ro; ban van co the tu chon thu cong."
+                    : "Day la goi y tu AI va bo quy tac; hay chon 1-3 loi tu duy phu hop nhat.";
+        }
+        return new CognitiveDistortionResponseDto(out, cleanText(hint));
     }
 
-    private String buildGuidedDiscoveryPrompt(GuidedDiscoveryRequestDto r) {
+    @Override
+    public GuideChatResponseDto guideChat(GuideChatRequestDto request) {
+        if (shouldEscalateSafety(request)) {
+            return cleanGuideResponse(buildSafetyGuideResponse(request));
+        }
+
+        String intent = guideChatRoutingService.detectIntent(request.getUserMessage());
+        AiKnowledgeQueryDto knowledgeQuery = buildGuideKnowledgeQuery(request, intent);
+        List<GuideKnowledgeCard> matchedCards = guideKnowledgeRetrieverService.retrieve(knowledgeQuery);
+        GuideKnowledgeCard primaryCard = matchedCards.isEmpty() ? null : matchedCards.get(0);
+        String cacheKey = buildGuideCacheKey(request, intent, primaryCard);
+        GuideChatResponseDto cached = guideChatCache.get(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
+
+        boolean useFallbackOnly = shouldUseFallbackOnly(request, matchedCards);
+        GuideChatResponseDto response = useFallbackOnly
+                ? buildGuideFallbackResponse(request, intent, primaryCard)
+                : buildGeminiGuideResponse(request, intent, matchedCards, primaryCard);
+
+        guideChatCache.put(cacheKey, response);
+        return response;
+    }
+
+    private boolean shouldEscalateSafety(GuideChatRequestDto request) {
+        int riskScore = request.getCurrentRiskScore() != null ? request.getCurrentRiskScore() : 0;
+        return request.isRedFlagActive() || riskScore >= 70;
+    }
+
+    private GuideChatResponseDto buildSafetyGuideResponse(GuideChatRequestDto request) {
+        return new GuideChatResponseDto(
+                "Minh se uu tien an toan cho ban truoc. He thong dang nhan thay muc rui ro cao hoac co co do, vi vay hay mo ho tro an toan hoac ket noi voi chuyen gia qua muc tu van tu xa.",
+                List.of(
+                        new GuideChatSuggestedActionDto("Mo ho tro an toan", "/safety-support"),
+                        new GuideChatSuggestedActionDto("Xem tu van tu xa", "/telehealth")),
+                "SAFETY_ESCALATION",
+                true,
+                true,
+                true);
+    }
+
+    private boolean shouldUseFallbackOnly(GuideChatRequestDto request, List<GuideKnowledgeCard> matchedCards) {
+        if (!aiProperties.isEnabled()) {
+            return true;
+        }
+        String normalized = normalizeText(request.getUserMessage());
+        boolean quickFaq = containsAny(
+                normalized,
+                "man nay la gi",
+                "dung de lam gi",
+                "toi nen lam gi tiep",
+                "giai thich bai tap nay",
+                "bat dau tu dau");
+        return quickFaq;
+    }
+
+    private GuideChatResponseDto buildGuideFallbackResponse(
+            GuideChatRequestDto request,
+            String intent,
+            GuideKnowledgeCard primaryCard) {
+        List<GuideChatSuggestedActionDto> actions = buildSuggestedActions(primaryCard, request.getScreenContext());
+        String topicCode = primaryCard != null ? primaryCard.getTopicCode() : "GENERAL_GUIDE";
+        String answer;
+        if (primaryCard == null) {
+            answer = "Minh la tro ly dong hanh, giup ban hieu man hien tai, biet nen lam gi tiep theo va giai thich cac cong cu CBT o muc nhe. Neu muon, ban co the hoi: man nay dung de lam gi, toi nen lam gi tiep theo, hoac giai thich bai tap nay.";
+        } else if ("NEXT_STEP".equals(intent)) {
+            answer = primaryCard.getContent() + " Buoc tiep theo phu hop nhat luc nay la chon mot thao tac nho, ro rang thay vi co lam moi thu cung luc.";
+        } else if ("CBT_SUPPORT_LIGHT".equals(intent)) {
+            answer = primaryCard.getContent() + " Neu dang thay lo, ban chi can bat dau bang mot buoc ngan va trung thuc voi cam xuc hien tai cua minh.";
+        } else {
+            answer = primaryCard.getContent();
+        }
+        if (hasMojibakeMarker(answer)) {
+            String cleanContent = primaryCard != null ? cleanText(primaryCard.getContent()) : null;
+            if (cleanContent == null || cleanContent.isBlank() || hasMojibakeMarker(cleanContent)) {
+                cleanContent = "Minh se giup ban hieu cong cu CBT hien tai va chon mot buoc tiep theo phu hop.";
+            }
+            if ("NEXT_STEP".equals(intent)) {
+                answer = cleanContent + " Buoc tiep theo phu hop nhat luc nay la chon mot thao tac nho, ro rang thay vi co lam moi thu cung luc.";
+            } else if ("CBT_SUPPORT_LIGHT".equals(intent)) {
+                answer = cleanContent + " Neu dang thay lo, ban chi can bat dau bang mot buoc ngan va trung thuc voi cam xuc hien tai cua minh.";
+            } else {
+                answer = cleanContent;
+            }
+        }
+        return new GuideChatResponseDto(
+                answer,
+                actions,
+                topicCode,
+                true,
+                false,
+                false);
+    }
+
+    private GuideChatResponseDto buildGeminiGuideResponse(
+            GuideChatRequestDto request,
+            String intent,
+            List<GuideKnowledgeCard> matchedCards,
+            GuideKnowledgeCard primaryCard) {
+        String prompt = buildGuideChatPrompt(
+                request,
+                intent,
+                resolveKnowledgeBlock(
+                        buildGuideKnowledgeQuery(request, intent),
+                        matchedCards,
+                        "Khong co tri thuc khop hoan toan. Chi tra loi o muc huong dan su dung app va CBT nhe."));
+        String raw = generateContent(prompt, 512, 0.2, guideChatResponseSchema());
+        GuideChatResponseDto parsed = parseGuideChatJson(raw);
+
+        if (parsed.getAnswer() == null || parsed.getAnswer().isBlank()) {
+            return cleanGuideResponse(buildGuideFallbackResponse(request, intent, primaryCard));
+        }
+
+        if (parsed.getSuggestedActions() == null || parsed.getSuggestedActions().isEmpty()) {
+            parsed.setSuggestedActions(buildSuggestedActions(primaryCard, request.getScreenContext()));
+        }
+        if (parsed.getRelatedTopicCode() == null || parsed.getRelatedTopicCode().isBlank()) {
+            parsed.setRelatedTopicCode(primaryCard != null ? primaryCard.getTopicCode() : "GENERAL_GUIDE");
+        }
+        parsed.setUsedFallback(false);
+        return cleanGuideResponse(parsed);
+    }
+
+    private String buildGuideCacheKey(
+            GuideChatRequestDto request,
+            String intent,
+            GuideKnowledgeCard primaryCard) {
+        String screenContext = normalizeText(request.getScreenContext());
+        String patientRoute = normalizeText(request.getPatientRoute());
+        String topicCode = primaryCard != null ? normalizeText(primaryCard.getTopicCode()) : "general_guide";
+        String message = normalizeText(request.getUserMessage());
+        return String.join("|",
+                intent == null ? "" : intent,
+                screenContext,
+                patientRoute,
+                topicCode,
+                message);
+    }
+
+    private String normalizeText(String value) {
+        if (value == null) {
+            return "";
+        }
+        String normalized = Normalizer.normalize(value, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .replace('đ', 'd')
+                .replace('Đ', 'D')
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("\\s+", " ")
+                .trim();
+        return normalized;
+    }
+
+    private List<String> cleanTextList(List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return List.of();
+        }
+        return values.stream()
+                .map(this::cleanText)
+                .filter(value -> value != null && !value.isBlank())
+                .collect(Collectors.toList());
+    }
+
+    private GuideChatResponseDto cleanGuideResponse(GuideChatResponseDto response) {
+        if (response == null) {
+            return null;
+        }
+        response.setAnswer(cleanText(response.getAnswer()));
+        if (response.getSuggestedActions() != null) {
+            response.setSuggestedActions(response.getSuggestedActions().stream()
+                    .map(action -> new GuideChatSuggestedActionDto(
+                            cleanText(action.getLabel()),
+                            action.getRoute() != null ? action.getRoute() : ""))
+                    .collect(Collectors.toList()));
+        }
+        return response;
+    }
+
+    private String cleanText(String value) {
+        if (value == null || value.isBlank() || !hasMojibakeMarker(value)) {
+            return value;
+        }
+        String current = value;
+        for (int i = 0; i < 3; i++) {
+            String repaired = repairOnce(current);
+            if (repaired == null || repaired.equals(current) || mojibakeScore(repaired) >= mojibakeScore(current)) {
+                break;
+            }
+            current = repaired;
+        }
+        return current;
+    }
+
+    private String repairOnce(String value) {
+        try {
+            return new String(value.getBytes(WINDOWS_1252), StandardCharsets.UTF_8);
+        } catch (Exception exception) {
+            return value;
+        }
+    }
+
+    private boolean hasMojibakeMarker(String value) {
+        return value.contains("Ã")
+                || value.contains("Â")
+                || value.contains("Ä")
+                || value.contains("Æ")
+                || value.contains("â€")
+                || value.contains("áº")
+                || value.contains("á»")
+                || value.contains("�");
+    }
+
+    private int mojibakeScore(String value) {
+        if (value == null || value.isBlank()) {
+            return 0;
+        }
+        int score = 0;
+        String[] markers = {"Ã", "Â", "Ä", "Æ", "â€", "áº", "á»", "�"};
+        for (String marker : markers) {
+            int index = value.indexOf(marker);
+            while (index >= 0) {
+                score++;
+                index = value.indexOf(marker, index + marker.length());
+            }
+        }
+        return score;
+    }
+
+    private boolean containsAny(String text, String... keywords) {
+        if (text == null || text.isBlank() || keywords == null || keywords.length == 0) {
+            return false;
+        }
+        for (String keyword : keywords) {
+            String normalizedKeyword = normalizeText(keyword);
+            if (!normalizedKeyword.isBlank() && text.contains(normalizedKeyword)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private List<GuideChatSuggestedActionDto> buildSuggestedActions(
+            GuideKnowledgeCard primaryCard,
+            String screenContext) {
+        if (primaryCard != null
+                && primaryCard.getSuggestedActions() != null
+                && !primaryCard.getSuggestedActions().isEmpty()) {
+            return primaryCard.getSuggestedActions().stream()
+                    .filter(action -> action.getLabel() != null && !action.getLabel().isBlank())
+                    .map(action -> new GuideChatSuggestedActionDto(
+                            cleanText(action.getLabel()),
+                            action.getRoute() != null ? action.getRoute() : ""))
+                    .limit(2)
+                    .collect(Collectors.toList());
+        }
+
+        String normalizedScreen = normalizeText(screenContext);
+        if (normalizedScreen.contains("thought-record") || normalizedScreen.contains("journal")) {
+            return List.of(
+                    new GuideChatSuggestedActionDto("Mở Nhật ký suy nghĩ", "/thought-record"),
+                    new GuideChatSuggestedActionDto("Xem lịch sử nhật ký", "/journal"));
+        }
+        if (normalizedScreen.contains("roadmap") || normalizedScreen.contains("fear-ladder")) {
+            return List.of(
+                    new GuideChatSuggestedActionDto("Xem lộ trình trị liệu", "/roadmap"),
+                    new GuideChatSuggestedActionDto("Mở thẻ đối phó", "/coping-cards"));
+        }
+        if (normalizedScreen.contains("telehealth") || normalizedScreen.contains("booking")) {
+            return List.of(
+                    new GuideChatSuggestedActionDto("Xem lịch hẹn", "/telehealth"),
+                    new GuideChatSuggestedActionDto("Đặt lịch tư vấn", "/booking"));
+        }
+        return List.of(
+                new GuideChatSuggestedActionDto("Về trang chủ", "/home"),
+                new GuideChatSuggestedActionDto("Xem hướng dẫn tiếp theo", "/guide"));
+    }
+
+    private GuideChatResponseDto parseGuideChatJson(String text) {
+        try {
+            String json = extractFirstJsonObject(text);
+            if (json.isBlank()) {
+                return new GuideChatResponseDto();
+            }
+
+            JsonNode node = objectMapper.readTree(json);
+            GuideChatResponseDto dto = new GuideChatResponseDto();
+            dto.setAnswer(cleanText(node.path("answer").asText("")));
+            dto.setRelatedTopicCode(node.path("relatedTopicCode").asText(""));
+
+            List<GuideChatSuggestedActionDto> actions = new ArrayList<>();
+            JsonNode suggestedActions = node.path("suggestedActions");
+            if (suggestedActions.isArray()) {
+                for (JsonNode actionNode : suggestedActions) {
+                    String label = cleanText(actionNode.path("label").asText("").trim());
+                    String route = actionNode.path("route").asText("").trim();
+                    if (!label.isBlank()) {
+                        actions.add(new GuideChatSuggestedActionDto(label, route));
+                    }
+                }
+            }
+            dto.setSuggestedActions(actions);
+            return dto;
+        } catch (Exception exception) {
+            return new GuideChatResponseDto();
+        }
+    }
+
+    private String buildGuideChatPrompt(
+            GuideChatRequestDto request,
+            String intent,
+            String knowledgeBlock) {
+        String route = request.getPatientRoute() != null ? request.getPatientRoute() : "";
+        String phase = request.getProgramPhaseCode() != null ? request.getProgramPhaseCode() : "";
+        String week = request.getProgramWeek() != null ? String.valueOf(request.getProgramWeek()) : "";
+
+        return ""
+                + "Bạn là AI Bạn Đồng Hành của ứng dụng ReConnect MindHealth.\n"
+                + "Vai trò: hướng dẫn sử dụng app, giải thích CBT ở mức nhẹ, gợi ý bước tiếp theo cho người có lo âu xã hội.\n"
+                + "Không chẩn đoán. Không kê thuốc. Không thay thế bác sĩ hay nhà trị liệu. Không nói sang trầm cảm như một bệnh lý chính.\n"
+                + "Chỉ trả lời dựa trên tri thức nội bộ bên dưới và bối cảnh màn hình hiện tại.\n"
+                + "Ưu tiên câu hỏi hiện tại của người dùng hơn patientRoute và lịch sử phân luồng.\n"
+                + "Nếu tri thức truy hồi không trực tiếp liên quan câu hỏi, không được dùng nó để chuyển sang chủ đề khác.\n"
+                + "Câu trả lời dài khoảng 80-180 từ. Tối đa 2 gợi ý hành động.\n"
+                + "Trả về DUY NHẤT một JSON object hợp lệ theo schema.\n"
+                + "Tri thức nội bộ:\n"
+                + knowledgeBlock + "\n\n"
+                + "Ngữ cảnh:\n"
+                + "- screenContext: " + request.getScreenContext() + "\n"
+                + "- patientRoute: " + route + "\n"
+                + "- programWeek: " + week + "\n"
+                + "- programPhaseCode: " + phase + "\n"
+                + "- intent: " + intent + "\n"
+                + "Câu hỏi người dùng: " + request.getUserMessage();
+    }
+    private Map<String, Object> guideChatResponseSchema() {
+        return Map.of(
+                "type", "OBJECT",
+                "properties", Map.of(
+                        "answer", Map.of("type", "STRING"),
+                        "relatedTopicCode", Map.of("type", "STRING"),
+                        "suggestedActions", Map.of(
+                                "type", "ARRAY",
+                                "items", Map.of(
+                                        "type", "OBJECT",
+                                        "properties", Map.of(
+                                                "label", Map.of("type", "STRING"),
+                                                "route", Map.of("type", "STRING")),
+                                        "required", List.of("label", "route")))),
+                "required", List.of("answer", "relatedTopicCode", "suggestedActions"));
+    }
+
+    private String buildGuidedDiscoveryPrompt(GuidedDiscoveryRequestDto r, String knowledgeBlock) {
         String moodLine = r.getMoodScore() != null ? ("Mood=" + r.getMoodScore() + "/100.\n") : "";
         String emotionLine = (r.getEmotion() != null && !r.getEmotion().isBlank())
                 ? ("Cảm xúc: " + r.getEmotion() + "\n")
@@ -199,37 +622,44 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
         return ""
                 + "Bạn là một nhà trị liệu CBT. Nhiệm vụ: tạo 1-2 câu hỏi Socratic ngắn gọn bằng tiếng Việt.\n"
                 + "Không tư vấn y khoa. Không nhắc đến chính sách. Không giải thích dài.\n"
+                + "Phải ưu tiên bám sát tri thức CBT nội bộ bên dưới, không trả lời chung chung.\n"
                 + "Trả về DUY NHẤT một JSON object hợp lệ. Ký tự đầu tiên phải là { và ký tự cuối cùng phải là }.\n"
                 + "Không markdown. Không code fence. Không ```json. Không text ngoài JSON.\n"
                 + "Mỗi câu hỏi tối đa 120 ký tự. Schema bắt buộc: {\"questions\":[\"câu hỏi 1\",\"câu hỏi 2\"]}\n"
+                + "Tri thức CBT nội bộ:\n"
+                + knowledgeBlock + "\n"
                 + moodLine
                 + "Tình huống: " + r.getSituation() + "\n"
                 + "Suy nghĩ tự động: " + r.getAutomaticThought() + "\n"
                 + emotionLine;
     }
-
     private String cognitiveDistortionDefinitionsPrompt() {
         return ""
-                + "Cơ sở phân loại 12 Cognitive Distortions. Chỉ chọn code trong danh sách này nếu nội dung thật sự phù hợp:\n"
-                + "- ALL_OR_NOTHING: Tư duy trắng-đen; nhìn tình huống theo hai thái cực thay vì một dải liên tục.\n"
-                + "- CATASTROPHIZING: Thảm họa hóa/dự đoán tương lai tiêu cực mà bỏ qua kết quả thực tế hơn.\n"
-                + "- DISQUALIFYING_POSITIVE: Bác bỏ hoặc đánh giá thấp trải nghiệm, hành động, phẩm chất tích cực.\n"
-                + "- EMOTIONAL_REASONING: Cho rằng điều gì đó đúng chỉ vì cảm thấy/tin rất mạnh như vậy.\n"
-                + "- LABELING: Gắn nhãn tiêu cực, cố định, toàn diện cho bản thân hoặc người khác.\n"
-                + "- MAGNIFICATION_MINIMIZATION: Phóng đại điều tiêu cực hoặc thu nhỏ điều tích cực một cách vô lý.\n"
-                + "- MENTAL_FILTER: Chỉ chú ý một chi tiết tiêu cực thay vì nhìn toàn bộ bức tranh.\n"
-                + "- MIND_READING: Tin chắc mình biết người khác đang nghĩ gì mà không xét khả năng khác.\n"
-                + "- OVERGENERALIZATION: Rút ra kết luận tiêu cực bao quát vượt xa tình huống hiện tại.\n"
-                + "- PERSONALIZATION: Tự đổ lỗi cho phản ứng/hành vi tiêu cực của người khác mà bỏ qua giải thích hợp lý hơn.\n"
-                + "- SHOULD_MUST: Câu lệnh phải/nên cứng nhắc về cách bản thân hoặc người khác phải hành xử.\n"
-                + "- TUNNEL_VISION: Chỉ nhìn thấy các khía cạnh tiêu cực của một tình huống.\n";
+                + "CÃ†Â¡ sÃ¡Â»Å¸ phÃƒÂ¢n loÃ¡ÂºÂ¡i 12 Cognitive Distortions. ChÃ¡Â»â€° chÃ¡Â»Ân code trong danh sÃƒÂ¡ch nÃƒÂ y nÃ¡ÂºÂ¿u nÃ¡Â»â„¢i dung thÃ¡ÂºÂ­t sÃ¡Â»Â± phÃƒÂ¹ hÃ¡Â»Â£p:\n"
+                + "- ALL_OR_NOTHING: TÃ†Â° duy trÃ¡ÂºÂ¯ng-Ã„â€˜en; nhÃƒÂ¬n tÃƒÂ¬nh huÃ¡Â»â€˜ng theo hai thÃƒÂ¡i cÃ¡Â»Â±c thay vÃƒÂ¬ mÃ¡Â»â„¢t dÃ¡ÂºÂ£i liÃƒÂªn tÃ¡Â»Â¥c.\n"
+                + "- CATASTROPHIZING: ThÃ¡ÂºÂ£m hÃ¡Â»Âa hÃƒÂ³a/dÃ¡Â»Â± Ã„â€˜oÃƒÂ¡n tÃ†Â°Ã†Â¡ng lai tiÃƒÂªu cÃ¡Â»Â±c mÃƒÂ  bÃ¡Â»Â qua kÃ¡ÂºÂ¿t quÃ¡ÂºÂ£ thÃ¡Â»Â±c tÃ¡ÂºÂ¿ hÃ†Â¡n.\n"
+                + "- DISQUALIFYING_POSITIVE: BÃƒÂ¡c bÃ¡Â»Â hoÃ¡ÂºÂ·c Ã„â€˜ÃƒÂ¡nh giÃƒÂ¡ thÃ¡ÂºÂ¥p trÃ¡ÂºÂ£i nghiÃ¡Â»â€¡m, hÃƒÂ nh Ã„â€˜Ã¡Â»â„¢ng, phÃ¡ÂºÂ©m chÃ¡ÂºÂ¥t tÃƒÂ­ch cÃ¡Â»Â±c.\n"
+                + "- EMOTIONAL_REASONING: Cho rÃ¡ÂºÂ±ng Ã„â€˜iÃ¡Â»Âu gÃƒÂ¬ Ã„â€˜ÃƒÂ³ Ã„â€˜ÃƒÂºng chÃ¡Â»â€° vÃƒÂ¬ cÃ¡ÂºÂ£m thÃ¡ÂºÂ¥y/tin rÃ¡ÂºÂ¥t mÃ¡ÂºÂ¡nh nhÃ†Â° vÃ¡ÂºÂ­y.\n"
+                + "- LABELING: GÃ¡ÂºÂ¯n nhÃƒÂ£n tiÃƒÂªu cÃ¡Â»Â±c, cÃ¡Â»â€˜ Ã„â€˜Ã¡Â»â€¹nh, toÃƒÂ n diÃ¡Â»â€¡n cho bÃ¡ÂºÂ£n thÃƒÂ¢n hoÃ¡ÂºÂ·c ngÃ†Â°Ã¡Â»Âi khÃƒÂ¡c.\n"
+                + "- MAGNIFICATION_MINIMIZATION: PhÃƒÂ³ng Ã„â€˜Ã¡ÂºÂ¡i Ã„â€˜iÃ¡Â»Âu tiÃƒÂªu cÃ¡Â»Â±c hoÃ¡ÂºÂ·c thu nhÃ¡Â»Â Ã„â€˜iÃ¡Â»Âu tÃƒÂ­ch cÃ¡Â»Â±c mÃ¡Â»â„¢t cÃƒÂ¡ch vÃƒÂ´ lÃƒÂ½.\n"
+                + "- MENTAL_FILTER: ChÃ¡Â»â€° chÃƒÂº ÃƒÂ½ mÃ¡Â»â„¢t chi tiÃ¡ÂºÂ¿t tiÃƒÂªu cÃ¡Â»Â±c thay vÃƒÂ¬ nhÃƒÂ¬n toÃƒÂ n bÃ¡Â»â„¢ bÃ¡Â»Â©c tranh.\n"
+                + "- MIND_READING: Tin chÃ¡ÂºÂ¯c mÃƒÂ¬nh biÃ¡ÂºÂ¿t ngÃ†Â°Ã¡Â»Âi khÃƒÂ¡c Ã„â€˜ang nghÃ„Â© gÃƒÂ¬ mÃƒÂ  khÃƒÂ´ng xÃƒÂ©t khÃ¡ÂºÂ£ nÃ„Æ’ng khÃƒÂ¡c.\n"
+                + "- OVERGENERALIZATION: RÃƒÂºt ra kÃ¡ÂºÂ¿t luÃ¡ÂºÂ­n tiÃƒÂªu cÃ¡Â»Â±c bao quÃƒÂ¡t vÃ†Â°Ã¡Â»Â£t xa tÃƒÂ¬nh huÃ¡Â»â€˜ng hiÃ¡Â»â€¡n tÃ¡ÂºÂ¡i.\n"
+                + "- PERSONALIZATION: TÃ¡Â»Â± Ã„â€˜Ã¡Â»â€¢ lÃ¡Â»â€”i cho phÃ¡ÂºÂ£n Ã¡Â»Â©ng/hÃƒÂ nh vi tiÃƒÂªu cÃ¡Â»Â±c cÃ¡Â»Â§a ngÃ†Â°Ã¡Â»Âi khÃƒÂ¡c mÃƒÂ  bÃ¡Â»Â qua giÃ¡ÂºÂ£i thÃƒÂ­ch hÃ¡Â»Â£p lÃƒÂ½ hÃ†Â¡n.\n"
+                + "- SHOULD_MUST: CÃƒÂ¢u lÃ¡Â»â€¡nh phÃ¡ÂºÂ£i/nÃƒÂªn cÃ¡Â»Â©ng nhÃ¡ÂºÂ¯c vÃ¡Â»Â cÃƒÂ¡ch bÃ¡ÂºÂ£n thÃƒÂ¢n hoÃ¡ÂºÂ·c ngÃ†Â°Ã¡Â»Âi khÃƒÂ¡c phÃ¡ÂºÂ£i hÃƒÂ nh xÃ¡Â»Â­.\n"
+                + "- TUNNEL_VISION: ChÃ¡Â»â€° nhÃƒÂ¬n thÃ¡ÂºÂ¥y cÃƒÂ¡c khÃƒÂ­a cÃ¡ÂºÂ¡nh tiÃƒÂªu cÃ¡Â»Â±c cÃ¡Â»Â§a mÃ¡Â»â„¢t tÃƒÂ¬nh huÃ¡Â»â€˜ng.\n";
     }
 
-    private String buildStandardRiskPrompt(JournalType journalType, String journalJsonContent) {
+    private String buildStandardRiskPrompt(
+            JournalType journalType,
+            String journalJsonContent,
+            String knowledgeBlock) {
         return ""
                 + "Bạn là chuyên gia phân tích tâm lý theo Liệu pháp Nhận thức Hành vi (CBT).\n"
                 + "Nhiệm vụ: phân tích đoạn Nhật ký suy nghĩ (Thought Record) của bệnh nhân theo risk và lỗi tư duy, rồi trả về DUY NHẤT một JSON object hợp lệ.\n"
                 + "Không markdown, không code fence, không giải thích ngoài JSON.\n\n"
+                + "Tri thức CBT / safety nội bộ được retrieve:\n"
+                + knowledgeBlock + "\n\n"
                 + "Schema bắt buộc:\n"
                 + "{\n"
                 + "  \"aiRiskScore\": 0 | 70 | 100,\n"
@@ -239,7 +669,7 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
                 + "}\n\n"
                 + "Tiêu chí chấm điểm rủi ro:\n"
                 + "- 0 / NORMAL: suy nghĩ tiêu cực, buồn bã, chán nản thông thường; không có nguy cơ đe dọa tính mạng.\n"
-                + "- 70 / CORE_BELIEF: tuyệt vọng sâu sắc, bế tắc tột cùng, buông xuôi mờ nhạt như \"tôi muốn biến mất\", \"không còn hy vọng\".\n"
+                + "- 70 / CORE_BELIEF: tuyệt vọng sâu sắc, bế tắc tột cùng, buông xuôi mờ nhạt như 'tôi muốn biến mất', 'không còn hy vọng'.\n"
                 + "- 100 / LIFE_THREAT: có ý định tự sát rõ ràng, kế hoạch tự hại, nhắc tới cái chết hoặc hành vi tự hại.\n\n"
                 + cognitiveDistortionDefinitionsPrompt()
                 + "\n"
@@ -251,24 +681,139 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
 
     private String buildRiskPrompt(JournalType journalType, String journalJsonContent) {
         return ""
-                + "Bạn là hệ thống phân loại rủi ro ngôn ngữ (NLP) cho ứng dụng CBT.\n"
-                + "Hãy phân loại mức rủi ro từ nội dung nhật ký. Chỉ cần 3 mức:\n"
+                + "BÃ¡ÂºÂ¡n lÃƒÂ  hÃ¡Â»â€¡ thÃ¡Â»â€˜ng phÃƒÂ¢n loÃ¡ÂºÂ¡i rÃ¡Â»Â§i ro ngÃƒÂ´n ngÃ¡Â»Â¯ (NLP) cho Ã¡Â»Â©ng dÃ¡Â»Â¥ng CBT.\n"
+                + "HÃƒÂ£y phÃƒÂ¢n loÃ¡ÂºÂ¡i mÃ¡Â»Â©c rÃ¡Â»Â§i ro tÃ¡Â»Â« nÃ¡Â»â„¢i dung nhÃ¡ÂºÂ­t kÃƒÂ½. ChÃ¡Â»â€° cÃ¡ÂºÂ§n 3 mÃ¡Â»Â©c:\n"
                 + "- 0: NORMAL\n"
-                + "- 70: CORE_BELIEF_ACTIVATION (bế tắc cùng cực, bất lực, vô giá trị, không thể yêu thương)\n"
-                + "- 100: LIFE_THREAT (từ khoá tự sát/cái chết/ý định tự hại)\n"
-                + "Đầu ra BẮT BUỘC là JSON thuần đúng schema: {\"aiRiskScore\":0|70|100,\"severityLevel\":\"NORMAL|CORE_BELIEF|LIFE_THREAT\"}\n"
+                + "- 70: CORE_BELIEF_ACTIVATION (bÃ¡ÂºÂ¿ tÃ¡ÂºÂ¯c cÃƒÂ¹ng cÃ¡Â»Â±c, bÃ¡ÂºÂ¥t lÃ¡Â»Â±c, vÃƒÂ´ giÃƒÂ¡ trÃ¡Â»â€¹, khÃƒÂ´ng thÃ¡Â»Æ’ yÃƒÂªu thÃ†Â°Ã†Â¡ng)\n"
+                + "- 100: LIFE_THREAT (tÃ¡Â»Â« khoÃƒÂ¡ tÃ¡Â»Â± sÃƒÂ¡t/cÃƒÂ¡i chÃ¡ÂºÂ¿t/ÃƒÂ½ Ã„â€˜Ã¡Â»â€¹nh tÃ¡Â»Â± hÃ¡ÂºÂ¡i)\n"
+                + "Ã„ÂÃ¡ÂºÂ§u ra BÃ¡ÂºÂ®T BUÃ¡Â»ËœC lÃƒÂ  JSON thuÃ¡ÂºÂ§n Ã„â€˜ÃƒÂºng schema: {\"aiRiskScore\":0|70|100,\"severityLevel\":\"NORMAL|CORE_BELIEF|LIFE_THREAT\"}\n"
                 + "journalType=" + journalType.name() + "\n"
                 + "journalJson=" + journalJsonContent;
     }
 
-    private String buildCognitiveDistortionsPrompt(CognitiveDistortionRequestDto r, int max) {
+    private String buildCognitiveDistortionsPrompt(CognitiveDistortionRequestDto r, int max, String knowledgeBlock) {
         return ""
-                + "Bạn là chuyên gia CBT. Nhiệm vụ: dựa vào 'automaticThought' và 'situation' để gợi ý 1-3 lỗi tư duy.\n"
+                + "Bạn là chuyên gia CBT. Nhiệm vụ: dựa vào automaticThought và situation để gợi ý 1-3 lỗi tư duy.\n"
+                + "Phải bám sát tri thức CBT retrieve bên dưới, không gắn nhãn tuỳ tiện.\n"
+                + "Tri thức retrieve:\n"
+                + knowledgeBlock + "\n"
                 + cognitiveDistortionDefinitionsPrompt()
                 + "Đầu ra BẮT BUỘC là JSON thuần đúng schema: {\"distortions\":[\"CODE\"...],\"hint\":\"...\"}\n"
                 + "Quy tắc: distortions dài tối đa " + max + " phần tử; hint 1 câu ngắn tiếng Việt.\n"
                 + "situation=" + r.getSituation() + "\n"
                 + "automaticThought=" + r.getAutomaticThought();
+    }
+
+    private List<GuideKnowledgeCard> retrieveThoughtRecordKnowledge(
+            String situation,
+            String automaticThought,
+            String emotion,
+            String adaptiveResponse,
+            String intent) {
+        return guideKnowledgeRetrieverService.retrieve(
+                buildThoughtRecordKnowledgeQuery(situation, automaticThought, emotion, adaptiveResponse, intent));
+    }
+
+    private List<GuideKnowledgeCard> retrieveJournalRiskKnowledge(
+            JournalType journalType,
+            String journalJsonContent,
+            int currentRiskScore) {
+        return guideKnowledgeRetrieverService.retrieve(
+                buildJournalRiskKnowledgeQuery(journalType, journalJsonContent, currentRiskScore));
+    }
+
+    private AiKnowledgeQueryDto buildThoughtRecordKnowledgeQuery(
+            String situation,
+            String automaticThought,
+            String emotion,
+            String adaptiveResponse,
+            String intent) {
+        AiKnowledgeQueryDto query = new AiKnowledgeQueryDto();
+        query.setScreenContext("thought-record");
+        query.setTopicHint("THOUGHT_RECORD");
+        query.setIntent(intent);
+        query.setJournalType(JournalType.THOUGHT_RECORD.name());
+        query.setUserMessage(String.join("\n",
+                safeInput("situation", situation),
+                safeInput("automaticThought", automaticThought),
+                safeInput("emotion", emotion),
+                safeInput("adaptiveResponse", adaptiveResponse)));
+        return query;
+    }
+
+    private AiKnowledgeQueryDto buildJournalRiskKnowledgeQuery(
+            JournalType journalType,
+            String journalJsonContent,
+            int currentRiskScore) {
+        Map<String, Object> content = parseJournalContent(journalJsonContent);
+        AiKnowledgeQueryDto query = new AiKnowledgeQueryDto();
+        query.setScreenContext("thought-record");
+        query.setTopicHint("THOUGHT_RECORD_RISK");
+        query.setIntent("JOURNAL_RISK");
+        query.setJournalType(journalType != null ? journalType.name() : "");
+        query.setCurrentRiskScore(currentRiskScore);
+        query.setUserMessage(String.join("\n",
+                safeInput("situation", content.get("situation")),
+                safeInput("automaticThought", content.get("automaticThought")),
+                safeInput("emotion", content.get("emotion")),
+                safeInput("worstPrediction", content.get("worstPrediction")),
+                safeInput("adaptiveResponse", content.get("adaptiveResponse")),
+                safeInput("behavioralExperimentIdea", content.get("behavioralExperimentIdea"))));
+        return query;
+    }
+
+    private AiKnowledgeQueryDto buildGuideKnowledgeQuery(GuideChatRequestDto request, String intent) {
+        AiKnowledgeQueryDto query = new AiKnowledgeQueryDto();
+        query.setUserMessage(request.getUserMessage());
+        query.setScreenContext(request.getScreenContext());
+        query.setPatientRoute(request.getPatientRoute());
+        query.setProgramPhaseCode(request.getProgramPhaseCode());
+        query.setProgramWeek(request.getProgramWeek());
+        query.setIntent(intent);
+        query.setCurrentRiskScore(request.getCurrentRiskScore());
+        query.setTopicHint(guideChatRoutingService.detectTopicHint(
+                request.getUserMessage(),
+                request.getScreenContext(),
+                intent));
+        return query;
+    }
+
+    private String resolveKnowledgeBlock(
+            AiKnowledgeQueryDto query,
+            List<GuideKnowledgeCard> fallbackCards,
+            String fallbackText) {
+        try {
+            RagContextBundle rag = ragRetrievalService.retrieve(query);
+            if (rag.isVectorUsed() && rag.getKnowledgeBlock() != null && !rag.getKnowledgeBlock().isBlank()) {
+                return rag.getKnowledgeBlock();
+            }
+        } catch (Exception exception) {
+            log.warn("RAG retrieval fallback triggered: {}", exception.getMessage());
+        }
+        return buildKnowledgeBlock(fallbackCards, fallbackText);
+    }
+    private Map<String, Object> parseJournalContent(String journalJsonContent) {
+        try {
+            return objectMapper.readValue(journalJsonContent, new TypeReference<>() {
+            });
+        } catch (Exception exception) {
+            return new HashMap<>();
+        }
+    }
+
+    private String safeInput(String label, Object value) {
+        String text = value == null ? "" : String.valueOf(value).trim();
+        return label + "=" + text;
+    }
+
+    private String buildKnowledgeBlock(List<GuideKnowledgeCard> matchedCards, String fallbackText) {
+        if (matchedCards == null || matchedCards.isEmpty()) {
+            return fallbackText;
+        }
+        return matchedCards.stream()
+                .limit(aiProperties.getGuide().getTopK())
+                .map(card -> "- " + card.getTopicCode() + ": " + card.getContent())
+                .collect(Collectors.joining("\n"));
     }
 
     private String generateContent(String prompt, int maxOutputTokens, double temperature) {
@@ -405,7 +950,7 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
             if (item != null) {
                 String s = String.valueOf(item).trim();
                 if (!s.isBlank()) {
-                    out.add(s);
+                    out.add(cleanText(s));
                 }
             }
         }
@@ -440,7 +985,7 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
                     }
                 }
             }
-            String reason = node.path("reason").asText("");
+            String reason = cleanText(node.path("reason").asText(""));
             return new JournalAiRiskResultDto(score, severity, distortions, reason);
         } catch (Exception e) {
             return new JournalAiRiskResultDto(0, "NORMAL");
@@ -464,7 +1009,7 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
                     }
                 }
             }
-            String hint = node.path("hint").asText(null);
+            String hint = cleanText(node.path("hint").asText(null));
             return new CognitiveDistortionResponseDto(list, hint);
         } catch (Exception e) {
             return new CognitiveDistortionResponseDto(List.of(), null);
@@ -497,4 +1042,12 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
         }
         return t;
     }
+
 }
+
+
+
+
+
+
+

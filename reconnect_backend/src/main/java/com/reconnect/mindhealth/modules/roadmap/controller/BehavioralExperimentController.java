@@ -47,6 +47,17 @@ public class BehavioralExperimentController {
         }
     }
 
+    @PostMapping("/select")
+    public ResponseEntity<ApiResponse<BehavioralExperimentDto>> select(
+            @RequestParam UUID patientId,
+            @RequestParam UUID ladderItemId) {
+        try {
+            return ResponseEntity.ok(ApiResponse.success("OK", fearLadderService.selectExperiment(patientId, ladderItemId)));
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.error(e.getMessage()));
+        }
+    }
+
     @PostMapping("/{id}/start")
     public ResponseEntity<ApiResponse<BehavioralExperimentDto>> start(
             @PathVariable UUID id,

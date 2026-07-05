@@ -1,0 +1,15 @@
+-- ReConnect MindHealth
+-- V8 - Telehealth / booster foundation
+--
+-- Mục đích:
+-- - Đánh dấu mốc quản lý lịch hẹn, booster, tapering bằng Flyway.
+-- - Chuẩn bị nền cho các thay đổi schema của:
+--   appointments, therapist schedule slots, booster purpose/status.
+--
+-- Các bảng/liên quan chính:
+-- - appointments
+-- - therapist_schedule_slots
+-- - therapist_weekly_schedule_slots
+-- - patient_profiles
+--
+-- Batch hiện tại chỉ tạo marker migration an toàn.

@@ -1,84 +1,206 @@
+﻿import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
-import '../../../../shared/widgets/mindhealth_scaffold.dart';
+import 'package:provider/provider.dart';
 
-class ProgressScreen extends StatelessWidget {
+import '../../../../shared/widgets/mindhealth_scaffold.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../data/models/lsas_progress_model.dart';
+import '../../data/repositories/assessment_repository.dart';
+
+class ProgressScreen extends StatefulWidget {
   const ProgressScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Mock LSAS trend over 8 weeks
-    final dataPoints = [
-      const FlSpot(0, 18), // Week 0: Severe
-      const FlSpot(2, 14), // Week 2: Moderate
-      const FlSpot(4, 9),  // Week 4: Mild
-      const FlSpot(6, 4),  // Week 6: Minimal
-      const FlSpot(8, 3),  // Week 8: Recovery
-    ];
+  State<ProgressScreen> createState() => _ProgressScreenState();
+}
 
+class _ProgressScreenState extends State<ProgressScreen> {
+  final AssessmentRepository _repository = AssessmentRepository();
+  Future<LsasProgressResponseModel>? _future;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _future ??= _repository.getLsasProgress(
+      token: Provider.of<AuthProvider>(context, listen: false).loginResponse?.token,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return MindHealthScaffold(
-      title: 'Tiến trình Phục hồi',
-      body: ListView(
-        padding: const EdgeInsets.all(24),
-        children: [
-          const Text(
-            'Tiến độ LSAS/Fear Ladder của bạn',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Biểu đồ thể hiện mức độ trầm cảm của bạn giảm dần qua các tuần trị liệu.',
-            style: TextStyle(color: Colors.grey),
-          ),
-          const SizedBox(height: 40),
-          
-          SizedBox(
-            height: 250,
-            child: LineChart(
-              LineChartData(
-                gridData: const FlGridData(show: false),
-                titlesData: FlTitlesData(
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (value, meta) {
-                        return Text('W${value.toInt()}', style: const TextStyle(fontSize: 10));
-                      },
+      title: 'Tiến trình Phục hồi LSAS',
+      body: FutureBuilder<LsasProgressResponseModel>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'Không tải được dữ liệu tiến trình phục hồi LSAS.\n${snapshot.error}',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            );
+          }
+
+          final progress = snapshot.data;
+          if (progress == null || progress.chartData.isEmpty) {
+            return const Center(
+              child: Text('Chưa có dữ liệu tiến trình phục hồi LSAS để hiển thị.'),
+            );
+          }
+
+          final dataPoints = _toChartSpots(progress.chartData);
+
+          return ListView(
+            padding: const EdgeInsets.all(24),
+            children: [
+              const Text(
+                'Tiến trình Phục hồi LSAS',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Biểu đồ thể hiện mức độ Lo âu xã hội của bạn giảm dần qua các tuần trị liệu.',
+                style: TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 24),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: SizedBox(
+                  height: 280,
+                  child: LineChart(
+                    LineChartData(
+                      minX: 0,
+                      maxX: 8,
+                      minY: 0,
+                      maxY: 144,
+                      gridData: FlGridData(
+                        show: true,
+                        horizontalInterval: 30,
+                        drawVerticalLine: false,
+                        getDrawingHorizontalLine: (value) => FlLine(
+                          color: Colors.grey.shade200,
+                          strokeWidth: 1,
+                        ),
+                      ),
+                      titlesData: FlTitlesData(
+                        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 34,
+                            interval: 30,
+                            getTitlesWidget: (value, meta) {
+                              const allowed = {0, 30, 60, 90, 120};
+                              if (!allowed.contains(value.toInt())) {
+                                return const SizedBox.shrink();
+                              }
+                              return Text(
+                                value.toInt().toString(),
+                                style: const TextStyle(fontSize: 11),
+                              );
+                            },
+                          ),
+                        ),
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 28,
+                            getTitlesWidget: (value, meta) {
+                              final labels = {
+                                0: 'W0',
+                                2: 'W2',
+                                4: 'W4',
+                                6: 'W6',
+                                8: 'W8',
+                              };
+                              final label = labels[value.toInt()];
+                              if (label == null) {
+                                return const SizedBox.shrink();
+                              }
+                              return Text(label, style: const TextStyle(fontSize: 11));
+                            },
+                          ),
+                        ),
+                      ),
+                      borderData: FlBorderData(
+                        show: true,
+                        border: Border.all(color: Colors.grey.shade300),
+                      ),
+                      lineBarsData: [
+                        _buildLineChart(dataPoints),
+                      ],
                     ),
                   ),
-                  leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 30)),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 ),
-                borderData: FlBorderData(show: true, border: Border.all(color: Colors.grey[300]!)),
-                lineBarsData: [
-                  LineChartWidgetData(dataPoints),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildScoreChip('Điểm ban đầu', progress.startScore),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildScoreChip('Điểm hiện tại', progress.currentScore),
+                  ),
                 ],
               ),
-            ),
-          ),
-          
-          const SizedBox(height: 40),
-          _buildInsightCard(
-            title: 'Sự tiến bộ vượt bậc!',
-            content: 'Bạn đã giảm từ 18 điểm (Nặng) xuống còn 3 điểm (Ổn định). Đây là kết quả của việc bạn đã kiên trì thực hiện Nhật ký suy nghĩ và Bài tập về nhà.',
-            icon: Icons.trending_down,
-            color: Colors.green[50]!,
-          ),
-          
-          const SizedBox(height: 16),
-          _buildInsightCard(
-            title: 'Giai đoạn Duy trì',
-            content: 'Hiện tại bạn đang ở chế độ duy trì. Hãy tiếp tục đọc Thẻ đối phó hàng ngày để phòng ngừa tái phát.',
-            icon: Icons.shield_outlined,
-            color: Colors.blue[50]!,
-          ),
-        ],
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEAF8EC),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFB9E2C0)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.celebration_outlined, color: Color(0xFF2E7D32)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        progress.insightMessage,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          height: 1.4,
+                          color: Color(0xFF1B5E20),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  LineChartBarData LineChartWidgetData(List<FlSpot> spots) {
+  List<FlSpot> _toChartSpots(List<LsasProgressPointModel> chartData) {
+    final labels = {'W0': 0.0, 'W2': 2.0, 'W4': 4.0, 'W6': 6.0, 'W8': 8.0};
+    return chartData
+        .map((item) => FlSpot(labels[item.weekLabel] ?? 0, item.totalScore.toDouble()))
+        .toList();
+  }
+
+  LineChartBarData _buildLineChart(List<FlSpot> spots) {
     return LineChartBarData(
       spots: spots,
       isCurved: true,
@@ -88,31 +210,27 @@ class ProgressScreen extends StatelessWidget {
       dotData: const FlDotData(show: true),
       belowBarData: BarAreaData(
         show: true,
-        color: const Color(0xFF6C63FF).withOpacity(0.1),
+        color: const Color(0xFF6C63FF).withOpacity(0.12),
       ),
     );
   }
 
-  Widget _buildInsightCard({required String title, required String content, required IconData icon, required Color color}) {
+  Widget _buildScoreChip(String label, int score) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade300),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: const Color(0xFF6C63FF)),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                Text(content, style: const TextStyle(fontSize: 12, color: Colors.black87)),
-              ],
-            ),
+          Text(label, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+          const SizedBox(height: 4),
+          Text(
+            '$score điểm',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
         ],
       ),

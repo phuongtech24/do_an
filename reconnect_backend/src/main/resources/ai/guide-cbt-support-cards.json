@@ -1,0 +1,52 @@
+[
+  {
+    "topicCode": "COPING_CARDS_LIGHT",
+    "screenScope": ["home", "daily-checkin", "thought-record"],
+    "routeScope": [],
+    "phaseScope": [],
+    "intentScope": ["CBT_SUPPORT_LIGHT"],
+    "topicAliases": ["support-light", "anxiety-support"],
+    "keywords": ["toi dang lo", "toi lo", "tran an", "ho tro nhe", "binh tinh", "coping card", "lo qua", "bat dau tu dau"],
+    "content": "Khi mức lo âu đang tăng nhưng chưa ở vùng nguy cơ cao, hệ thống ưu tiên các hỗ trợ ngắn như thẻ đối phó, nhắc thở chậm, hoặc gợi ý một bước rất nhỏ thay vì ép người dùng xử lý quá nhiều việc cùng lúc.",
+    "suggestedActions": [
+      { "label": "Xem thẻ đối phó", "route": "/coping-cards" },
+      { "label": "Quay lại trang chủ", "route": "/home" }
+    ]
+  },
+  {
+    "topicCode": "THOUGHT_RECORD_WHEN_TO_USE",
+    "screenScope": ["home", "daily-checkin", "thought-record"],
+    "routeScope": [],
+    "phaseScope": [],
+    "keywords": ["khi nao viet", "khi nao dung thought record", "phan bien", "suy nghi tu dong"],
+    "content": "Thought Record phù hợp nhất khi người dùng đang mắc kẹt trong lo âu dự đoán trước một tình huống xã hội hoặc nhai lại sau một sự kiện. Công cụ này giúp đưa suy nghĩ tự động ra ánh sáng và phản biện lại các cách diễn giải tiêu cực.",
+    "suggestedActions": [
+      { "label": "Mở Thought Record", "route": "/thought-record" },
+      { "label": "Xem nhật ký", "route": "/journal" }
+    ]
+  },
+  {
+    "topicCode": "SAFETY_BEHAVIORS_EXPLAINER",
+    "screenScope": ["roadmap", "behavioral-experiment", "thought-record"],
+    "routeScope": ["SELF_HELP", "THERAPIST_TRACK_14_WEEKS"],
+    "phaseScope": ["MAP_AND_BELIEF_BREAK", "REAL_WORLD_EXPERIMENTS"],
+    "keywords": ["hanh vi an toan", "safety behavior", "ne tranh", "che giau"],
+    "content": "Hành vi an toàn là những cách người bệnh dùng để tự bảo vệ mình khỏi bị chú ý hoặc bị đánh giá, ví dụ tránh giao tiếp mắt, nói rất nhanh hoặc chuẩn bị quá mức. Chúng làm giảm lo âu ngắn hạn nhưng lại duy trì niềm tin sợ hãi về lâu dài.",
+    "suggestedActions": [
+      { "label": "Xem lộ trình", "route": "/roadmap" },
+      { "label": "Thiết lập bài thực hành", "route": "/roadmap" }
+    ]
+  },
+  {
+    "topicCode": "BEHAVIORAL_EXPERIMENT_WHEN_TO_USE",
+    "screenScope": ["roadmap", "behavioral-experiment"],
+    "routeScope": ["SELF_HELP", "THERAPIST_TRACK_14_WEEKS"],
+    "phaseScope": ["REAL_WORLD_EXPERIMENTS"],
+    "keywords": ["thu nghiem hanh vi", "behavioral experiment", "thuc hanh", "kiem chung"],
+    "content": "Behavioral Experiment được dùng khi người bệnh cần kiểm chứng một dự đoán sợ hãi ngoài đời thật, ví dụ sợ bị cười chê khi phát biểu. Bài tập này so sánh điều mình lo với điều thực tế xảy ra để tạo bằng chứng mới, cụ thể hơn là chỉ suy nghĩ trong đầu.",
+    "suggestedActions": [
+      { "label": "Mở lộ trình", "route": "/roadmap" },
+      { "label": "Tổng kết bài thực hành", "route": "/roadmap" }
+    ]
+  }
+]

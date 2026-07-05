@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.reconnect.mindhealth.common.util.PatientProfileFieldValidator;
 import com.reconnect.mindhealth.modules.clinical.dto.PatientProfileDto;
 import com.reconnect.mindhealth.modules.clinical.dto.PatientProfileUpdateRequestDto;
 import com.reconnect.mindhealth.modules.clinical.dto.PatientSafetyGateRequestDto;
@@ -52,19 +53,25 @@ public class PatientProfileSelfService {
             profile.setGender(trimToNull(request.getGender()));
         }
         if (request.getPhoneNumber() != null) {
-            profile.setPhoneNumber(trimToNull(request.getPhoneNumber()));
+            profile.setPhoneNumber(PatientProfileFieldValidator.normalizePhone(
+                    request.getPhoneNumber(),
+                    "Số điện thoại cá nhân",
+                    false));
         }
         if (request.getEmergencyContactPhone() != null) {
-            profile.setEmergencyContactPhone(trimToNull(request.getEmergencyContactPhone()));
+            profile.setEmergencyContactPhone(PatientProfileFieldValidator.normalizePhone(
+                    request.getEmergencyContactPhone(),
+                    "Số điện thoại người liên hệ khẩn cấp",
+                    false));
         }
         if (request.getEducationLevel() != null) {
-            profile.setEducationLevel(trimToNull(request.getEducationLevel()));
+            profile.setEducationLevel(PatientProfileFieldValidator.normalizeEducationLevel(request.getEducationLevel()));
         }
         if (request.getOccupation() != null) {
             profile.setOccupation(trimToNull(request.getOccupation()));
         }
         if (request.getRelationshipStatus() != null) {
-            profile.setRelationshipStatus(trimToNull(request.getRelationshipStatus()));
+            profile.setRelationshipStatus(PatientProfileFieldValidator.normalizeRelationshipStatus(request.getRelationshipStatus()));
         }
         if (request.getMedicalHistory() != null) {
             profile.setMedicalHistory(trimToNull(request.getMedicalHistory()));
@@ -93,11 +100,11 @@ public class PatientProfileSelfService {
         if (isBlank(request.getRealFullName())) {
             throw new IllegalArgumentException("Họ tên thật là bắt buộc.");
         }
-        if (isBlank(request.getPhoneNumber())) {
-            throw new IllegalArgumentException("Số điện thoại cá nhân là bắt buộc.");
-        }
         profile.setRealFullName(request.getRealFullName().trim());
-        profile.setPhoneNumber(request.getPhoneNumber().trim());
+        profile.setPhoneNumber(PatientProfileFieldValidator.normalizePhone(
+                request.getPhoneNumber(),
+                "Số điện thoại cá nhân",
+                true));
         profile.setSafetyGateCompleted(true);
         return new PatientProfileDto(patientProfileRepository.save(profile));
     }
@@ -134,11 +141,7 @@ public class PatientProfileSelfService {
     }
 
     private String trimToNull(String value) {
-        if (value == null) {
-            return null;
-        }
-        String trimmed = value.trim();
-        return trimmed.isEmpty() ? null : trimmed;
+        return PatientProfileFieldValidator.trimToNull(value);
     }
 
     private boolean isBlank(String value) {

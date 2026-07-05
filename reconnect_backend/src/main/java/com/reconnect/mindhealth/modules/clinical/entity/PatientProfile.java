@@ -7,6 +7,7 @@ import com.reconnect.mindhealth.common.domain.BaseObject;
 import com.reconnect.mindhealth.modules.auth.entity.User;
 import com.reconnect.mindhealth.modules.clinical.enums.Status;
 import com.reconnect.mindhealth.modules.clinical.enums.TaperingStage;
+import com.reconnect.mindhealth.modules.clinical.enums.TriageStatus;
 
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
@@ -35,7 +36,7 @@ public class PatientProfile extends BaseObject {
     @JoinColumn(name = "therapist_id")
     private TherapistProfile therapist;
 
-    @Column(name = "nickname", unique = true)
+    @Column(name = "nickname")
     private String nickName = "";
 
     @Enumerated(EnumType.STRING)
@@ -109,8 +110,27 @@ public class PatientProfile extends BaseObject {
     @Column(name = "current_cycle_start_date")
     private java.time.LocalDateTime currentCycleStartDate;
 
+    @Column(name = "therapy_program_started_at")
+    private java.time.LocalDateTime therapyProgramStartedAt;
+
+    @Column(name = "current_program_week")
+    private Integer currentProgramWeek;
+
     @Column(name = "graduated_at")
     private java.time.LocalDateTime graduatedAt;
+
+    @Column(name = "triage_required")
+    private Boolean triageRequired = false;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "triage_status")
+    private TriageStatus triageStatus;
+
+    @Column(name = "triage_priority")
+    private Integer triagePriority;
+
+    @Column(name = "triage_triggered_at")
+    private java.time.LocalDateTime triageTriggeredAt;
 
     @Column(name = "psychoeducation_completed")
     private Boolean psychoeducationCompleted = false;
@@ -270,6 +290,38 @@ public class PatientProfile extends BaseObject {
         this.medicalProfileCompleted = medicalProfileCompleted;
     }
 
+    public Boolean getTriageRequired() {
+        return triageRequired;
+    }
+
+    public void setTriageRequired(Boolean triageRequired) {
+        this.triageRequired = triageRequired;
+    }
+
+    public TriageStatus getTriageStatus() {
+        return triageStatus;
+    }
+
+    public void setTriageStatus(TriageStatus triageStatus) {
+        this.triageStatus = triageStatus;
+    }
+
+    public Integer getTriagePriority() {
+        return triagePriority;
+    }
+
+    public void setTriagePriority(Integer triagePriority) {
+        this.triagePriority = triagePriority;
+    }
+
+    public java.time.LocalDateTime getTriageTriggeredAt() {
+        return triageTriggeredAt;
+    }
+
+    public void setTriageTriggeredAt(java.time.LocalDateTime triageTriggeredAt) {
+        this.triageTriggeredAt = triageTriggeredAt;
+    }
+
     public String getGoalsJson() {
         return goalsJson;
     }
@@ -335,6 +387,22 @@ public class PatientProfile extends BaseObject {
 
     public void setCurrentCycleStartDate(java.time.LocalDateTime currentCycleStartDate) {
         this.currentCycleStartDate = currentCycleStartDate;
+    }
+
+    public java.time.LocalDateTime getTherapyProgramStartedAt() {
+        return therapyProgramStartedAt;
+    }
+
+    public void setTherapyProgramStartedAt(java.time.LocalDateTime therapyProgramStartedAt) {
+        this.therapyProgramStartedAt = therapyProgramStartedAt;
+    }
+
+    public Integer getCurrentProgramWeek() {
+        return currentProgramWeek;
+    }
+
+    public void setCurrentProgramWeek(Integer currentProgramWeek) {
+        this.currentProgramWeek = currentProgramWeek;
     }
 
     public java.time.LocalDateTime getGraduatedAt() {

@@ -133,8 +133,8 @@ class _MainAdminScreenState extends State<MainAdminScreen> {
             const SizedBox(height: 12),
             _menuItem(
               icon: Icons.library_books_outlined,
-              label: 'Kho nội dung CBT',
-              subtitle: 'Quản lý nội dung và flow',
+              label: 'Kho nội dung trị liệu',
+              subtitle: 'Quản lý thư viện tình huống mẫu',
               index: 1,
             ),
             const SizedBox(height: 12),
@@ -235,7 +235,7 @@ class _MainAdminScreenState extends State<MainAdminScreen> {
   }
 
   Widget _buildTopBar({required bool compact}) {
-    const labels = ['Hồ sơ bệnh nhân', 'Kho nội dung CBT', 'Quản lý chuyên gia'];
+    const labels = ['Hồ sơ bệnh nhân', 'Kho nội dung trị liệu', 'Quản lý chuyên gia'];
 
     return Container(
       margin: compact ? EdgeInsets.zero : const EdgeInsets.fromLTRB(0, 20, 20, 0),

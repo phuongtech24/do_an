@@ -14,8 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.reconnect.mindhealth.modules.assessment.entity.LsasAnswer;
 import com.reconnect.mindhealth.modules.assessment.enums.LsasSituationGroup;
+import com.reconnect.mindhealth.modules.assessment.entity.LsasAnswer;
 import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
 import com.reconnect.mindhealth.modules.roadmap.dto.BehavioralExperimentDebriefRequestDto;
@@ -33,7 +33,6 @@ import com.reconnect.mindhealth.modules.roadmap.enums.FearLadderBucket;
 import com.reconnect.mindhealth.modules.roadmap.enums.FearLadderStatus;
 import com.reconnect.mindhealth.modules.roadmap.enums.PatientGoalStatus;
 import com.reconnect.mindhealth.modules.roadmap.enums.PatientGoalType;
-import com.reconnect.mindhealth.modules.roadmap.enums.QuestSourceType;
 import com.reconnect.mindhealth.modules.roadmap.repository.BehavioralExperimentRepository;
 import com.reconnect.mindhealth.modules.roadmap.repository.FearLadderItemRepository;
 import com.reconnect.mindhealth.modules.roadmap.repository.PatientGoalRepository;
@@ -67,17 +66,16 @@ public class FearLadderService {
     @Transactional
     public List<FearLadderItemDto> rebuildFromBaseline(PatientProfile patient, List<LsasAnswer> answers) {
         fearLadderItemRepository.deleteByPatientProfile_Id(patient.getId());
-        PatientGoalType primaryGoalType = resolvePrimaryGoalType(patient.getId());
+        PatientGoalType activeGoalType = resolveActiveGoalType(patient.getId());
         List<LsasAnswer> scored = answers.stream()
                 .filter(answer -> answer.getTotalScore() != null && answer.getTotalScore() > 0)
                 .sorted(Comparator
-                        .comparing((LsasAnswer answer) -> !matchesGoal(answer.getSituation().getSituationGroup(), primaryGoalType))
+                        .comparing(
+                                (LsasAnswer answer) -> isGoalMatch(activeGoalType, answer.getSituation().getSituationGroup()),
+                                Comparator.reverseOrder())
                         .thenComparing(LsasAnswer::getTotalScore)
                         .thenComparing(answer -> answer.getSituation().getSituationNumber()))
                 .toList();
-        long goalMatchedCount = scored.stream()
-                .filter(answer -> matchesGoal(answer.getSituation().getSituationGroup(), primaryGoalType))
-                .count();
 
         int order = 1;
         for (LsasAnswer answer : scored) {
@@ -95,27 +93,22 @@ public class FearLadderService {
             item.setStatus(FearLadderStatus.ACTIVE);
             fearLadderItemRepository.save(item);
         }
-        log.info(
-                "Fear ladder rebuilt patientId={}, primaryGoalType={}, totalLsasAnswers={}, scoredItems={}, goalMatchedItems={}",
-                patient.getId(),
-                primaryGoalType,
-                answers.size(),
-                scored.size(),
-                goalMatchedCount);
+        log.info("Fear ladder rebuilt patientId={}, totalLsasAnswers={}, scoredItems={}",
+                patient.getId(), answers.size(), scored.size());
         return getFearLadder(patient.getId());
     }
 
     @Transactional(readOnly = true)
     public List<FearLadderItemDto> getFearLadder(UUID patientId) {
         requirePatient(patientId);
+        PatientGoalType activeGoalType = resolveActiveGoalType(patientId);
         List<FearLadderItem> items = fearLadderItemRepository.findByPatientProfile_IdOrderByLadderOrderAsc(patientId);
-        PatientGoalType primaryGoalType = resolvePrimaryGoalType(patientId);
         int unlockedUntilIndex = resolveUnlockedUntilIndex(items);
         List<FearLadderItemDto> dtos = new ArrayList<>();
         for (int index = 0; index < items.size(); index++) {
             FearLadderItem item = items.get(index);
             FearLadderItemDto dto = new FearLadderItemDto(item);
-            dto.setGoalMatch(matchesGoal(item.getSituation().getSituationGroup(), primaryGoalType));
+            applyGoalContext(dto, activeGoalType);
             dto.setUnlocked(index <= unlockedUntilIndex);
             dto.setMasteredAt(item.getStatus() == FearLadderStatus.MASTERED ? item.getModifyDate() : null);
             dtos.add(dto);
@@ -128,13 +121,13 @@ public class FearLadderService {
         requirePatient(request.getPatientId());
         int masteredCount = 0;
         if (request.getItems() == null || request.getItems().isEmpty()) {
-            throw new IllegalArgumentException("Thiếu danh sách tình huống cần re-rate.");
+            throw new IllegalArgumentException("Thiáº¿u danh sÃ¡ch tÃ¬nh huá»‘ng cáº§n re-rate.");
         }
         for (FearLadderRerateItemDto itemDto : request.getItems()) {
             FearLadderItem item = fearLadderItemRepository.findById(itemDto.getLadderItemId())
-                    .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy Fear Ladder item."));
+                    .orElseThrow(() -> new EntityNotFoundException("KhÃ´ng tÃ¬m tháº¥y Fear Ladder item."));
             if (!item.getPatientProfile().getId().equals(request.getPatientId())) {
-                throw new SecurityException("Không được cập nhật thang sợ của bệnh nhân khác.");
+                throw new SecurityException("KhÃ´ng Ä‘Æ°á»£c cáº­p nháº­t thang sá»£ cá»§a bá»‡nh nhÃ¢n khÃ¡c.");
             }
             int fear = normalizeScore(itemDto.getFearScore());
             int avoidance = normalizeScore(itemDto.getAvoidanceScore());
@@ -160,15 +153,16 @@ public class FearLadderService {
     public PatientGoalDto saveGoal(PatientGoalDto dto) {
         PatientProfile patient = requirePatient(dto.getPatientId());
         if (dto.getGoalType() == null) {
-            throw new IllegalArgumentException("Thiếu goalType.");
+            throw new IllegalArgumentException("Thi?u goalType.");
         }
 
         String description = dto.getDescription();
         if (description == null || description.isBlank()) {
             description = switch (dto.getGoalType()) {
-                case SOCIAL_INTERACTION -> "Kết bạn/mở rộng quan hệ";
-                case PERFORMANCE -> "Công việc/học tập/trình bày";
-                case GENERAL -> "Tự tin trong mọi tình huống";
+                case COGNITIVE -> "Nh?n di?n v? ?i?u ch?nh suy ngh? lo ?u x? h?i";
+                case EMOTIONAL -> "?n ??nh c?m x?c khi ??i di?n t?nh hu?ng x? h?i";
+                case BEHAVIORAL -> "Gi?m n? tr?nh v? h?nh vi an to?n";
+                case SOCIAL -> "T? tin h?n trong t??ng t?c x? h?i";
             };
         }
 
@@ -204,48 +198,102 @@ public class FearLadderService {
     @Transactional
     public BehavioralExperimentDto getTodayExperiment(UUID patientId) {
         PatientProfile patient = requirePatient(patientId);
+        PatientGoalType activeGoalType = resolveActiveGoalType(patientId);
         return behavioralExperimentRepository
                 .findTopByPatientProfile_IdAndStatusInOrderByAssignedAtDesc(
                         patientId,
                         List.of(BehavioralExperimentStatus.PLANNED, BehavioralExperimentStatus.IN_PROGRESS))
-                .map(BehavioralExperimentDto::new)
-                .orElseGet(() -> new BehavioralExperimentDto(createNextExperiment(patient)));
+                .map(experiment -> buildBehavioralExperimentDto(experiment, activeGoalType))
+                .orElseGet(() -> buildBehavioralExperimentDto(createNextExperiment(patient), activeGoalType));
+    }
+
+    @Transactional
+    public BehavioralExperimentDto selectExperiment(UUID patientId, UUID ladderItemId) {
+        PatientProfile patient = requirePatient(patientId);
+        PatientGoalType activeGoalType = resolveActiveGoalType(patientId);
+        FearLadderItem ladderItem = fearLadderItemRepository.findById(ladderItemId)
+                .orElseThrow(() -> new EntityNotFoundException("KhÃ´ng tÃ¬m tháº¥y báº­c thá»±c hÃ nh."));
+
+        if (!ladderItem.getPatientProfile().getId().equals(patient.getId())) {
+            throw new SecurityException("KhÃ´ng Ä‘Æ°á»£c chá»n bÃ i thá»±c hÃ nh cá»§a bá»‡nh nhÃ¢n khÃ¡c.");
+        }
+
+        List<FearLadderItem> ladderItems = fearLadderItemRepository.findByPatientProfile_IdOrderByLadderOrderAsc(patientId);
+        int unlockedUntilIndex = resolveUnlockedUntilIndex(ladderItems);
+        int selectedIndex = indexOfLadderItem(ladderItems, ladderItemId);
+        if (selectedIndex < 0 || selectedIndex > unlockedUntilIndex) {
+            throw new IllegalStateException("BÃ i thá»±c hÃ nh nÃ y chÆ°a Ä‘Æ°á»£c má»Ÿ.");
+        }
+
+        if (ladderItem.getStatus() == FearLadderStatus.MASTERED) {
+            throw new IllegalStateException("BÃ i thá»±c hÃ nh nÃ y Ä‘Ã£ hoÃ n thÃ nh vÃ  Ä‘Æ°á»£c lÃ m chá»§.");
+        }
+
+        return behavioralExperimentRepository
+                .findTopByPatientProfile_IdAndFearLadderItem_IdAndStatusInOrderByAssignedAtDesc(
+                        patientId,
+                        ladderItemId,
+                        List.of(BehavioralExperimentStatus.PLANNED, BehavioralExperimentStatus.IN_PROGRESS))
+                .map(experiment -> buildBehavioralExperimentDto(experiment, activeGoalType))
+                .orElseGet(() -> buildBehavioralExperimentDto(createExperimentForItem(patient, ladderItem), activeGoalType));
     }
 
     @Transactional(readOnly = true)
     public List<BehavioralExperimentDto> getExperimentHistory(UUID patientId) {
         requirePatient(patientId);
+        PatientGoalType activeGoalType = resolveActiveGoalType(patientId);
         return behavioralExperimentRepository.findByPatientProfile_IdOrderByAssignedAtDesc(patientId)
                 .stream()
-                .map(BehavioralExperimentDto::new)
+                .map(experiment -> buildBehavioralExperimentDto(experiment, activeGoalType))
                 .toList();
     }
 
     @Transactional
     public BehavioralExperimentDto startExperiment(UUID experimentId, BehavioralExperimentStartRequestDto request) {
         BehavioralExperiment experiment = requireExperiment(experimentId);
+        String prediction = normalizeRequiredText(request.getPrediction(), "prediction");
         String normalizedSafetyBehaviorsJson = normalizeSafetyBehaviorsJson(request.getSafetyBehaviorsJson());
-        experiment.setPrediction(request.getPrediction());
-        experiment.setPredictionBelief(normalizePercent(request.getPredictionBelief()));
+        if (!hasSafetyBehaviorCommitment(normalizedSafetyBehaviorsJson,
+                Boolean.TRUE.equals(request.getDropWithoutSafetyBehaviors()))) {
+            throw new IllegalArgumentException("Cáº§n chá»n Ã­t nháº¥t má»™t hÃ nh vi an toÃ n Ä‘á»ƒ giáº£m hoáº·c xÃ¡c nháº­n khÃ´ng dÃ¹ng hÃ nh vi an toÃ n.");
+        }
+        Integer beliefSource = request.getPredictionBeliefBefore() != null
+                ? request.getPredictionBeliefBefore()
+                : request.getPredictionBelief();
+        int beliefBefore = normalizeRequiredPercent(beliefSource, "predictionBeliefBefore");
+        experiment.setPrediction(prediction);
+        experiment.setPredictionBelief(beliefBefore);
+        experiment.setPredictionBeliefBefore(beliefBefore);
         experiment.setSafetyBehaviorsJson(normalizedSafetyBehaviorsJson);
+        experiment.setSetupCompletedAt(LocalDateTime.now());
+        experiment.setStartedAt(LocalDateTime.now());
+        experiment.setFocusReminderShown(true);
         experiment.setStatus(BehavioralExperimentStatus.IN_PROGRESS);
         BehavioralExperiment saved = behavioralExperimentRepository.save(experiment);
         log.info(
-                "Behavioral experiment started patientId={}, experimentId={}, ladderItemId={}, predictionBelief={}, safetyBehaviorsJsonNormalized={}",
+                "Behavioral experiment started patientId={}, experimentId={}, ladderItemId={}, predictionBeliefBefore={}, safetyBehaviorsJsonNormalized={}",
                 saved.getPatientProfile() != null ? saved.getPatientProfile().getId() : null,
                 saved.getId(),
                 saved.getFearLadderItem() != null ? saved.getFearLadderItem().getId() : null,
-                saved.getPredictionBelief(),
+                saved.getPredictionBeliefBefore(),
                 normalizedSafetyBehaviorsJson);
-        return new BehavioralExperimentDto(saved);
+        return buildBehavioralExperimentDto(saved, resolveActiveGoalType(saved.getPatientProfile().getId()));
     }
 
     @Transactional
     public BehavioralExperimentDto debriefExperiment(UUID experimentId, BehavioralExperimentDebriefRequestDto request) {
         BehavioralExperiment experiment = requireExperiment(experimentId);
-        experiment.setExecutionNotes(request.getExecutionNotes());
+        if (experiment.getSetupCompletedAt() == null) {
+            throw new IllegalStateException("BÃ i thá»±c hÃ nh chÆ°a hoÃ n táº¥t bÆ°á»›c thiáº¿t láº­p.");
+        }
+        experiment.setExecutionNotes(trimToNull(request.getExecutionNotes()));
         experiment.setProofImageUrl(request.getProofImageUrl());
-        experiment.setDebrief(request.getDebrief());
+        experiment.setOutcome(normalizeRequiredText(request.getOutcome(), "outcome"));
+        experiment.setLearning(normalizeRequiredText(
+                request.getLearning() != null ? request.getLearning() : request.getDebrief(),
+                "learning"));
+        experiment.setDebrief(experiment.getLearning());
+        experiment.setPredictionBeliefAfter(normalizeRequiredPercent(request.getPredictionBeliefAfter(), "predictionBeliefAfter"));
         experiment.setPostFearScore(normalizeScore(request.getPostFearScore()));
         experiment.setPostAvoidanceScore(normalizeScore(request.getPostAvoidanceScore()));
         experiment.setStatus(BehavioralExperimentStatus.DONE);
@@ -262,14 +310,16 @@ public class FearLadderService {
 
         BehavioralExperiment saved = behavioralExperimentRepository.save(experiment);
         log.info(
-                "Behavioral experiment completed patientId={}, experimentId={}, ladderItemId={}, postFear={}, postAvoidance={}, ladderStatus={}",
+                "Behavioral experiment completed patientId={}, experimentId={}, ladderItemId={}, beliefBefore={}, beliefAfter={}, postFear={}, postAvoidance={}, ladderStatus={}",
                 saved.getPatientProfile() != null ? saved.getPatientProfile().getId() : null,
                 saved.getId(),
                 ladderItem.getId(),
+                saved.getPredictionBeliefBefore(),
+                saved.getPredictionBeliefAfter(),
                 saved.getPostFearScore(),
                 saved.getPostAvoidanceScore(),
                 ladderItem.getStatus());
-        return new BehavioralExperimentDto(saved);
+        return buildBehavioralExperimentDto(saved, resolveActiveGoalType(saved.getPatientProfile().getId()));
     }
 
     private BehavioralExperiment createNextExperiment(PatientProfile patient) {
@@ -279,18 +329,21 @@ public class FearLadderService {
                 .limit(unlockedUntilIndex + 1L)
                 .filter(candidate -> candidate.getStatus() == FearLadderStatus.ACTIVE)
                 .findFirst()
-                .orElseThrow(() -> new IllegalStateException("Chưa có Fear Ladder hoặc tất cả tình huống đã mastered."));
+                .orElseThrow(() -> new IllegalStateException("ChÆ°a cÃ³ Fear Ladder hoáº·c táº¥t cáº£ tÃ¬nh huá»‘ng Ä‘Ã£ mastered."));
 
+        return createExperimentForItem(patient, item);
+    }
+
+    private BehavioralExperiment createExperimentForItem(PatientProfile patient, FearLadderItem item) {
         BehavioralExperiment experiment = new BehavioralExperiment();
         experiment.setPatientProfile(patient);
         experiment.setFearLadderItem(item);
-        experiment.setSourceType(QuestSourceType.SYSTEM);
         experiment.setStatus(BehavioralExperimentStatus.PLANNED);
         experiment.setAssignedAt(LocalDateTime.now());
         experiment.setDueDate(LocalDateTime.now().plusDays(2));
         BehavioralExperiment saved = behavioralExperimentRepository.save(experiment);
         log.info(
-                "Behavioral experiment assigned patientId={}, experimentId={}, ladderItemId={}, ladderOrder={}, bucket={}, currentTotalScore={}",
+                "Behavioral experiment assigned patientId={}, experimentId={}, ladderItemId={}, ladderOrder={}, bucket={}, currentTotalScore= {}",
                 patient.getId(),
                 saved.getId(),
                 item.getId(),
@@ -300,26 +353,26 @@ public class FearLadderService {
         return saved;
     }
 
+    private int indexOfLadderItem(List<FearLadderItem> items, UUID ladderItemId) {
+        for (int index = 0; index < items.size(); index++) {
+            if (items.get(index).getId().equals(ladderItemId)) {
+                return index;
+            }
+        }
+        return -1;
+    }
+
     private PatientProfile requirePatient(UUID patientId) {
         if (patientId == null) {
-            throw new IllegalArgumentException("Thiếu patientId.");
+            throw new IllegalArgumentException("Thiáº¿u patientId.");
         }
         return patientProfileRepository.findById(patientId)
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy bệnh nhân: " + patientId));
+                .orElseThrow(() -> new EntityNotFoundException("KhÃ´ng tÃ¬m tháº¥y bá»‡nh nhÃ¢n: " + patientId));
     }
 
     private BehavioralExperiment requireExperiment(UUID experimentId) {
         return behavioralExperimentRepository.findById(experimentId)
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy Behavioral Experiment: " + experimentId));
-    }
-
-    private PatientGoalType resolvePrimaryGoalType(UUID patientId) {
-        return patientGoalRepository
-                .findByPatientProfile_IdAndStatusOrderByCreateDateDesc(patientId, PatientGoalStatus.ACTIVE)
-                .stream()
-                .findFirst()
-                .map(PatientGoal::getGoalType)
-                .orElse(PatientGoalType.GENERAL);
+                .orElseThrow(() -> new EntityNotFoundException("KhÃ´ng tÃ¬m tháº¥y Behavioral Experiment: " + experimentId));
     }
 
     private int resolveUnlockedUntilIndex(List<FearLadderItem> items) {
@@ -331,6 +384,72 @@ public class FearLadderService {
         return items.isEmpty() ? -1 : items.size() - 1;
     }
 
+    private PatientGoalType resolveActiveGoalType(UUID patientId) {
+        return patientGoalRepository.findByPatientProfile_IdAndStatusOrderByCreateDateDesc(
+                patientId,
+                PatientGoalStatus.ACTIVE)
+                .stream()
+                .findFirst()
+                .map(PatientGoal::getGoalType)
+                .orElse(null);
+    }
+
+    private BehavioralExperimentDto buildBehavioralExperimentDto(
+            BehavioralExperiment experiment,
+            PatientGoalType activeGoalType) {
+        BehavioralExperimentDto dto = new BehavioralExperimentDto(experiment);
+        if (dto.getLadderItem() != null) {
+            applyGoalContext(dto.getLadderItem(), activeGoalType);
+        }
+        return dto;
+    }
+
+    private void applyGoalContext(FearLadderItemDto dto, PatientGoalType activeGoalType) {
+        boolean goalMatch = isGoalMatch(activeGoalType, dto.getSituationGroup());
+        dto.setGoalMatch(goalMatch);
+        dto.setGoalContextLabel(resolveGoalContextLabel(activeGoalType));
+        dto.setGoalPriorityReason(resolveGoalPriorityReason(activeGoalType, dto.getSituationGroup(), goalMatch));
+    }
+
+    private boolean isGoalMatch(PatientGoalType activeGoalType, LsasSituationGroup situationGroup) {
+        if (activeGoalType == null || situationGroup == null) {
+            return false;
+        }
+        return switch (activeGoalType) {
+            case SOCIAL -> situationGroup == LsasSituationGroup.SOCIAL_INTERACTION;
+            case BEHAVIORAL -> situationGroup == LsasSituationGroup.PERFORMANCE;
+            case EMOTIONAL, COGNITIVE -> false;
+        };
+    }
+
+    private String resolveGoalContextLabel(PatientGoalType activeGoalType) {
+        if (activeGoalType == null) {
+            return "GENERAL";
+        }
+        return activeGoalType.name();
+    }
+
+    private String resolveGoalPriorityReason(
+            PatientGoalType activeGoalType,
+            LsasSituationGroup situationGroup,
+            boolean goalMatch) {
+        if (activeGoalType == null) {
+            return "Ưu tiên mặc định theo mức độ lo âu hiện tại";
+        }
+        return switch (activeGoalType) {
+            case SOCIAL -> goalMatch
+                    ? "Ưu tiên theo mục tiêu tương tác xã hội"
+                    : "Vẫn giữ trong ladder để bảo đảm bao phủ đầy đủ các tình huống LSAS";
+            case BEHAVIORAL -> goalMatch
+                    ? "Ưu tiên theo mục tiêu thực hành hành vi"
+                    : "Vẫn giữ trong ladder để bệnh nhân không bỏ sót các tình huống còn né tránh";
+            case EMOTIONAL -> "Ưu tiên cân bằng theo mức độ lo âu hiện tại";
+            case COGNITIVE -> situationGroup == LsasSituationGroup.PERFORMANCE
+                    ? "Ưu tiên trung tính, kết hợp phản biện dự đoán và đối chiếu kết quả"
+                    : "Ưu tiên trung tính, kết hợp điều chỉnh chú ý và nhận diện tự phán xét";
+        };
+    }
+
     private FearLadderBucket resolveBucket(int total) {
         if (total <= 2) {
             return FearLadderBucket.EASY;
@@ -338,15 +457,10 @@ public class FearLadderService {
         if (total <= 4) {
             return FearLadderBucket.MEDIUM;
         }
-        return FearLadderBucket.HARD;
-    }
-
-    private boolean matchesGoal(LsasSituationGroup group, PatientGoalType goalType) {
-        return switch (goalType) {
-            case PERFORMANCE -> group == LsasSituationGroup.PERFORMANCE;
-            case SOCIAL_INTERACTION -> group == LsasSituationGroup.SOCIAL_INTERACTION;
-            case GENERAL -> true;
-        };
+        if (total == 5) {
+            return FearLadderBucket.HARD;
+        }
+        return FearLadderBucket.EXTREME;
     }
 
     private int normalizeScore(Integer score) {
@@ -361,6 +475,21 @@ public class FearLadderService {
             return 0;
         }
         return Math.max(0, Math.min(100, score));
+    }
+
+    private int normalizeRequiredPercent(Integer score, String fieldName) {
+        if (score == null) {
+            throw new IllegalArgumentException(fieldName + " lÃ  báº¯t buá»™c.");
+        }
+        return normalizePercent(score);
+    }
+
+    private String normalizeRequiredText(String value, String fieldName) {
+        String trimmed = trimToNull(value);
+        if (trimmed == null) {
+            throw new IllegalArgumentException(fieldName + " lÃ  báº¯t buá»™c.");
+        }
+        return trimmed;
     }
 
     private String normalizeSafetyBehaviorsJson(String rawValue) {
@@ -404,7 +533,23 @@ public class FearLadderService {
         try {
             return objectMapper.writeValueAsString(values);
         } catch (JsonProcessingException exception) {
-            throw new IllegalArgumentException("Không thể chuẩn hóa danh sách hành vi an toàn.", exception);
+            throw new IllegalArgumentException("KhÃ´ng thá»ƒ chuáº©n hÃ³a danh sÃ¡ch hÃ nh vi an toÃ n.", exception);
         }
     }
+
+    private boolean hasSafetyBehaviorCommitment(String normalizedSafetyBehaviorsJson, boolean dropWithoutSafetyBehaviors) {
+        if (dropWithoutSafetyBehaviors) {
+            return true;
+        }
+        return normalizedSafetyBehaviorsJson != null && !"[]".equals(normalizedSafetyBehaviorsJson);
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
 }
+

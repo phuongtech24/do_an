@@ -11,6 +11,7 @@ import '../../features/admin/data/repositories/admin_therapist_approval_reposito
 import '../../features/admin/data/repositories/admin_therapist_credentials_repository.dart';
 import '../../features/admin/data/repositories/admin_therapist_management_repository.dart';
 import '../../features/admin/data/repositories/admin_user_repository.dart';
+import '../../shared/widgets/pagination_bar.dart';
 import '../../theme/app_colors.dart';
 
 class AdminVerifyDoctorScreen extends StatefulWidget {
@@ -29,6 +30,10 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
   bool _loading = false;
   String _error = '';
   String _query = '';
+  int _pageIndex = 1;
+  int _pageSize = 10;
+  int _totalPages = 0;
+  int _totalElements = 0;
   List<TherapistApplicantModel> _items = [];
 
   @override
@@ -74,13 +79,27 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
     }).toList();
   }
 
+  List<TherapistApplicantModel> get _paged {
+    final list = _filtered;
+    _totalElements = list.length;
+    _totalPages = (_totalElements / _pageSize).ceil();
+    if (_pageIndex < 1) _pageIndex = 1;
+    if (_pageIndex > _totalPages && _totalPages > 0) _pageIndex = _totalPages;
+
+    final start = (_pageIndex - 1) * _pageSize;
+    var end = start + _pageSize;
+    if (start >= list.length) return [];
+    if (end > list.length) end = list.length;
+    return list.sublist(start, end);
+  }
+
   Future<void> _setApproval(TherapistApplicantModel item, String status) async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final token = auth.token;
     if (token == null || token.isEmpty) return;
 
     if (status == 'ACTIVE' && item.credentialCount <= 0) {
-      setState(() => _error = 'Chưa có chứng chỉ. Không thể duyệt ACTIVE.');
+      setState(() => _error = 'Chưa có chứng chỉ. Không thể cấp quyền Đang hoạt động.');
       return;
     }
 
@@ -93,6 +112,7 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
                   therapistId: x.therapistId,
                   fullName: x.fullName,
                   email: x.email,
+                  phoneNumber: x.phoneNumber,
                   hometown: x.hometown,
                   birthYear: x.birthYear,
                   voiceDescription: x.voiceDescription,
@@ -156,6 +176,7 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
                     therapistId: x.therapistId,
                     fullName: x.fullName,
                     email: x.email,
+                    phoneNumber: x.phoneNumber,
                     hometown: x.hometown,
                     birthYear: x.birthYear,
                     voiceDescription: x.voiceDescription,
@@ -227,6 +248,7 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
     if (token == null || token.isEmpty) return;
 
     final fullNameCtrl = TextEditingController(text: item.fullName);
+    final phoneNumberCtrl = TextEditingController(text: item.phoneNumber ?? '');
     final hometownCtrl = TextEditingController(text: item.hometown ?? '');
     final birthYearCtrl = TextEditingController(text: item.birthYear?.toString() ?? '');
     final voiceDescriptionCtrl = TextEditingController(text: item.voiceDescription ?? '');
@@ -246,6 +268,8 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(controller: fullNameCtrl, decoration: const InputDecoration(labelText: 'Họ tên')),
+              const SizedBox(height: 10),
+              TextField(controller: phoneNumberCtrl, decoration: const InputDecoration(labelText: 'Số điện thoại *')),
               const SizedBox(height: 10),
               TextField(controller: hometownCtrl, decoration: const InputDecoration(labelText: 'Quê quán / khu vực')),
               const SizedBox(height: 10),
@@ -276,7 +300,13 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Lưu')),
+          ElevatedButton(onPressed: () {
+            if (phoneNumberCtrl.text.trim().isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Số điện thoại không được để trống')));
+              return;
+            }
+            Navigator.pop(context, true);
+          }, child: const Text('Lưu')),
         ],
       ),
     );
@@ -293,6 +323,7 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
         token: token,
         therapistId: item.therapistId,
         fullName: fullNameCtrl.text.trim(),
+        phoneNumber: phoneNumberCtrl.text.trim(),
         hometown: hometownCtrl.text.trim(),
         birthYear: int.tryParse(birthYearCtrl.text.trim()),
         voiceDescription: voiceDescriptionCtrl.text.trim(),
@@ -440,7 +471,7 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
       setState(() => _items = [created, ..._items]);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Đã tạo tài khoản therapist. Trạng thái: PENDING'),
+          content: Text('Đã tạo tài khoản bác sĩ. Trạng thái: Chờ duyệt'),
           backgroundColor: AppColors.success,
         ),
       );
@@ -468,9 +499,9 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
   String _statusLabel(String status) {
     switch (status) {
       case 'ACTIVE':
-        return 'ĐÃ CẤP PHÉP';
+        return 'ĐANG HOẠT ĐỘNG';
       case 'REJECTED':
-        return 'TỪ CHỐI';
+        return 'BỊ TỪ CHỐI';
       case 'PENDING':
       default:
         return 'CHỜ DUYỆT';
@@ -489,7 +520,7 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: const [
                 Text(
-                  'Quản lý Bác sĩ/Chuyên gia (Approval)',
+                  'Hồ sơ Bác sĩ',
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 8),
@@ -544,55 +575,58 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
             child: Text(_error, style: const TextStyle(color: Colors.red)),
           ),
         Expanded(
-          child: Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: Colors.grey[300]!),
-            ),
-            child: _loading && _items.isEmpty
-                ? const Center(child: CircularProgressIndicator())
-                : ListView.separated(
-                    itemCount: _filtered.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final doc = _filtered[index];
-                      final isPending = doc.approvalStatus == 'PENDING';
-                      final color = _statusColor(doc.approvalStatus);
-                      return ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        leading: CircleAvatar(
-                          radius: 24,
-                          backgroundColor: color.withOpacity(0.15),
-                          child: Icon(Icons.medical_services, color: color),
-                        ),
-                        title: Row(
-                          children: [
-                            Expanded(
-                              child: Text(doc.fullName, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: color.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(6),
+          child: Column(
+            children: [
+              Expanded(
+                child: Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: Colors.grey[300]!),
+                  ),
+                  child: _loading && _items.isEmpty
+                      ? const Center(child: CircularProgressIndicator())
+                      : ListView.separated(
+                          itemCount: _paged.length,
+                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final doc = _paged[index];
+                            final isPending = doc.approvalStatus == 'PENDING';
+                            final color = _statusColor(doc.approvalStatus);
+                            return ListTile(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              leading: CircleAvatar(
+                                radius: 24,
+                                backgroundColor: color.withOpacity(0.15),
+                                child: Icon(Icons.medical_services, color: color),
                               ),
-                              child: Text(
-                                _statusLabel(doc.approvalStatus),
-                                style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12),
+                              title: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(doc.fullName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: color.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      _statusLabel(doc.approvalStatus),
+                                      style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ],
-                        ),
-                        subtitle: Text(
-                          'Email: ${doc.email}'
-                          '${doc.specialization == null || doc.specialization!.isEmpty ? '' : ' • ${doc.specialization}'}'
-                          '${doc.hometown == null || doc.hometown!.isEmpty ? '' : ' • ${doc.hometown}'}'
-                          ' • Chứng chỉ: ${doc.credentialCount}',
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
+                              subtitle: Text(
+                                'Email: ${doc.email}'
+                                '${doc.specialization == null || doc.specialization!.isEmpty ? '' : ' • ${doc.specialization}'}'
+                                '${doc.hometown == null || doc.hometown!.isEmpty ? '' : ' • ${doc.hometown}'}'
+                                ' • Chứng chỉ: ${doc.credentialCount}',
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
                             OutlinedButton(
                               onPressed: _loading ? null : () => _showCredentialsDialog(doc),
                               child: const Text('Xem chứng chỉ'),
@@ -638,6 +672,21 @@ class _AdminVerifyDoctorScreenState extends State<AdminVerifyDoctorScreen> {
                       );
                     },
                   ),
+                ),
+              ),
+              if (_totalPages > 1 || _totalElements > 0)
+                PaginationBar(
+                  pageIndex: _pageIndex,
+                  totalPages: _totalPages,
+                  totalElements: _totalElements,
+                  pageSize: _pageSize,
+                  onPageChanged: (v) => setState(() => _pageIndex = v),
+                  onPageSizeChanged: (v) => setState(() {
+                    _pageSize = v;
+                    _pageIndex = 1;
+                  }),
+                ),
+            ],
           ),
         ),
       ],

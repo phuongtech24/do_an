@@ -17,6 +17,14 @@ class JournalAiScreen extends StatefulWidget {
 }
 
 class _JournalAiScreenState extends State<JournalAiScreen> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -39,7 +47,7 @@ class _JournalAiScreenState extends State<JournalAiScreen> {
     final token = auth.loginResponse?.token;
 
     return MindHealthScaffold(
-      title: 'Nhật ký & Trợ lý AI CBT',
+      title: 'Nhật ký & Trợ lý AI',
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/thought-record'),
         backgroundColor: AppColors.primary,
@@ -90,6 +98,34 @@ class _JournalAiScreenState extends State<JournalAiScreen> {
               ],
             ),
             const SizedBox(height: 12),
+            TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Tìm theo tình huống, suy nghĩ, phản hồi...',
+                prefixIcon: const Icon(Icons.search_rounded),
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide(color: AppColors.primary.withOpacity(0.08)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide(color: AppColors.primary.withOpacity(0.08)),
+                ),
+              ),
+              onSubmitted: (value) {
+                if (patientId.isNotEmpty) {
+                  journalProvider.loadJournalsPaged(
+                    patientId,
+                    token: token,
+                    keyword: value,
+                    pageIndex: 1,
+                  );
+                }
+              },
+            ),
+            const SizedBox(height: 14),
             if (journalProvider.status == JournalProviderStatus.loading)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 40),
@@ -101,6 +137,23 @@ class _JournalAiScreenState extends State<JournalAiScreen> {
               _buildEmptyState()
             else
               ...journalProvider.journals.map((journal) => _buildJournalCard(context, journal)),
+            if (journalProvider.journals.isNotEmpty) ...[
+              const SizedBox(height: 18),
+              _PaginationSection(
+                pageIndex: journalProvider.pageIndex,
+                totalPages: journalProvider.totalPages,
+                totalElements: journalProvider.totalElements,
+                onPageChanged: (page) {
+                  if (patientId.isNotEmpty) {
+                    journalProvider.loadJournalsPaged(
+                      patientId,
+                      token: token,
+                      pageIndex: page,
+                    );
+                  }
+                },
+              ),
+            ],
           ],
         ),
       ),
@@ -568,6 +621,62 @@ class _JournalAiScreenState extends State<JournalAiScreen> {
         .map((item) => item.trim())
         .where((item) => item.isNotEmpty)
         .join('\n');
+  }
+}
+
+class _PaginationSection extends StatelessWidget {
+  const _PaginationSection({
+    required this.pageIndex,
+    required this.totalPages,
+    required this.totalElements,
+    required this.onPageChanged,
+  });
+
+  final int pageIndex;
+  final int totalPages;
+  final int totalElements;
+  final ValueChanged<int> onPageChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasPrev = pageIndex > 1;
+    final hasNext = totalPages > 0 && pageIndex < totalPages;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.primary.withOpacity(0.08)),
+      ),
+      child: Row(
+        children: [
+          Text(
+            '$totalElements mục',
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            'Trang ${totalPages == 0 ? 0 : pageIndex}/$totalPages',
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(width: 10),
+          IconButton(
+            onPressed: hasPrev ? () => onPageChanged(pageIndex - 1) : null,
+            icon: const Icon(Icons.chevron_left_rounded),
+          ),
+          IconButton(
+            onPressed: hasNext ? () => onPageChanged(pageIndex + 1) : null,
+            icon: const Icon(Icons.chevron_right_rounded),
+          ),
+        ],
+      ),
+    );
   }
 }
 

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -54,7 +54,7 @@ class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
     final token = auth.token;
 
     return MindHealthScaffold(
-      title: 'Đánh giá lo âu xã hội (LSAS)',
+      title: 'Bài kiểm tra lo âu xã hội',
       body: userId.isEmpty
           ? const _LsasEmptyState(
               icon: Icons.lock_outline_rounded,
@@ -96,7 +96,7 @@ class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
 
     if (missing.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Bạn còn ${missing.length} tình huống chưa chấm đủ Fear/Avoidance.')),
+        SnackBar(content: Text('Bạn còn ${missing.length} tình huống chưa chấm đủ cả 2 mức độ.')),
       );
       return;
     }
@@ -155,7 +155,7 @@ class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
       await showDialog<void>(
         context: context,
         builder: (_) => AlertDialog(
-          title: const Text('Đã lưu LSAS'),
+          title: const Text('Đã lưu kết quả'),
           content: Text(
             '$displaySummaryMessage\n\n'
             'Mức độ: $severityLabel\n'
@@ -524,7 +524,7 @@ class _LsasFormState extends State<_LsasForm> {
       children: [
         const _GuideCard(
           icon: Icons.psychology_alt_rounded,
-          title: 'LSAS là gì?',
+          title: 'Bài kiểm tra này là gì?',
           message:
               'Bạn sẽ chấm 24 tình huống xã hội theo 2 trục: mức sợ/hồi hộp và mức né tránh. Bài đầu tiên và các lần đánh giá lại sau này đều dùng cùng 24 tình huống để theo dõi thay đổi.',
         ),
@@ -580,7 +580,7 @@ class _LsasFormState extends State<_LsasForm> {
             icon: widget.loading
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.check_circle_outline_rounded),
-            label: const Text('Lưu kết quả LSAS'),
+            label: const Text('Hoàn thành bài kiểm tra'),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0F8B7F),
               foregroundColor: Colors.white,
@@ -918,7 +918,6 @@ class _SituationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isPerformance = situation.group == 'PERFORMANCE';
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -944,11 +943,6 @@ class _SituationCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(situation.title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 4),
-                    Text(
-                      isPerformance ? 'Hiệu suất/biểu diễn' : 'Tương tác xã hội',
-                      style: TextStyle(color: isPerformance ? Colors.deepPurple : const Color(0xFF0F8B7F)),
-                    ),
                   ],
                 ),
               ),
@@ -956,14 +950,14 @@ class _SituationCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _ScoreSelector(
-            title: 'Mức độ sợ hãi / lo âu (Fear)',
+            title: 'Mức độ sợ hãi / lo âu',
             value: fearScore,
             labels: const ['Không có', 'Nhẹ', 'Vừa phải / Trung bình', 'Nghiêm trọng'],
             onChanged: onFearChanged,
           ),
           const SizedBox(height: 14),
           _ScoreSelector(
-            title: 'Mức độ né tránh (Avoidance)',
+            title: 'Mức độ né tránh',
             value: avoidanceScore,
             labels: const ['Không bao giờ', 'Thỉnh thoảng', 'Thường xuyên', 'Hầu như luôn luôn'],
             onChanged: onAvoidanceChanged,
@@ -1092,14 +1086,14 @@ class _LsasHistorySection extends StatelessWidget {
             children: const [
               Icon(Icons.history_rounded, color: Color(0xFF0F8B7F)),
               SizedBox(width: 10),
-              Text('Lịch sử LSAS', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+              Text('Lịch sử bài kiểm tra', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
             ],
           ),
           const SizedBox(height: 12),
           if (loading)
             const Center(child: CircularProgressIndicator())
           else if (history.isEmpty)
-            const Text('Chưa có lần đánh giá LSAS nào.', style: TextStyle(color: Colors.black54))
+            const Text('Bạn chưa có lần kiểm tra nào.', style: TextStyle(color: Colors.black54))
           else
             ...history.map((item) {
               final score = item.totalScore;
@@ -1120,10 +1114,10 @@ class _LsasHistorySection extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        '${item.createDate ?? ''} • ${item.submissionType}\n'
+                        '${item.createDate ?? ''} • ${_submissionTypeLabel(item.submissionType)}\n'
                         '${item.severityLabel.isNotEmpty ? item.severityLabel : _lsasSeverityLabel(score)}'
                         '${item.clinicalRoute.isNotEmpty ? ' • ${_clinicalRouteLabel(item.clinicalRoute)}' : ''}\n'
-                        'Fear ${item.fearTotal}/72 • Avoidance ${item.avoidanceTotal}/72',
+                        'Sợ hãi ${item.fearTotal}/72 • Né tránh ${item.avoidanceTotal}/72',
                         style: const TextStyle(height: 1.35),
                       ),
                     ),
@@ -1183,7 +1177,7 @@ class _LsasErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     return _LsasEmptyState(
       icon: Icons.error_outline_rounded,
-      title: 'Không tải được LSAS',
+      title: 'Không tải được bài kiểm tra',
       message: message,
       actionLabel: 'Tải lại',
       onAction: onRetry,
@@ -1244,14 +1238,25 @@ String _lsasSeverityLabel(int score) {
 String _clinicalRouteLabel(String route) {
   switch (route) {
     case 'SELF_HELP':
-      return 'Tự trị liệu trên app (Self-help)';
+      return 'Tự luyện tập trên ứng dụng';
     case 'THERAPIST_TRACK_14_WEEKS':
-      return 'Lộ trình 14 tuần chuyên sâu cùng bác sĩ';
+      return 'Lộ trình 14 tuần cùng chuyên gia';
     case 'URGENT_RED_FLAG':
-      return 'Cờ đỏ khẩn cấp';
+      return 'Cần can thiệp ưu tiên';
     case 'REASSURANCE':
-      return 'Thông điệp an tâm và theo dõi cơ bản';
+      return 'Theo dõi và an tâm';
     default:
-      return 'Luồng điều trị phù hợp';
+      return 'Lộ trình điều trị phù hợp';
+  }
+}
+
+String _submissionTypeLabel(String type) {
+  switch (type) {
+    case 'BASELINE':
+      return 'Lần đầu';
+    case 'PERIODIC':
+      return 'Định kỳ';
+    default:
+      return type;
   }
 }

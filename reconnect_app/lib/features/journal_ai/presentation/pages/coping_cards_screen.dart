@@ -18,7 +18,7 @@ class CopingCardsScreen extends StatefulWidget {
 class _CopingCardsScreenState extends State<CopingCardsScreen> {
   final List<String> _staticCredits = [
     'Hôm nay mình đã tự nấu ăn.',
-    'Mình đã hoàn thành bài đánh giá LSAS.',
+    'Mình đã hoàn thành bài kiểm tra lo âu xã hội.',
     'Mình đã đứng lên đi dạo 10 phút.',
   ];
 
@@ -49,7 +49,7 @@ class _CopingCardsScreenState extends State<CopingCardsScreen> {
   final Map<String, dynamic> _relapsePlan = {
     'title': 'Kế hoạch phòng ngừa tái phát',
     'content':
-        'Khi chững lại, mình có thể xem lại nhật ký, nhớ rằng setback là một phần bình thường của quá trình hồi phục, rồi chọn một bước nhỏ để quay lại nhịp trị liệu.',
+        'Khi chững lại, mình có thể xem lại nhật ký, nhớ rằng những lúc chậm tiến là một phần bình thường của quá trình hồi phục, rồi chọn một bước nhỏ để quay lại nhịp trị liệu.',
     'icon': Icons.health_and_safety_outlined,
     'accent': AppColors.warning,
     'background': const Color(0xFFFFF7E8),

@@ -1,4 +1,5 @@
 import '../../../../core/network/api_client.dart';
+import '../../../../core/models/paged_result.dart';
 import '../models/admin_patient_profile_model.dart';
 
 class AdminPatientProfileRepository {
@@ -7,10 +8,12 @@ class AdminPatientProfileRepository {
   Future<List<AdminPatientProfileModel>> listPatients({
     required String token,
     bool redFlagOnly = false,
+    bool triageOnly = false,
     String? q,
   }) async {
     final query = <String, String>{
       'redFlagOnly': redFlagOnly.toString(),
+      'triageOnly': triageOnly.toString(),
     };
     if (q != null && q.trim().isNotEmpty) {
       query['q'] = q.trim();
@@ -35,6 +38,37 @@ class AdminPatientProfileRepository {
     return res.data!;
   }
 
+  Future<PagedResult<AdminPatientProfileModel>> listPatientsPaged({
+    required String token,
+    bool redFlagOnly = false,
+    bool triageOnly = false,
+    String? keyword,
+    int pageIndex = 1,
+    int pageSize = 10,
+  }) async {
+    final res = await _api.post<PagedResult<AdminPatientProfileModel>>(
+      '/admin/patients/paging',
+      headers: {'Authorization': 'Bearer $token'},
+      body: {
+        'redFlagOnly': redFlagOnly,
+        'triageOnly': triageOnly,
+        'keyword': keyword?.trim(),
+        'pageIndex': pageIndex,
+        'pageSize': pageSize,
+      },
+      parseData: (raw) => raw is Map<String, dynamic>
+          ? PagedResult<AdminPatientProfileModel>.fromJson(
+              raw,
+              itemParser: AdminPatientProfileModel.fromJson,
+            )
+          : null,
+    );
+    if (res.status != 200 || res.data == null) {
+      throw Exception(res.message.isNotEmpty ? res.message : 'Cannot load patients');
+    }
+    return res.data!;
+  }
+
   Future<void> assignTherapist({
     required String token,
     required String patientId,
@@ -49,6 +83,24 @@ class AdminPatientProfileRepository {
     if (res.status != 200) {
       throw Exception(res.message.isNotEmpty ? res.message : 'Cannot assign therapist');
     }
+  }
+
+  Future<String> triageAction({
+    required String token,
+    required String patientId,
+    required String action,
+    Map<String, dynamic>? body,
+  }) async {
+    final res = await _api.post<Map<String, dynamic>>(
+      '/admin/triage/$patientId/$action',
+      headers: {'Authorization': 'Bearer $token'},
+      body: body,
+      parseData: (raw) => raw as Map<String, dynamic>? ?? <String, dynamic>{},
+    );
+    if (res.status != 200) {
+      throw Exception(res.message.isNotEmpty ? res.message : 'Triage action failed');
+    }
+    return res.message;
   }
 
   Future<String> runDemoAction({

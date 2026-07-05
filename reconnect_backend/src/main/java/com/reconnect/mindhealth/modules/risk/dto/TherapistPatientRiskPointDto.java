@@ -2,8 +2,6 @@ package com.reconnect.mindhealth.modules.risk.dto;
 
 import java.time.LocalDate;
 
-import com.reconnect.mindhealth.modules.risk.entity.DailyRiskLog;
-
 public class TherapistPatientRiskPointDto {
 
     private LocalDate riskDate;
@@ -17,14 +15,21 @@ public class TherapistPatientRiskPointDto {
     public TherapistPatientRiskPointDto() {
     }
 
-    public TherapistPatientRiskPointDto(DailyRiskLog entity) {
-        this.riskDate = entity.getRiskDate();
-        this.riskScore = entity.getRiskScore();
-        this.scoreSafety = entity.getScoreSafety();
-        this.scoreAi = entity.getScoreAi();
-        this.scoreMood = entity.getScoreMood();
-        this.overrideTriggered = entity.getOverrideTriggered();
-        this.redFlagActive = entity.getRedFlagActive();
+    public TherapistPatientRiskPointDto(
+            LocalDate riskDate,
+            Integer riskScore,
+            Integer scoreSafety,
+            Integer scoreAi,
+            Integer scoreMood,
+            Boolean overrideTriggered,
+            Boolean redFlagActive) {
+        this.riskDate = riskDate;
+        this.riskScore = riskScore;
+        this.scoreSafety = scoreSafety;
+        this.scoreAi = scoreAi;
+        this.scoreMood = scoreMood;
+        this.overrideTriggered = overrideTriggered;
+        this.redFlagActive = redFlagActive;
     }
 
     public LocalDate getRiskDate() {

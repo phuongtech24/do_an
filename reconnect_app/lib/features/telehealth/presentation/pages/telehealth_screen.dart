@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -42,12 +42,13 @@ class _TelehealthScreenState extends State<TelehealthScreen> {
           final assigned = telehealth.isAssigned;
           final isSelfHelpMode = telehealth.isSelfHelpMode;
           final isReassuranceMode = telehealth.isReassuranceMode;
+          final isTriageMode = telehealth.carePhaseCode == 'RED_FLAG_OVERRIDE' && !assigned;
           final therapistName = telehealth.therapistName.isNotEmpty ? telehealth.therapistName : 'Chưa cập nhật';
           final bannerText = assigned
               ? 'Chuyên gia đồng hành hiện tại: $therapistName'
               : (telehealth.assignmentMessage.isNotEmpty
                     ? telehealth.assignmentMessage
-                    : 'Bạn cần chọn chuyên gia trước khi đặt lịch CBT.');
+                    : 'Bạn cần chọn chuyên gia trước khi đặt lịch tư vấn.');
 
           return ListView(
             padding: const EdgeInsets.only(bottom: 20),
@@ -71,7 +72,7 @@ class _TelehealthScreenState extends State<TelehealthScreen> {
                 _ActionCard(
                   icon: Icons.menu_book_rounded,
                   title: 'Viết nhật ký suy nghĩ',
-                  subtitle: 'Đi thẳng vào Thought Record 6 bước để bóc tách suy nghĩ tự động và tự điều chỉnh.',
+                  subtitle: 'Đi thẳng vào nhật ký suy nghĩ 6 bước để bóc tách suy nghĩ tự động và tự điều chỉnh.',
                   accent: AppColors.primary,
                   onTap: () => context.push('/thought-record'),
                 ),
@@ -94,13 +95,13 @@ class _TelehealthScreenState extends State<TelehealthScreen> {
                 const SizedBox(height: 14),
                 _ActionCard(
                   icon: Icons.wb_sunny_outlined,
-                  title: 'Check-in hôm nay',
-                  subtitle: 'Quay về Trang chủ để làm Daily Check-in, theo dõi lo âu và nhận điều hướng CBT phù hợp.',
+                  title: 'Ghi nhận cảm xúc hôm nay',
+                  subtitle: 'Quay về Trang chủ để ghi nhận cảm xúc hàng ngày và nhận điều hướng CBT phù hợp.',
                   accent: const Color(0xFFF0A34A),
                   onTap: () => context.go('/home'),
                 ),
               ] else ...[
-                if (!assigned) ...[
+                if (!assigned && !isTriageMode) ...[
                   _ActionCard(
                     icon: Icons.people_alt_outlined,
                     title: 'Chọn chuyên gia phù hợp',
@@ -115,7 +116,9 @@ class _TelehealthScreenState extends State<TelehealthScreen> {
                   title: 'Đặt lịch tư vấn',
                   subtitle: assigned
                       ? 'Chọn khung giờ CBT còn trống theo đúng giai đoạn điều trị hiện tại.'
-                      : 'Bạn cần chọn chuyên gia trước khi xem lịch trống.',
+                      : (isTriageMode
+                          ? 'Ca của bạn đang được admin lâm sàng điều phối. Khi gán xong bác sĩ, lịch phù hợp sẽ được mở.'
+                          : 'Bạn cần chọn chuyên gia trước khi xem lịch trống.'),
                   accent: AppColors.primary,
                   onTap: assigned
                       ? () => context.push('/telehealth/booking')
@@ -201,7 +204,7 @@ class _TelehealthHero extends StatelessWidget {
         : reassuranceMode
             ? 'Theo dõi và an tâm'
             : assigned
-                ? 'Telehealth đã sẵn sàng'
+                ? 'Sẵn sàng tư vấn trực tuyến'
                 : 'Sẵn sàng chọn chuyên gia';
 
     return Container(
@@ -264,6 +267,79 @@ class _TelehealthHero extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _IdentityCard extends StatelessWidget {
+  const _IdentityCard({
+    required this.value,
+    required this.onChanged,
+  });
+
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: AppColors.primary.withOpacity(0.12)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Icon(Icons.verified_user_outlined, color: AppColors.primary, size: 30),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Chế độ danh tính',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  value
+                      ? 'Hiện tại app đang ưu tiên biệt danh và avatar hệ thống khi giao tiếp với chuyên gia.'
+                      : 'Bạn cho phép hiển thị tên thật rõ hơn khi tham vấn. Bác sĩ vẫn luôn xem được hồ sơ y tế thật trong portal.',
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeColor: AppColors.primary,
           ),
         ],
       ),
@@ -449,79 +525,6 @@ class _ActionCard extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _IdentityCard extends StatelessWidget {
-  const _IdentityCard({
-    required this.value,
-    required this.onChanged,
-  });
-
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(26),
-        border: Border.all(color: AppColors.primary.withOpacity(0.12)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Icon(Icons.verified_user_outlined, color: AppColors.primary, size: 30),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Chế độ danh tính',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  value
-                      ? 'Hiện tại app đang ưu tiên biệt danh và avatar hệ thống khi giao tiếp với chuyên gia.'
-                      : 'Bạn cho phép hiển thị tên thật rõ hơn khi tham vấn. Bác sĩ vẫn luôn xem được hồ sơ y tế thật trong portal.',
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    height: 1.45,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: AppColors.primary,
-          ),
-        ],
       ),
     );
   }

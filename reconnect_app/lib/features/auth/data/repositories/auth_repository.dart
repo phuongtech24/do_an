@@ -37,6 +37,52 @@ class AuthRepository {
     throw Exception(json['message'] ?? 'Đăng nhập thất bại.');
   }
 
+  Future<LoginResponse> refreshToken(String refreshToken) async {
+    final response = await http.post(
+      Uri.parse('${ApiConstants.baseUrl}/auth/refresh'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'refreshToken': refreshToken}),
+    );
+
+    final json = _decodeApiResponse(response, 'làm mới phiên đăng nhập');
+    if (json['status'] == 200 && json['data'] != null) {
+      return LoginResponse.fromJson(json['data']);
+    }
+    throw Exception(json['message'] ?? 'Làm mới phiên đăng nhập thất bại.');
+  }
+
+  Future<void> requestPasswordReset(String email) async {
+    final response = await http.post(
+      Uri.parse('${ApiConstants.baseUrl}/auth/forgot-password'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email}),
+    );
+
+    final json = _decodeApiResponse(response, 'yêu cầu đặt lại mật khẩu');
+    if (json['status'] != 200) {
+      throw Exception(json['message'] ?? 'Không thể tạo yêu cầu đặt lại mật khẩu.');
+    }
+  }
+
+  Future<void> resetPassword({
+    required String resetToken,
+    required String newPassword,
+  }) async {
+    final response = await http.post(
+      Uri.parse('${ApiConstants.baseUrl}/auth/reset-password'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'resetToken': resetToken,
+        'newPassword': newPassword,
+      }),
+    );
+
+    final json = _decodeApiResponse(response, 'đặt lại mật khẩu');
+    if (json['status'] != 200) {
+      throw Exception(json['message'] ?? 'Đặt lại mật khẩu thất bại.');
+    }
+  }
+
   Future<void> register({
     required String email,
     required String password,

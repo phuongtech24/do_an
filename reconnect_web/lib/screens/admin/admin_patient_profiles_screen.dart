@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/auth/auth_provider.dart';
@@ -7,6 +7,7 @@ import '../../features/admin/data/models/therapist_applicant_model.dart';
 import '../../features/admin/data/repositories/admin_patient_profile_repository.dart';
 import '../../features/admin/data/repositories/admin_therapist_approval_repository.dart';
 import '../../features/admin/data/repositories/admin_user_repository.dart';
+import '../../shared/widgets/pagination_bar.dart';
 import '../../theme/app_colors.dart';
 
 class AdminPatientProfilesScreen extends StatefulWidget {
@@ -25,6 +26,11 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
   String _error = '';
   String _query = '';
   bool _redFlagOnly = false;
+  bool _triageOnly = false;
+  int _pageIndex = 1;
+  int _pageSize = 10;
+  int _totalPages = 0;
+  int _totalElements = 0;
 
   List<AdminPatientProfileModel> _items = [];
 
@@ -34,7 +40,7 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
-  Future<void> _load() async {
+  Future<void> _load({int? pageIndex, int? pageSize, String? keyword}) async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final token = auth.token;
     if (token == null || token.isEmpty) {
@@ -44,11 +50,26 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
     setState(() {
       _loading = true;
       _error = '';
+      if (pageIndex != null) _pageIndex = pageIndex;
+      if (pageSize != null) _pageSize = pageSize;
+      if (keyword != null) _query = keyword;
     });
     try {
-      final list = await _repo.listPatients(token: token, redFlagOnly: _redFlagOnly, q: _query);
+      final page = await _repo.listPatientsPaged(
+        token: token,
+        redFlagOnly: _redFlagOnly,
+        triageOnly: _triageOnly,
+        keyword: _query,
+        pageIndex: _pageIndex,
+        pageSize: _pageSize,
+      );
       if (!mounted) return;
-      setState(() => _items = list);
+      setState(() {
+        _items = page.content;
+        _totalPages = page.totalPages;
+        _totalElements = page.totalElements;
+        _pageIndex = page.pageIndex;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = e.toString().replaceAll('Exception: ', ''));
@@ -124,7 +145,7 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 value: selectedId,
-                decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Chuyên gia (ACTIVE)'),
+                decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Chuyên gia (Đang hoạt động)'),
                 items: therapists
                     .map((t) => DropdownMenuItem<String>(
                           value: t.therapistId,
@@ -164,6 +185,41 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
       await _load();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Đã gán chuyên gia cho bệnh nhân.'), backgroundColor: AppColors.success),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _runTriageAction(
+    AdminPatientProfileModel item,
+    String action, {
+    Map<String, dynamic>? body,
+  }) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final token = auth.token;
+    if (token == null || token.isEmpty) return;
+
+    setState(() {
+      _loading = true;
+      _error = '';
+    });
+
+    try {
+      final message = await _repo.triageAction(
+        token: token,
+        patientId: item.patientId,
+        action: action,
+        body: body,
+      );
+      if (!mounted) return;
+      await _load();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: AppColors.success),
       );
     } catch (e) {
       if (!mounted) return;
@@ -218,51 +274,209 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
         ),
         content: SizedBox(
           width: 440,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Bệnh nhân: ${item.nickname ?? item.email ?? item.patientId}',
-                style: const TextStyle(color: Colors.black54),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.72,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Bệnh nhân: ${item.nickname ?? item.email ?? item.patientId}',
+                    style: const TextStyle(color: Colors.black54),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Các thao tác này chỉ dùng để demo/clinical override, không dùng cho luồng bệnh nhân thường ngày.',
+                    style: TextStyle(color: Colors.black54, height: 1.35),
+                  ),
+                  const SizedBox(height: 16),
+                  const _DemoSectionLabel('1. Demo phân luồng LSAS'),
+                  _DemoActionTile(
+                    icon: Icons.rule_folder_outlined,
+                    title: 'LSAS rất thấp (<30)',
+                    subtitle: 'Chỉ đổi routing sang nhánh an tâm, không tự mở hết bài tập.',
+                    onTap: () => Navigator.pop(context, 'set-lsas-band:REASSURANCE'),
+                  ),
+                  _DemoActionTile(
+                    icon: Icons.self_improvement_outlined,
+                    title: 'LSAS nhẹ/vừa (30-59)',
+                    subtitle: 'Đưa bệnh nhân vào nhánh tự trị liệu Self-help.',
+                    onTap: () => Navigator.pop(context, 'set-lsas-band:SELF_HELP'),
+                  ),
+                  _DemoActionTile(
+                    icon: Icons.psychology_alt_outlined,
+                    title: 'LSAS rõ rệt (60-89)',
+                    subtitle: 'Đưa bệnh nhân vào therapist track 14 tuần, chưa ép tiến độ ladder.',
+                    onTap: () => Navigator.pop(context, 'set-lsas-band:THERAPIST_TRACK'),
+                  ),
+                  _DemoActionTile(
+                    icon: Icons.crisis_alert_outlined,
+                    title: 'LSAS khẩn cấp (>=90)',
+                    subtitle: 'Bật nhánh urgent red flag từ assessment.',
+                    onTap: () => Navigator.pop(context, 'set-lsas-band:URGENT_RED_FLAG'),
+                  ),
+                  const SizedBox(height: 8),
+                  const _DemoSectionLabel('2. Demo tiến trình trị liệu'),
+                  _DemoActionTile(
+                    icon: Icons.looks_one_outlined,
+                    title: 'Đặt tuần trị liệu = 4',
+                    subtitle: 'Ép bệnh nhân sang phase thực tế tuần 4.',
+                    onTap: () => Navigator.pop(context, 'set-program-week:4'),
+                  ),
+                  _DemoActionTile(
+                    icon: Icons.looks_3_outlined,
+                    title: 'Đặt tuần trị liệu = 8',
+                    subtitle: 'Ép bệnh nhân sang phase thực tế tuần 8.',
+                    onTap: () => Navigator.pop(context, 'set-program-week:8'),
+                  ),
+                  _DemoActionTile(
+                    icon: Icons.looks_5_outlined,
+                    title: 'Đặt tuần trị liệu = 12',
+                    subtitle: 'Đẩy sang phase can thiệp sâu để demo gần tốt nghiệp.',
+                    onTap: () => Navigator.pop(context, 'set-program-week:12'),
+                  ),
+                  _DemoActionTile(
+                    icon: Icons.flag_circle_outlined,
+                    title: 'Đặt tuần trị liệu = 14',
+                    subtitle: 'Dùng trước khi demo tốt nghiệp / booster.',
+                    onTap: () => Navigator.pop(context, 'set-program-week:14'),
+                  ),
+                  _DemoActionTile(
+                    icon: Icons.stairs_outlined,
+                    title: 'Fear Ladder: làm chủ 3 bậc',
+                    subtitle: 'Ép 3 bậc đầu sang trạng thái đã làm chủ.',
+                    onTap: () => Navigator.pop(context, 'set-fear-ladder-mastery:3'),
+                  ),
+                  _DemoActionTile(
+                    icon: Icons.trending_up_outlined,
+                    title: 'Fear Ladder: làm chủ 5 bậc',
+                    subtitle: 'Ép tiến độ sâu hơn để demo mở khóa nhanh.',
+                    onTap: () => Navigator.pop(context, 'set-fear-ladder-mastery:5'),
+                  ),
+                  _DemoActionTile(
+                    icon: Icons.verified_outlined,
+                    title: 'Fear Ladder: mở tối đa cho tốt nghiệp',
+                    subtitle: 'Đặt toàn bộ bậc sang đã làm chủ để chuẩn bị mark graduated.',
+                    onTap: () => Navigator.pop(context, 'set-fear-ladder-mastery:999'),
+                  ),
+                  _DemoActionTile(
+                    icon: Icons.all_inclusive_outlined,
+                    title: 'Mở khóa toàn bộ roadmap demo',
+                    subtitle: 'Đẩy nhanh lên tuần 14, mở tối đa ladder và tạo bài hệ thống hôm nay.',
+                    onTap: () => Navigator.pop(context, 'unlock-all-roadmap-content'),
+                  ),
+                  _DemoActionTile(
+                    icon: Icons.restart_alt,
+                    title: 'Reset tiến độ Fear Ladder',
+                    subtitle: 'Xóa tiến độ bậc đã làm chủ để demo lại từ đầu.',
+                    onTap: () => Navigator.pop(context, 'reset-fear-ladder-progress'),
+                  ),
+                  const SizedBox(height: 8),
+                  const _DemoSectionLabel('3. Daily Check-in / Thought Record'),
+                  _DemoActionTile(
+                    icon: Icons.monitor_heart_outlined,
+                    title: 'Seed Daily Check-in ổn định',
+                    subtitle: 'Tạo check-in mẫu nhánh 0-3 để demo coping mode.',
+                    onTap: () => Navigator.pop(context, 'seed-daily-checkin:STABLE'),
+                  ),
+                  _DemoActionTile(
+                    icon: Icons.balance_outlined,
+                    title: 'Seed Daily Check-in mức 4-5',
+                    subtitle: 'Tạo check-in mẫu nhánh cho lựa chọn Thought Record hoặc Thẻ đối phó.',
+                    onTap: () => Navigator.pop(context, 'seed-daily-checkin:CHOICE_4_5'),
+                  ),
+                  _DemoActionTile(
+                    icon: Icons.auto_graph_outlined,
+                    title: 'Seed Daily Check-in mức 6-8',
+                    subtitle: 'Tạo check-in mẫu nhánh AI đẩy sang Thought Record.',
+                    onTap: () => Navigator.pop(context, 'seed-daily-checkin:THOUGHT_RECORD_6_8'),
+                  ),
+                  _DemoActionTile(
+                    icon: Icons.emergency_share_outlined,
+                    title: 'Seed Daily Check-in không an toàn',
+                    subtitle: 'Bật safety gate UNSAFE để demo cờ đỏ và UI khẩn cấp.',
+                    onTap: () => Navigator.pop(context, 'seed-daily-checkin:UNSAFE'),
+                  ),
+                  _DemoActionTile(
+                    icon: Icons.edit_note_outlined,
+                    title: 'Seed Thought Record mẫu',
+                    subtitle: 'Tạo nhanh một thought record cho lịch sử patient/therapist review.',
+                    onTap: () => Navigator.pop(context, 'seed-thought-record'),
+                  ),
+                  const SizedBox(height: 8),
+                  const _DemoSectionLabel('4. Graduation / Booster'),
+                  _DemoActionTile(
+                    icon: Icons.timelapse_outlined,
+                    title: 'Tapering 2 tuần/lần',
+                    subtitle: 'Chuyển patient sang giai đoạn giãn cách 2 tuần/lần.',
+                    onTap: () => Navigator.pop(context, 'set-tapering-stage:MONTHLY'),
+                  ),
+                  _DemoActionTile(
+                    icon: Icons.event_repeat_outlined,
+                    title: 'Tapering 3-4 tuần/lần',
+                    subtitle: 'Chuyển patient sang giai đoạn giãn cách 3-4 tuần/lần.',
+                    onTap: () => Navigator.pop(context, 'set-tapering-stage:QUARTERLY'),
+                  ),
+                  _DemoActionTile(
+                    icon: Icons.school_outlined,
+                    title: 'Đánh dấu tốt nghiệp',
+                    subtitle: 'Chuyển patient sang maintenance / booster mode.',
+                    onTap: () => Navigator.pop(context, 'mark-graduated'),
+                  ),
+                  _DemoActionTile(
+                    icon: Icons.today_outlined,
+                    title: 'Tạo Booster 3 tháng',
+                    subtitle: 'Tạo lịch booster demo gần nhất cho patient.',
+                    onTap: () => Navigator.pop(context, 'trigger-booster:BOOSTER_3M'),
+                  ),
+                  _DemoActionTile(
+                    icon: Icons.date_range_outlined,
+                    title: 'Tạo Booster 6 tháng',
+                    subtitle: 'Tạo lịch booster 6 tháng để demo hậu điều trị.',
+                    onTap: () => Navigator.pop(context, 'trigger-booster:BOOSTER_6M'),
+                  ),
+                  _DemoActionTile(
+                    icon: Icons.calendar_month_outlined,
+                    title: 'Tạo Booster 12 tháng',
+                    subtitle: 'Tạo lịch booster 12 tháng để demo duy trì dài hạn.',
+                    onTap: () => Navigator.pop(context, 'trigger-booster:BOOSTER_12M'),
+                  ),
+                  _DemoActionTile(
+                    icon: Icons.lock_open,
+                    title: 'Mở khóa LSAS',
+                    subtitle: 'Bệnh nhân vào app làm lại LSAS/re-rating ngay.',
+                    onTap: () => Navigator.pop(context, 'unlock-lsas'),
+                  ),
+                  _DemoActionTile(
+                    icon: Icons.assignment_turned_in,
+                    title: 'Tạo bài thực hành hôm nay',
+                    subtitle: 'Tạo bài hệ thống cho Fear Ladder nếu chưa có.',
+                    onTap: () => Navigator.pop(context, 'run-daily-roadmap'),
+                  ),
+                  _DemoActionTile(
+                    icon: Icons.warning_amber,
+                    title: 'Bật cảnh báo risk cao',
+                    subtitle: 'Set risk=80 và bật red flag để demo Safety Overlay.',
+                    onTap: () => Navigator.pop(context, 'set-risk'),
+                  ),
+                  _DemoActionTile(
+                    icon: Icons.health_and_safety,
+                    title: 'Tắt cảnh báo risk',
+                    subtitle: 'Đưa risk/red flag về trạng thái an toàn.',
+                    onTap: () => Navigator.pop(context, 'clear-risk'),
+                  ),
+                  _DemoActionTile(
+                    icon: Icons.restart_alt,
+                    title: 'Reset tốt nghiệp',
+                    subtitle: 'Đưa bệnh nhân về luồng đang điều trị.',
+                    onTap: () => Navigator.pop(context, 'reset-graduation'),
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              const Text(
-                'Các thao tác này chỉ dùng để demo/clinical override, không dùng cho luồng bệnh nhân thường ngày.',
-                style: TextStyle(color: Colors.black54, height: 1.35),
-              ),
-              const SizedBox(height: 16),
-              _DemoActionTile(
-                icon: Icons.lock_open,
-                title: 'Mở khóa LSAS',
-                subtitle: 'Bệnh nhân vào app làm lại LSAS/re-rating ngay.',
-                onTap: () => Navigator.pop(context, 'unlock-lsas'),
-              ),
-              _DemoActionTile(
-                icon: Icons.assignment_turned_in,
-                title: 'Tạo bài thực hành hôm nay',
-                subtitle: 'Tạo bài hệ thống cho Fear Ladder nếu chưa có.',
-                onTap: () => Navigator.pop(context, 'run-daily-roadmap'),
-              ),
-              _DemoActionTile(
-                icon: Icons.warning_amber,
-                title: 'Bật cảnh báo risk cao',
-                subtitle: 'Set risk=80 và bật red flag để demo Safety Overlay.',
-                onTap: () => Navigator.pop(context, 'set-risk'),
-              ),
-              _DemoActionTile(
-                icon: Icons.health_and_safety,
-                title: 'Tắt cảnh báo risk',
-                subtitle: 'Đưa risk/red flag về trạng thái an toàn.',
-                onTap: () => Navigator.pop(context, 'clear-risk'),
-              ),
-              _DemoActionTile(
-                icon: Icons.restart_alt,
-                title: 'Reset tốt nghiệp',
-                subtitle: 'Đưa bệnh nhân về luồng đang điều trị.',
-                onTap: () => Navigator.pop(context, 'reset-graduation'),
-              ),
-            ],
+            ),
           ),
         ),
         actions: [
@@ -272,11 +486,91 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
     );
 
     if (action == null || action.isEmpty) return;
+    if (action.contains(':')) {
+      final pieces = action.split(':');
+      final baseAction = pieces.first;
+      final value = pieces.sublist(1).join(':');
+      final query = switch (baseAction) {
+        'set-lsas-band' => {'band': value},
+        'set-program-week' => {'programWeek': value},
+        'set-fear-ladder-mastery' => {'masteredCount': value},
+        'seed-daily-checkin' => {'mode': value},
+        'set-tapering-stage' => {'stage': value},
+        'trigger-booster' => {'purpose': value},
+        _ => <String, String>{},
+      };
+      await _runDemoAction(item, baseAction, query: query);
+      return;
+    }
     if (action == 'set-risk') {
       await _runDemoAction(item, action, query: {'score': '80', 'redFlag': 'true'});
       return;
     }
     await _runDemoAction(item, action);
+  }
+
+  void _showPatientDetails(AdminPatientProfileModel it) {
+    final risk = it.currentRiskScore ?? 0;
+    final red = it.redFlagActive == true;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Chi tiết hồ sơ bệnh án', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: SizedBox(
+          width: 500,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Thông tin lâm sàng', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 8),
+                Text('Điểm LSAS: ${it.currentLsasScore ?? 0}'),
+                Text('Rủi ro (Risk Score): $risk'),
+                Text('Cờ đỏ (Red flag): ${red ? 'Có' : 'Không'}'),
+                if ((it.emergencyContactPhone ?? '').isNotEmpty)
+                  Text('Liên hệ khẩn cấp: ${it.emergencyContactPhone}'),
+                const Divider(height: 24),
+                const Text('Tiến trình điều trị', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 8),
+                Text('Giãn cách (Tapering): ${it.taperingStage == 'NONE' ? 'Không' : it.taperingStage ?? 'Không'}'),
+                Text('Tốt nghiệp: ${it.graduatedAt != null ? 'Đã tốt nghiệp' : 'Chưa'}'),
+                Text('Chế độ ẩn danh: ${it.anonymousModeEnabled ? 'Đang bật' : 'Đang tắt'}'),
+                if (it.triageRequired) ...[
+                  const Divider(height: 24),
+                  const Text('Xử lý khẩn (Triage)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.alert)),
+                  const SizedBox(height: 8),
+                  Text('Trạng thái: ${it.triageStatus == 'PENDING' ? 'Chờ xử lý' : it.triageStatus ?? 'Chờ xử lý'}'),
+                  Text('Mức ưu tiên: ${it.triagePriority ?? risk}'),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      OutlinedButton(
+                        onPressed: _loading ? null : () { Navigator.pop(context); _runTriageAction(it, 'claim'); },
+                        child: const Text('Nhận xử lý'),
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton(
+                        onPressed: _loading ? null : () { Navigator.pop(context); _runTriageAction(it, 'mark-called'); },
+                        child: const Text('Đã gọi'),
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton(
+                        onPressed: _loading ? null : () { Navigator.pop(context); _runTriageAction(it, 'close'); },
+                        child: const Text('Đóng'),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Đóng')),
+        ],
+      ),
+    );
   }
 
   @override
@@ -304,7 +598,18 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
                       ? null
                       : (v) async {
                           setState(() => _redFlagOnly = v);
-                          await _load();
+                          await _load(pageIndex: 1);
+                        },
+                ),
+                const SizedBox(width: 8),
+                FilterChip(
+                  label: const Text('Triage (Đánh giá sơ bộ)'),
+                  selected: _triageOnly,
+                  onSelected: _loading
+                      ? null
+                      : (v) async {
+                          setState(() => _triageOnly = v);
+                          await _load(pageIndex: 1);
                         },
                 ),
                 const SizedBox(width: 8),
@@ -329,8 +634,8 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
               borderSide: BorderSide(color: Colors.grey.shade300),
             ),
           ),
-          onChanged: (v) => setState(() => _query = v),
-          onSubmitted: (_) => _load(),
+          onChanged: (v) => _query = v,
+          onSubmitted: (v) => _load(pageIndex: 1, keyword: v),
         ),
         const SizedBox(height: 12),
         if (_error.isNotEmpty)
@@ -339,85 +644,122 @@ class _AdminPatientProfilesScreenState extends State<AdminPatientProfilesScreen>
             child: Text(_error, style: const TextStyle(color: Colors.red)),
           ),
         Expanded(
-          child: _loading
-              ? const Center(child: CircularProgressIndicator())
-              : _items.isEmpty
-                  ? const Center(child: Text('Không có dữ liệu.'))
-                  : ListView.separated(
-                      itemCount: _items.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1),
-                      itemBuilder: (context, i) {
-                        final it = _items[i];
-                        final risk = it.currentRiskScore ?? 0;
-                        final red = it.redFlagActive == true;
-                        return Container(
-                          color: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+          child: Column(
+            children: [
+              Expanded(
+                child: _loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _items.isEmpty
+                        ? const Center(child: Text('Không có dữ liệu.'))
+                        : ListView.separated(
+                            itemCount: _items.length,
+                            separatorBuilder: (_, __) => const Divider(height: 1),
+                            itemBuilder: (context, i) {
+                              final it = _items[i];
+                              return Container(
+                                color: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    Text(
-                                      it.nickname?.isNotEmpty == true ? it.nickname! : (it.email ?? it.patientId),
-                                      style: const TextStyle(fontWeight: FontWeight.bold),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            it.nickname?.isNotEmpty == true ? it.nickname! : (it.email ?? it.patientId),
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            '${it.realFullName ?? 'Chưa có tên thật'} • ${it.phoneNumber ?? 'Chưa có SĐT'}',
+                                            style: const TextStyle(color: Colors.black54),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Chuyên gia: ${it.therapistName ?? 'Chưa gán'}',
+                                            style: const TextStyle(color: Colors.black54),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          InkWell(
+                                            onTap: () => _showPatientDetails(it),
+                                            child: const Text(
+                                              'Xem chi tiết hồ sơ bệnh án',
+                                              style: TextStyle(color: AppColors.primary, decoration: TextDecoration.underline),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '${it.realFullName ?? 'Chưa có tên thật'} • ${it.phoneNumber ?? 'Chưa có SĐT'}',
-                                      style: const TextStyle(color: Colors.black54),
+                                    const SizedBox(width: 12),
+                                    Column(
+                                      children: [
+                                        Switch(
+                                          value: it.active ?? true,
+                                          onChanged: _loading ? null : (v) => _toggleActive(it, v),
+                                          activeColor: AppColors.success,
+                                        ),
+                                        const Text('Hoạt động', style: TextStyle(fontSize: 12)),
+                                      ],
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Chuyên gia: ${it.therapistName ?? 'Chưa gán'}',
-                                      style: const TextStyle(color: Colors.black54),
+                                    const SizedBox(width: 8),
+                                    ElevatedButton(
+                                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                                      onPressed: _loading ? null : () => _assignTherapist(it),
+                                      child: const Text('Gán BS', style: TextStyle(color: Colors.white)),
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Ẩn danh: ${it.anonymousModeEnabled ? 'Đang bật' : 'Đang tắt'} • risk: $risk • redFlag: $red',
-                                      style: const TextStyle(color: Colors.black54),
-                                    ),
-                                    if ((it.emergencyContactPhone ?? '').isNotEmpty) ...[
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Liên hệ khẩn cấp: ${it.emergencyContactPhone}',
-                                        style: const TextStyle(color: Colors.black54),
+                                    if (it.triageRequired) ...[
+                                      const SizedBox(width: 8),
+                                      OutlinedButton(
+                                        onPressed: _loading ? null : () => _runTriageAction(it, 'claim'),
+                                        child: const Text('Triage', style: TextStyle(color: AppColors.alert)),
                                       ),
                                     ],
+                                    const SizedBox(width: 8),
+                                    OutlinedButton.icon(
+                                      onPressed: _loading ? null : () => _showDemoControls(it),
+                                      icon: const Icon(Icons.tune, size: 18),
+                                      label: const Text('Demo'),
+                                    ),
                                   ],
                                 ),
-                              ),
-                              const SizedBox(width: 12),
-                              Column(
-                                children: [
-                                  Switch(
-                                    value: it.active ?? true,
-                                    onChanged: _loading ? null : (v) => _toggleActive(it, v),
-                                    activeColor: AppColors.success,
-                                  ),
-                                  const Text('Active'),
-                                ],
-                              ),
-                              const SizedBox(width: 8),
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-                                onPressed: _loading ? null : () => _assignTherapist(it),
-                                child: const Text('Gán BS', style: TextStyle(color: Colors.white)),
-                              ),
-                              const SizedBox(width: 8),
-                              OutlinedButton.icon(
-                                onPressed: _loading ? null : () => _showDemoControls(it),
-                                icon: const Icon(Icons.tune, size: 18),
-                                label: const Text('Demo'),
-                              ),
-                            ],
+                              );
+                            },
                           ),
-                        );
-                      },
-                    ),
+              ),
+              PaginationBar(
+                pageIndex: _pageIndex,
+                totalPages: _totalPages,
+                totalElements: _totalElements,
+                pageSize: _pageSize,
+                onPageChanged: (page) => _load(pageIndex: page),
+                onPageSizeChanged: (size) => _load(pageIndex: 1, pageSize: size),
+              ),
+            ],
+          ),
         ),
       ],
+    );
+  }
+}
+
+class _DemoSectionLabel extends StatelessWidget {
+  const _DemoSectionLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w800,
+          color: AppColors.textSecondary,
+        ),
+      ),
     );
   }
 }

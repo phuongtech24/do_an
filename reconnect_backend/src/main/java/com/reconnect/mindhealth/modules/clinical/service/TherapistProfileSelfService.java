@@ -68,6 +68,12 @@ public class TherapistProfileSelfService {
         if (request.getFullName() != null && !request.getFullName().trim().isEmpty()) {
             profile.setFullName(request.getFullName().trim());
         }
+        if (request.getPhoneNumber() != null) {
+            if (request.getPhoneNumber().trim().isEmpty()) {
+                throw new IllegalArgumentException("Số điện thoại không được để trống.");
+            }
+            profile.setPhoneNumber(request.getPhoneNumber().trim());
+        }
         if (request.getHometown() != null) {
             profile.setHometown(blankToNull(request.getHometown()));
         }

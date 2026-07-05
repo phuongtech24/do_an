@@ -10,11 +10,18 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.reconnect.mindhealth.common.dto.ApiResponse;
+import com.reconnect.mindhealth.common.security.AuthContextService;
+import com.reconnect.mindhealth.modules.auth.entity.User;
 import com.reconnect.mindhealth.modules.ai.dto.CognitiveDistortionRequestDto;
 import com.reconnect.mindhealth.modules.ai.dto.CognitiveDistortionResponseDto;
+import com.reconnect.mindhealth.modules.ai.dto.GuideChatFeedbackRequestDto;
 import com.reconnect.mindhealth.modules.ai.dto.GuidedDiscoveryRequestDto;
 import com.reconnect.mindhealth.modules.ai.dto.GuidedDiscoveryResponseDto;
+import com.reconnect.mindhealth.modules.ai.dto.GuideChatRequestDto;
+import com.reconnect.mindhealth.modules.ai.dto.GuideChatResponseDto;
+import com.reconnect.mindhealth.modules.ai.service.AiChatHistoryService;
 import com.reconnect.mindhealth.modules.ai.service.IAiAssistantService;
+import com.reconnect.mindhealth.modules.ai.service.KnowledgeIngestionService;
 
 @RestController
 @RequestMapping("/api/ai")
@@ -23,9 +30,19 @@ public class AiController {
     private static final Logger log = LoggerFactory.getLogger(AiController.class);
 
     private final IAiAssistantService aiAssistantService;
+    private final AuthContextService authContextService;
+    private final AiChatHistoryService aiChatHistoryService;
+    private final KnowledgeIngestionService knowledgeIngestionService;
 
-    public AiController(IAiAssistantService aiAssistantService) {
+    public AiController(
+            IAiAssistantService aiAssistantService,
+            AuthContextService authContextService,
+            AiChatHistoryService aiChatHistoryService,
+            KnowledgeIngestionService knowledgeIngestionService) {
         this.aiAssistantService = aiAssistantService;
+        this.authContextService = authContextService;
+        this.aiChatHistoryService = aiChatHistoryService;
+        this.knowledgeIngestionService = knowledgeIngestionService;
     }
 
     /**
@@ -54,5 +71,36 @@ public class AiController {
                 result.getDistortions() != null ? result.getDistortions().size() : 0,
                 result.getHint() != null && !result.getHint().isBlank());
         return ResponseEntity.ok(ApiResponse.success("OK", result));
+    }
+
+    @PostMapping("/guide-chat")
+    public ResponseEntity<ApiResponse<GuideChatResponseDto>> guideChat(
+            @Validated @RequestBody GuideChatRequestDto request) {
+        GuideChatResponseDto result = aiAssistantService.guideChat(request);
+        try {
+            User currentUser = authContextService.requireCurrentUser();
+            aiChatHistoryService.attachTrackingAndPersist(currentUser, request, result);
+        } catch (Exception exception) {
+            log.debug("Skip AI chat history persistence bootstrap: {}", exception.getMessage());
+        }
+        return ResponseEntity.ok(ApiResponse.success("OK", result));
+    }
+
+    @PostMapping("/guide-chat/feedback")
+    public ResponseEntity<ApiResponse<Void>> submitGuideChatFeedback(
+            @Validated @RequestBody GuideChatFeedbackRequestDto request) {
+        User currentUser = authContextService.requireCurrentUser();
+        aiChatHistoryService.saveFeedback(currentUser, request);
+        return ResponseEntity.ok(ApiResponse.success("OK", null));
+    }
+
+    @PostMapping("/rag/reindex")
+    public ResponseEntity<ApiResponse<java.util.Map<String, Object>>> reindexRagKnowledge() {
+        int chunksIndexed = knowledgeIngestionService.reindexAll();
+        return ResponseEntity.ok(ApiResponse.success(
+                "RAG reindex completed",
+                java.util.Map.of(
+                        "chunksIndexed", chunksIndexed,
+                        "ragEnabled", chunksIndexed > 0)));
     }
 }

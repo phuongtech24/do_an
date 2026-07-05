@@ -1,6 +1,8 @@
 package com.reconnect.mindhealth.modules.clinical.dto;
 
+import java.time.LocalDateTime;
 import java.time.LocalDate;
+import java.util.Date;
 import java.util.UUID;
 
 import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
@@ -8,7 +10,6 @@ import com.reconnect.mindhealth.modules.clinical.entity.PatientProfile;
 public class TherapistPatientListItemDto {
     private UUID patientId;
     private String nickname;
-    private Integer currentRiskScore;
     private Boolean isRedFlagActive;
     private Integer currentLsasScore;
     private Integer baselineLsasScore;
@@ -25,6 +26,12 @@ public class TherapistPatientListItemDto {
     private String occupation;
     private String relationshipStatus;
     private String medicalHistory;
+    private Integer programWeek;
+    private String programPhaseLabel;
+    private Boolean stalledProgress;
+    private LocalDateTime upcomingAppointmentAt;
+    private Date latestThoughtRecordAt;
+    private Date latestCheckinAt;
 
     public TherapistPatientListItemDto() {
     }
@@ -32,7 +39,6 @@ public class TherapistPatientListItemDto {
     public TherapistPatientListItemDto(PatientProfile patient, Integer baselineLsasScore, String primaryGoal) {
         this.patientId = patient.getId();
         this.nickname = patient.getNickName();
-        this.currentRiskScore = patient.getCurrentRiskScore();
         this.isRedFlagActive = patient.getIsRedFlagActive();
         this.currentLsasScore = patient.getCurrentLsasScore();
         this.baselineLsasScore = baselineLsasScore;
@@ -55,8 +61,6 @@ public class TherapistPatientListItemDto {
     public void setPatientId(UUID patientId) { this.patientId = patientId; }
     public String getNickname() { return nickname; }
     public void setNickname(String nickname) { this.nickname = nickname; }
-    public Integer getCurrentRiskScore() { return currentRiskScore; }
-    public void setCurrentRiskScore(Integer currentRiskScore) { this.currentRiskScore = currentRiskScore; }
     public Boolean getIsRedFlagActive() { return isRedFlagActive; }
     public void setIsRedFlagActive(Boolean isRedFlagActive) { this.isRedFlagActive = isRedFlagActive; }
     public Integer getCurrentLsasScore() { return currentLsasScore; }
@@ -89,4 +93,16 @@ public class TherapistPatientListItemDto {
     public void setRelationshipStatus(String relationshipStatus) { this.relationshipStatus = relationshipStatus; }
     public String getMedicalHistory() { return medicalHistory; }
     public void setMedicalHistory(String medicalHistory) { this.medicalHistory = medicalHistory; }
+    public Integer getProgramWeek() { return programWeek; }
+    public void setProgramWeek(Integer programWeek) { this.programWeek = programWeek; }
+    public String getProgramPhaseLabel() { return programPhaseLabel; }
+    public void setProgramPhaseLabel(String programPhaseLabel) { this.programPhaseLabel = programPhaseLabel; }
+    public Boolean getStalledProgress() { return stalledProgress; }
+    public void setStalledProgress(Boolean stalledProgress) { this.stalledProgress = stalledProgress; }
+    public LocalDateTime getUpcomingAppointmentAt() { return upcomingAppointmentAt; }
+    public void setUpcomingAppointmentAt(LocalDateTime upcomingAppointmentAt) { this.upcomingAppointmentAt = upcomingAppointmentAt; }
+    public Date getLatestThoughtRecordAt() { return latestThoughtRecordAt; }
+    public void setLatestThoughtRecordAt(Date latestThoughtRecordAt) { this.latestThoughtRecordAt = latestThoughtRecordAt; }
+    public Date getLatestCheckinAt() { return latestCheckinAt; }
+    public void setLatestCheckinAt(Date latestCheckinAt) { this.latestCheckinAt = latestCheckinAt; }
 }

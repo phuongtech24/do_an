@@ -16,7 +16,6 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   bool pushEnabled = true;
   bool vietnameseLanguage = true;
-  bool biometricLock = false;
   bool weeklySummary = true;
 
   @override
@@ -84,14 +83,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             value: pushEnabled,
             onChanged: (value) => setState(() => pushEnabled = value),
           ),
-          const SizedBox(height: 12),
-          _SettingTile(
-            icon: Icons.fingerprint_outlined,
-            title: 'Khóa ứng dụng nhanh',
-            subtitle: 'Yêu cầu xác nhận lại khi mở ứng dụng sau một thời gian không sử dụng.',
-            value: biometricLock,
-            onChanged: (value) => setState(() => biometricLock = value),
-          ),
           const SizedBox(height: 18),
           const _SectionTitle('Trải nghiệm sử dụng'),
           const SizedBox(height: 10),
@@ -106,7 +97,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _SettingTile(
             icon: Icons.summarize_outlined,
             title: 'Nhận tổng kết hằng tuần',
-            subtitle: 'Nhắc bạn xem lại LSAS, thang sợ và tiến triển trị liệu mỗi tuần.',
+            subtitle: 'Nhắc bạn xem lại kết quả kiểm tra, bài thực hành tiếp xúc và tiến triển trị liệu mỗi tuần.',
             value: weeklySummary,
             onChanged: (value) => setState(() => weeklySummary = value),
           ),
@@ -119,18 +110,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: 'Bổ sung họ tên thật, số điện thoại, học vấn, nghề nghiệp và tiền sử bệnh lý/thuốc đang dùng.',
             accent: AppColors.primary,
             onTap: () => context.go('/profile-setup?mode=medical-profile&after=/settings'),
-          ),
-          const SizedBox(height: 12),
-          _ActionTile(
-            icon: Icons.lock_reset_outlined,
-            title: 'Khôi phục mật khẩu',
-            subtitle: 'Dùng khi bạn quên mật khẩu hoặc muốn đặt lại mật khẩu mới an toàn hơn.',
-            accent: AppColors.primary,
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Tính năng khôi phục mật khẩu sẽ được kết nối ở batch sau.')),
-              );
-            },
           ),
           const SizedBox(height: 12),
           _ActionTile(

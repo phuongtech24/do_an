@@ -1,4 +1,5 @@
 import '../../../../core/network/api_client.dart';
+import '../../../../core/models/paged_result.dart';
 import '../models/admin_user_model.dart';
 
 class AdminUserRepository {
@@ -12,6 +13,30 @@ class AdminUserRepository {
         final list = (raw as List<dynamic>? ?? []);
         return list.map((e) => AdminUserModel.fromJson(e as Map<String, dynamic>)).toList();
       },
+    );
+    if (res.status != 200 || res.data == null) {
+      throw Exception(res.message.isNotEmpty ? res.message : 'Cannot load users');
+    }
+    return res.data!;
+  }
+
+  Future<PagedResult<AdminUserModel>> listUsersPaged({
+    required String token,
+    String? keyword,
+    int pageIndex = 1,
+    int pageSize = 10,
+  }) async {
+    final res = await _api.post<PagedResult<AdminUserModel>>(
+      '/admin/users/paging',
+      headers: {'Authorization': 'Bearer $token'},
+      body: {
+        'keyword': keyword?.trim(),
+        'pageIndex': pageIndex,
+        'pageSize': pageSize,
+      },
+      parseData: (raw) => raw is Map<String, dynamic>
+          ? PagedResult<AdminUserModel>.fromJson(raw, itemParser: AdminUserModel.fromJson)
+          : null,
     );
     if (res.status != 200 || res.data == null) {
       throw Exception(res.message.isNotEmpty ? res.message : 'Cannot load users');

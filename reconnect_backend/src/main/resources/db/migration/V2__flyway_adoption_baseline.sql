@@ -1,0 +1,4 @@
+-- Flyway adoption baseline for ReConnect MindHealth.
+-- Intentionally no-op.
+-- Existing local databases still rely on Hibernate ddl-auto=update
+-- and ApplicationRunner-based schema patchers during the transition period.

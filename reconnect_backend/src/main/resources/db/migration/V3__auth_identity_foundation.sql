@@ -1,0 +1,17 @@
+-- ReConnect MindHealth
+-- V3 - Auth / Identity foundation
+--
+-- Mục đích:
+-- - Đánh dấu mốc chuyển các thay đổi schema liên quan đến xác thực
+--   và danh tính kép (guest -> patient) sang Flyway.
+-- - Giữ migration an toàn cho local DB hiện tại trong giai đoạn hybrid.
+--
+-- Các bảng/liên quan chính:
+-- - users
+-- - guest_profiles
+-- - patient_profiles
+--
+-- Lưu ý:
+-- - Chưa thực thi DDL bắt buộc trong batch này.
+-- - Các thay đổi schema thật sẽ được bổ sung ở các migration sau.
+

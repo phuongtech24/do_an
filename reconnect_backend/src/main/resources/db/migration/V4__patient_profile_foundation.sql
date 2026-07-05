@@ -1,0 +1,15 @@
+-- ReConnect MindHealth
+-- V4 - Patient profile / medical profile foundation
+--
+-- Mục đích:
+-- - Đánh dấu mốc quản lý hồ sơ y tế bệnh nhân bằng Flyway.
+-- - Chuẩn bị nền cho các field như:
+--   phone_number, emergency_contact_phone,
+--   education_level, relationship_status, medical_history.
+--
+-- Các bảng/liên quan chính:
+-- - patient_profiles
+-- - users
+--
+-- Batch hiện tại chỉ tạo marker migration an toàn.
+

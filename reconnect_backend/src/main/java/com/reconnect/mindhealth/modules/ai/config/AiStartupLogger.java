@@ -24,7 +24,11 @@ public class AiStartupLogger implements ApplicationRunner {
         String apiKey = gemini != null ? gemini.getApiKey() : null;
         boolean apiKeyPresent = apiKey != null && !apiKey.isBlank();
 
-        log.info("AI startup config: enabled={}, geminiModel={}, apiKeyPresent={}",
-                aiProperties.isEnabled(), model, apiKeyPresent);
+        log.info("AI startup config: enabled={}, geminiModel={}, apiKeyPresent={}, guideRetrievalEnabled={}, guideTopK={}",
+                aiProperties.isEnabled(),
+                model,
+                apiKeyPresent,
+                aiProperties.getGuide().isRetrievalEnabled(),
+                aiProperties.getGuide().getTopK());
     }
 }

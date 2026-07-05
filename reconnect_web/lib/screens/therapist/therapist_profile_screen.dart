@@ -27,6 +27,7 @@ class _TherapistProfileScreenState extends State<TherapistProfileScreen> {
   final TherapistCredentialRepository _credentialRepo = TherapistCredentialRepository();
 
   final TextEditingController _fullNameController = TextEditingController();
+  final TextEditingController _phoneNumberController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _hometownController = TextEditingController();
   final TextEditingController _birthYearController = TextEditingController();
@@ -56,6 +57,7 @@ class _TherapistProfileScreenState extends State<TherapistProfileScreen> {
   @override
   void dispose() {
     _fullNameController.dispose();
+    _phoneNumberController.dispose();
     _emailController.dispose();
     _hometownController.dispose();
     _birthYearController.dispose();
@@ -93,6 +95,7 @@ class _TherapistProfileScreenState extends State<TherapistProfileScreen> {
 
   void _applyProfile(TherapistProfileModel profile) {
     _fullNameController.text = profile.fullName;
+    _phoneNumberController.text = profile.phoneNumber ?? '';
     _emailController.text = profile.email;
     _hometownController.text = profile.hometown ?? '';
     _birthYearController.text = profile.birthYear?.toString() ?? '';
@@ -107,6 +110,12 @@ class _TherapistProfileScreenState extends State<TherapistProfileScreen> {
   Future<void> _saveProfile() async {
     final token = Provider.of<AuthProvider>(context, listen: false).token;
     if (token == null || token.isEmpty) return;
+
+        final phoneNumber = _phoneNumberController.text.trim();
+    if (phoneNumber.isEmpty) {
+      setState(() => _error = 'Số điện thoại không được để trống.');
+      return;
+    }
 
     final meetingLink = _meetingLinkController.text.trim();
     if (meetingLink.isNotEmpty && !meetingLink.startsWith('https://') && !meetingLink.startsWith('http://')) {
@@ -129,6 +138,7 @@ class _TherapistProfileScreenState extends State<TherapistProfileScreen> {
       final saved = await _repo.updateMyProfile(
         token: token,
         fullName: _fullNameController.text.trim(),
+        phoneNumber: phoneNumber,
         hometown: _hometownController.text.trim(),
         birthYear: birthYear,
         voiceDescription: _voiceDescriptionController.text.trim(),
@@ -542,9 +552,10 @@ class _TherapistProfileScreenState extends State<TherapistProfileScreen> {
           spacing: 14,
           runSpacing: 14,
           children: [
-            _buildField(_fullNameController, 'Họ tên chuyên gia', width: 340),
-            _buildField(_hometownController, 'Quê quán / khu vực', width: 240),
-            _buildField(_birthYearController, 'Năm sinh', width: 160),
+            _buildField(_fullNameController, 'Họ tên chuyên gia', width: 250),
+            _buildField(_phoneNumberController, 'Số điện thoại *', width: 180),
+            _buildField(_hometownController, 'Quê quán / khu vực', width: 200),
+            _buildField(_birthYearController, 'Năm sinh', width: 100),
           ],
         ),
         const SizedBox(height: 14),

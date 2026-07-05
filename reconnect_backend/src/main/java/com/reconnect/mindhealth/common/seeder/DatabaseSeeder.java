@@ -3,15 +3,19 @@ package com.reconnect.mindhealth.common.seeder;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.regex.Pattern;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.core.io.Resource;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.reconnect.mindhealth.modules.auth.entity.User;
 import com.reconnect.mindhealth.modules.auth.enums.Role;
 import com.reconnect.mindhealth.modules.auth.repository.UserRepository;
@@ -21,410 +25,165 @@ import com.reconnect.mindhealth.modules.clinical.enums.ApprovalStatus;
 import com.reconnect.mindhealth.modules.clinical.enums.Status;
 import com.reconnect.mindhealth.modules.clinical.repository.PatientProfileRepository;
 import com.reconnect.mindhealth.modules.clinical.repository.TherapistProfileRepository;
-import com.reconnect.mindhealth.modules.assessment.entity.LsasSituation;
-import com.reconnect.mindhealth.modules.assessment.enums.LsasSituationGroup;
-import com.reconnect.mindhealth.modules.assessment.repository.LsasSituationRepository;
-import com.reconnect.mindhealth.modules.journal.entity.Journal;
-import com.reconnect.mindhealth.modules.journal.enums.JournalType;
-import com.reconnect.mindhealth.modules.journal.repository.JournalRepository;
-import com.reconnect.mindhealth.modules.roadmap.entity.QuestTemplate;
-import com.reconnect.mindhealth.modules.roadmap.enums.QuestCategory;
-import com.reconnect.mindhealth.modules.roadmap.enums.QuestDifficulty;
-import com.reconnect.mindhealth.modules.roadmap.repository.QuestTemplateRepository;
-import com.reconnect.mindhealth.common.util.EncryptionUtil;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Component
 public class DatabaseSeeder implements CommandLineRunner {
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    private static final Logger log = LoggerFactory.getLogger(DatabaseSeeder.class);
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
+    private final PatientProfileRepository patientProfileRepository;
+    private final TherapistProfileRepository therapistProfileRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    @Autowired
-    private PatientProfileRepository patientProfileRepository;
-
-    @Autowired
-    private TherapistProfileRepository therapistProfileRepository;
-
-    @Autowired
-    private LsasSituationRepository lsasSituationRepository;
-
-    @Autowired
-    private JournalRepository journalRepository;
-
-    @Autowired
-    private QuestTemplateRepository questTemplateRepository;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @Value("classpath:seed_data/users.csv")
-    private Resource usersCsv;
-
-    @Value("classpath:seed_data/patient_profiles.csv")
-    private Resource profilesCsv;
-
-    @Value("classpath:seed_data/therapist_profiles.csv")
-    private Resource therapistProfilesCsv;
-
-    @Value("classpath:seed_data/lsas_situations.csv")
-    private Resource lsasSituationsCsv;
-
-    @Value("classpath:seed_data/journals.csv")
-    private Resource journalsCsv;
-
-    @Value("classpath:seed_data/quest_templates.csv")
-    private Resource questTemplatesCsv;
-
-    private Map<UUID, String> csvIdToEmailMap = new HashMap<>();
-    private static final Pattern BCRYPT_PREFIX = Pattern.compile("^\\$2[ay]\\$.*");
+    public DatabaseSeeder(
+            UserRepository userRepository,
+            PatientProfileRepository patientProfileRepository,
+            TherapistProfileRepository therapistProfileRepository,
+            PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.patientProfileRepository = patientProfileRepository;
+        this.therapistProfileRepository = therapistProfileRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
 
     @Override
-    public void run(String... args) throws Exception {
-        boolean needsSeed = userRepository.count() == 0
-                || therapistProfileRepository.count() == 0
-                || patientProfileRepository.count() == 0
-                || lsasSituationRepository.count() == 0
-                || questTemplateRepository.count() == 0;
-
-        if (!needsSeed) {
-            safeSeed("lsas_situations", this::seedLsasSituations);
-            System.out.println("====== RECONNECT: SKIP DATABASE SEEDING (DATA ALREADY EXISTS) ======");
-            return;
-        }
-
-        System.out.println("====== RECONNECT: STARTING DATABASE SEEDING FROM CSV (AUTO) ======");
-
-        safeSeed("users", this::seedUsers);
-        safeSeed("therapist_profiles", this::seedTherapistProfiles);
-        safeSeed("patient_profiles", this::seedPatientProfiles);
-        safeSeed("lsas_situations", this::seedLsasSituations);
-        safeSeed("journals", this::seedJournals);
-        safeSeed("quest_templates", this::seedQuestTemplates);
-
-        System.out.println("====== RECONNECT: DATABASE SEEDING FINISHED (CHECK LOGS ABOVE) ======");
-    }
-
-    @FunctionalInterface
-    private interface SeedTask {
-        void run() throws Exception;
-    }
-
-    private void safeSeed(String name, SeedTask task) {
+    public void run(String... args) {
         try {
-            task.run();
-        } catch (Exception e) {
-            System.err.println("====== RECONNECT: SEED STEP FAILED: " + name + " ======");
-            e.printStackTrace();
+            seedUsers();
+            seedPatientProfiles();
+            seedTherapistProfiles();
+        } catch (Exception exception) {
+            log.warn("Database seed skipped: {}", exception.getMessage());
         }
     }
 
-    private void seedUsers() throws Exception {
-        if (!usersCsv.exists()) {
-            System.out.println("Users CSV file not found at classpath:seed_data/users.csv");
-            return;
+    @Transactional
+    protected void seedUsers() {
+        for (String[] row : readCsv("seed_data/users.csv")) {
+            UUID id = UUID.fromString(value(row, 0));
+            String email = value(row, 1);
+            String username = value(row, 2);
+            String rawPassword = value(row, 3);
+            Role role = Role.valueOf(value(row, 4));
+            boolean isAnonymous = Boolean.parseBoolean(value(row, 5));
+            boolean isActive = Boolean.parseBoolean(value(row, 6));
+
+            User user = userRepository.findById(id)
+                    .or(() -> userRepository.findByEmail(email))
+                    .orElseGet(User::new);
+
+            boolean isNew = user.getId() == null;
+            if (isNew) {
+                user.setId(id);
+                user.setPasswordHash(passwordEncoder.encode(rawPassword));
+            }
+
+            user.setEmail(email);
+            user.setUsername(username);
+            user.setRole(role);
+            user.setIsAnonymous(isAnonymous);
+            user.setIsActive(isActive);
+            userRepository.save(user);
         }
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(usersCsv.getInputStream(), StandardCharsets.UTF_8))) {
+    }
+
+    @Transactional
+    protected void seedPatientProfiles() {
+        for (String[] row : readCsv("seed_data/patient_profiles.csv")) {
+            UUID userId = UUID.fromString(value(row, 0));
+            User user = userRepository.findById(userId).orElse(null);
+            if (user == null || user.getRole() != Role.PATIENT) {
+                continue;
+            }
+
+            PatientProfile profile = patientProfileRepository.findById(userId).orElseGet(PatientProfile::new);
+            profile.setId(userId);
+            profile.setUser(user);
+            profile.setNickName(value(row, 1));
+            profile.setStatus(parseStatus(value(row, 2)));
+            profile.setAvatarIcon(value(row, 3));
+            profile.setIsRedFlagActive(Boolean.parseBoolean(value(row, 4)));
+            patientProfileRepository.save(profile);
+        }
+    }
+
+    @Transactional
+    protected void seedTherapistProfiles() {
+        for (String[] row : readCsv("seed_data/therapist_profiles.csv")) {
+            UUID userId = UUID.fromString(value(row, 0));
+            User user = userRepository.findById(userId).orElse(null);
+            if (user == null || user.getRole() != Role.THERAPIST) {
+                continue;
+            }
+
+            TherapistProfile profile = therapistProfileRepository.findById(userId).orElseGet(TherapistProfile::new);
+            profile.setId(userId);
+            profile.setUser(user);
+            profile.setFullName(value(row, 1));
+            profile.setSpecialization(blankToNull(value(row, 2)));
+            profile.setBio(blankToNull(value(row, 3)));
+            profile.setMeetingLink(blankToNull(value(row, 4)));
+            profile.setApprovalStatus(parseApproval(value(row, 5)));
+            profile.setPhoneNumber(blankToNull(value(row, 6)));
+            profile.setHometown(blankToNull(value(row, 7)));
+            profile.setBirthYear(parseInteger(value(row, 8)));
+            profile.setVoiceDescription(blankToNull(value(row, 9)));
+            profile.setTherapyStyle(blankToNull(value(row, 10)));
+            profile.setAvatarUrl(blankToNull(value(row, 11)));
+            therapistProfileRepository.save(profile);
+        }
+    }
+
+    private List<String[]> readCsv(String classpathLocation) {
+        List<String[]> rows = new ArrayList<>();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+                new ClassPathResource(classpathLocation).getInputStream(),
+                StandardCharsets.UTF_8))) {
             String line;
-            boolean isHeader = true;
+            boolean headerSkipped = false;
             while ((line = reader.readLine()) != null) {
-                if (isHeader) {
-                    isHeader = false;
+                if (!headerSkipped) {
+                    headerSkipped = true;
                     continue;
                 }
-                String[] data = line.split(",");
-                if (data.length < 7) continue;
-
-                UUID id = UUID.fromString(data[0].trim());
-                String email = data[1].trim();
-                String username = data[2].trim();
-                String passwordHash = data[3].trim();
-                Role role = Role.valueOf(data[4].trim());
-                boolean isAnonymous = Boolean.parseBoolean(data[5].trim());
-                boolean isActive = Boolean.parseBoolean(data[6].trim());
-
-                boolean emailExists = userRepository.existsByEmail(email);
-                boolean usernameExists = username != null && !username.isBlank() && userRepository.existsByUsername(username);
-                if (emailExists || usernameExists || userRepository.existsById(id)) {
-                    csvIdToEmailMap.put(id, email);
+                if (line.isBlank()) {
                     continue;
                 }
-
-                if (!userRepository.existsById(id) && !userRepository.existsByEmail(email)) {
-                    User user = new User();
-                    user.setId(id);
-                    user.setEmail(email);
-                    user.setUsername(username);
-                    
-                    // Hash raw password if it's not already a BCrypt hash
-                    String finalPassword = passwordHash;
-                    if (finalPassword != null && !BCRYPT_PREFIX.matcher(finalPassword).matches()) {
-                        finalPassword = passwordEncoder.encode(finalPassword);
-                    }
-                    user.setPasswordHash(finalPassword);
-                    
-                    user.setRole(role);
-                    user.setIsAnonymous(isAnonymous);
-                    user.setIsActive(isActive);
-                    try {
-                        userRepository.save(user);
-                        System.out.println("Successfully seeded user: " + username);
-                    } catch (Exception ex) {
-                        System.out.println("Skipping seed user (constraint): " + email);
-                    }
-                }
-                
-                // Track mapping between CSV UUID and Email
-                csvIdToEmailMap.put(id, email);
+                rows.add(line.split(",", -1));
             }
+            return rows;
+        } catch (Exception exception) {
+            throw new IllegalStateException("Cannot read seed file: " + classpathLocation, exception);
         }
     }
 
-    private void seedTherapistProfiles() throws Exception {
-        if (!therapistProfilesCsv.exists()) {
-            System.out.println("Therapist profiles CSV file not found at classpath:seed_data/therapist_profiles.csv");
-            return;
-        }
-
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(therapistProfilesCsv.getInputStream(), StandardCharsets.UTF_8))) {
-            String line;
-            boolean isHeader = true;
-            while ((line = reader.readLine()) != null) {
-                if (isHeader) {
-                    isHeader = false;
-                    continue;
-                }
-                String[] data = line.split(",", -1);
-                if (data.length < 6) {
-                    continue;
-                }
-
-                UUID userId = UUID.fromString(data[0].trim());
-                String fullName = data[1].trim();
-                String specialization = data[2].trim();
-                String bio = data[3].trim();
-                String meetingLink = data[4].trim();
-                String approvalStatusRaw = data[5].trim();
-
-                User user = userRepository.findById(userId).orElse(null);
-                if (user == null) {
-                    continue;
-                }
-
-                if (therapistProfileRepository.existsById(user.getId())) {
-                    continue;
-                }
-
-                TherapistProfile profile = new TherapistProfile();
-                profile.setUser(userRepository.getReferenceById(user.getId()));
-                profile.setFullName(fullName.isBlank() ? user.getUsername() : fullName);
-                profile.setSpecialization(specialization.isBlank() ? null : specialization);
-                profile.setBio(bio.isBlank() ? null : bio);
-                profile.setMeetingLink(meetingLink.isBlank() ? null : meetingLink);
-
-                ApprovalStatus approvalStatus = ApprovalStatus.PENDING;
-                if (!approvalStatusRaw.isBlank()) {
-                    approvalStatus = ApprovalStatus.valueOf(approvalStatusRaw);
-                }
-                profile.setApprovalStatus(approvalStatus);
-
-                try {
-                    therapistProfileRepository.save(profile);
-                    System.out.println("Successfully seeded therapist profile: " + profile.getFullName());
-                } catch (Exception ex) {
-                    System.out.println("Skipping seed therapist profile (constraint): " + userId);
-                }
-            }
-        }
+    private String value(String[] row, int index) {
+        return index < row.length ? row[index].trim() : "";
     }
 
-    private void seedPatientProfiles() throws Exception {
-        if (!profilesCsv.exists()) {
-            System.out.println("Patient profiles CSV file not found at classpath:seed_data/patient_profiles.csv");
-            return;
-        }
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(profilesCsv.getInputStream(), StandardCharsets.UTF_8))) {
-            String line;
-            boolean isHeader = true;
-            while ((line = reader.readLine()) != null) {
-                if (isHeader) {
-                    isHeader = false;
-                    continue;
-                }
-                String[] data = line.split(",");
-                if (data.length < 5) continue;
-
-                UUID userId = UUID.fromString(data[0].trim());
-                String nickname = data[1].trim();
-                Status status = Status.valueOf(data[2].trim());
-                String avatarIcon = data[3].trim();
-                boolean isRedFlagActive = Boolean.parseBoolean(data[4].trim());
-
-                // Find the actual user by email using our mapping
-                String email = csvIdToEmailMap.get(userId);
-                User user = email != null ? userRepository.findByEmail(email).orElse(null) : null;
-                
-                if (user != null && !patientProfileRepository.existsById(user.getId())) {
-                    PatientProfile profile = new PatientProfile();
-                    profile.setUser(userRepository.getReferenceById(user.getId()));
-                    profile.setNickName(nickname);
-                    profile.setStatus(status);
-                    profile.setAvatarIcon(avatarIcon);
-                    profile.setIsRedFlagActive(isRedFlagActive);
-                    try {
-                        patientProfileRepository.save(profile);
-                        System.out.println("Successfully seeded patient profile: " + nickname);
-                    } catch (Exception ex) {
-                        System.out.println("Skipping seed patient profile (constraint): " + user.getId());
-                    }
-                }
-            }
-        }
+    private String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
-    private void seedLsasSituations() throws Exception {
-        if (!lsasSituationsCsv.exists()) {
-            System.out.println("LSAS situations CSV file not found at classpath:seed_data/lsas_situations.csv");
-            return;
+    private Integer parseInteger(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
         }
-        System.out.println("Upserting LSAS situations into database...");
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(lsasSituationsCsv.getInputStream(), StandardCharsets.UTF_8))) {
-            String line;
-            boolean isHeader = true;
-            while ((line = reader.readLine()) != null) {
-                if (isHeader) {
-                    isHeader = false;
-                    continue;
-                }
-                String[] data = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
-                if (data.length < 3) continue;
-
-                Integer situationNumber = Integer.parseInt(data[0].trim());
-                LsasSituationGroup group = LsasSituationGroup.valueOf(data[1].trim());
-                String text = data[2].trim().replace("\"", "");
-
-                LsasSituation situation = lsasSituationRepository.findBySituationNumber(situationNumber);
-                if (situation == null) {
-                    situation = new LsasSituation();
-                    situation.setSituationNumber(situationNumber);
-                } else {
-                    situation.setSituationNumber(situationNumber);
-                }
-                situation.setSituationGroup(group);
-                situation.setText(text);
-                lsasSituationRepository.save(situation);
-                System.out.println("Successfully upserted LSAS situation " + situationNumber + ": " + text);
-            }
-        }
+        return Integer.parseInt(value.trim());
     }
 
-    private void seedJournals() throws Exception {
-        if (!journalsCsv.exists()) {
-            System.out.println("Journals CSV file not found at classpath:seed_data/journals.csv");
-            return;
+    private Status parseStatus(String value) {
+        if (value == null || value.isBlank()) {
+            return Status.STABLE;
         }
-        if (journalRepository.count() == 0) {
-            System.out.println("Seeding journals into database...");
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(journalsCsv.getInputStream(), StandardCharsets.UTF_8))) {
-                String line;
-                boolean isHeader = true;
-                while ((line = reader.readLine()) != null) {
-                    if (isHeader) {
-                        isHeader = false;
-                        continue;
-                    }
-                    String[] data = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
-                    if (data.length < 11) continue;
-
-                    UUID patientUserId = UUID.fromString(data[0].trim());
-                    JournalType journalType = JournalType.valueOf(data[1].trim());
-                    Integer aiRiskScore = Integer.parseInt(data[2].trim());
-                    String severityLevelStr = data[3].trim();
-                    
-                    String situation = data[4].trim();
-                    String automaticThought = data[5].trim();
-                    String emotion = data[6].trim();
-                    Integer emotionScore = data[7].trim().isEmpty() ? null : Integer.parseInt(data[7].trim());
-                    String adaptiveResponse = data[8].trim();
-                    Integer reRatedScore = data[9].trim().isEmpty() ? null : Integer.parseInt(data[9].trim());
-                    
-                    String content = data[10].trim();
-
-                    PatientProfile patient = patientProfileRepository.findById(patientUserId).orElse(null);
-                    if (patient != null) {
-                        Journal journal = new Journal();
-                        journal.setPatientProfile(patient);
-                        journal.setJournalType(journalType);
-                        journal.setAiRiskScore(aiRiskScore);
-                        journal.setSeverityLevel(severityLevelStr);
-
-                        Map<String, Object> contentMap = new HashMap<>();
-                        if (journalType == JournalType.THOUGHT_RECORD) {
-                            contentMap.put("situation", situation);
-                            contentMap.put("automaticThought", automaticThought);
-                            contentMap.put("emotion", emotion);
-                            contentMap.put("emotionScore", emotionScore);
-                            contentMap.put("adaptiveResponse", adaptiveResponse);
-                            contentMap.put("reRatedScore", reRatedScore);
-                        } else {
-                            contentMap.put("content", content);
-                        }
-
-                        String jsonString = objectMapper.writeValueAsString(contentMap);
-                        String encrypted = EncryptionUtil.encrypt(jsonString);
-                        journal.setContentEncrypted(encrypted);
-
-                        journalRepository.save(journal);
-                        System.out.println("Successfully seeded journal of type: " + journalType);
-                    }
-                }
-            }
-        } else {
-            System.out.println("Journals already exist in database.");
-        }
+        return Status.valueOf(value.trim());
     }
 
-    private void seedQuestTemplates() throws Exception {
-        if (!questTemplatesCsv.exists()) {
-            System.out.println("Quest templates CSV file not found at classpath:seed_data/quest_templates.csv");
-            return;
+    private ApprovalStatus parseApproval(String value) {
+        if (value == null || value.isBlank()) {
+            return ApprovalStatus.PENDING;
         }
-        if (questTemplateRepository.count() == 0) {
-            System.out.println("Seeding quest templates into database...");
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(questTemplatesCsv.getInputStream(), StandardCharsets.UTF_8))) {
-                String line;
-                boolean isHeader = true;
-                while ((line = reader.readLine()) != null) {
-                    if (isHeader) {
-                        isHeader = false;
-                        continue;
-                    }
-                    String[] data = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
-                    if (data.length < 4) {
-                        continue;
-                    }
-                    String title = data[0].trim().replace("\"", "");
-                    String description = data[1].trim().replace("\"", "");
-                    QuestCategory category = QuestCategory.valueOf(data[2].trim());
-                    QuestDifficulty difficulty = QuestDifficulty.valueOf(data[3].trim());
-
-                    QuestTemplate qt = new QuestTemplate();
-                    qt.setTitle(title);
-                    qt.setDescription(description);
-                    qt.setCategory(category);
-                    qt.setDifficulty(difficulty);
-                    questTemplateRepository.save(qt);
-                    System.out.println("Successfully seeded quest template: " + title);
-                }
-            }
-        } else {
-            System.out.println("Quest templates already exist in database.");
-        }
+        return ApprovalStatus.valueOf(value.trim());
     }
 }

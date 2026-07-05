@@ -1,4 +1,5 @@
 import '../../../../core/network/api_client.dart';
+import '../../../../core/models/paged_result.dart';
 import '../models/therapist_applicant_model.dart';
 
 class AdminTherapistApprovalRepository {
@@ -13,6 +14,35 @@ class AdminTherapistApprovalRepository {
         final list = (raw as List<dynamic>? ?? []);
         return list.map((e) => TherapistApplicantModel.fromJson(e as Map<String, dynamic>)).toList();
       },
+    );
+    if (res.status != 200 || res.data == null) {
+      throw Exception(res.message.isNotEmpty ? res.message : 'Cannot load therapist applicants');
+    }
+    return res.data!;
+  }
+
+  Future<PagedResult<TherapistApplicantModel>> listPaged({
+    required String token,
+    String? status,
+    String? keyword,
+    int pageIndex = 1,
+    int pageSize = 10,
+  }) async {
+    final res = await _api.post<PagedResult<TherapistApplicantModel>>(
+      '/admin/therapists/paging',
+      headers: {'Authorization': 'Bearer $token'},
+      body: {
+        'status': status == null || status.isEmpty ? null : status,
+        'keyword': keyword?.trim(),
+        'pageIndex': pageIndex,
+        'pageSize': pageSize,
+      },
+      parseData: (raw) => raw is Map<String, dynamic>
+          ? PagedResult<TherapistApplicantModel>.fromJson(
+              raw,
+              itemParser: TherapistApplicantModel.fromJson,
+            )
+          : null,
     );
     if (res.status != 200 || res.data == null) {
       throw Exception(res.message.isNotEmpty ? res.message : 'Cannot load therapist applicants');
@@ -60,4 +90,3 @@ class AdminTherapistApprovalRepository {
     return res.data!;
   }
 }
-

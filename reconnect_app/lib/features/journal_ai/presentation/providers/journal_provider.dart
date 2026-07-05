@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:reconnect_app/core/models/paged_result.dart';
 import 'package:reconnect_app/features/journal_ai/data/models/journal_model.dart';
 import 'package:reconnect_app/features/journal_ai/data/repositories/journal_repository.dart';
 
@@ -11,23 +12,63 @@ class JournalProvider extends ChangeNotifier {
   String _errorMessage = '';
   List<JournalModel> _journals = [];
   JournalModel? _selectedJournal;
+  int _pageIndex = 1;
+  int _pageSize = 10;
+  int _totalPages = 0;
+  int _totalElements = 0;
+  String _keyword = '';
 
   // Getters
   JournalProviderStatus get status => _status;
   String get errorMessage => _errorMessage;
   List<JournalModel> get journals => _journals;
   JournalModel? get selectedJournal => _selectedJournal;
+  int get pageIndex => _pageIndex;
+  int get pageSize => _pageSize;
+  int get totalPages => _totalPages;
+  int get totalElements => _totalElements;
+  String get keyword => _keyword;
 
   // ======================================================
   // 1. TẢI DANH SÁCH LỊCH SỬ NHẬT KÝ
   // ======================================================
   Future<void> loadJournals(String patientId, {String? token}) async {
+    await loadJournalsPaged(patientId, token: token);
+  }
+
+  Future<void> loadJournalsPaged(
+    String patientId, {
+    String? token,
+    String? keyword,
+    int? pageIndex,
+    int? pageSize,
+  }) async {
     _status = JournalProviderStatus.loading;
     _errorMessage = '';
+    if (keyword != null) {
+      _keyword = keyword;
+    }
+    if (pageIndex != null) {
+      _pageIndex = pageIndex;
+    }
+    if (pageSize != null) {
+      _pageSize = pageSize;
+    }
     notifyListeners();
 
     try {
-      _journals = await _repository.getJournals(patientId, token: token);
+      final PagedResult<JournalModel> page = await _repository.getJournalsPaged(
+        patientId,
+        token: token,
+        keyword: _keyword,
+        pageIndex: _pageIndex,
+        pageSize: _pageSize,
+      );
+      _journals = page.content;
+      _pageIndex = page.pageIndex;
+      _pageSize = page.size;
+      _totalPages = page.totalPages;
+      _totalElements = page.totalElements;
       _status = JournalProviderStatus.success;
     } catch (e) {
       _status = JournalProviderStatus.error;

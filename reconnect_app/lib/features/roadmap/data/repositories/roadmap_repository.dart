@@ -6,6 +6,7 @@ import '../../../../core/constants/api_constants.dart';
 import '../models/behavioral_experiment_model.dart';
 import '../models/fear_ladder_item_model.dart';
 import '../models/patient_quest_model.dart';
+import '../models/roadmap_program_state_model.dart';
 import '../models/roadmap_safety_overlay_model.dart';
 import '../models/verify_quest_proof_result.dart';
 
@@ -39,6 +40,27 @@ class RoadmapRepository {
       } else {
         throw Exception(json['message'] ?? 'Không thể tải nhiệm vụ hôm nay');
       }
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  Future<RoadmapProgramStateModel> getProgramState(String patientId, {String? token}) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiConstants.roadmapProgramState}?patientId=$patientId'),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      _handleHttpError(response, 'tải trạng thái lộ trình 14 tuần');
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      if (json['status'] == 200 && json['data'] != null) {
+        return RoadmapProgramStateModel.fromJson(json['data'] as Map<String, dynamic>);
+      }
+      throw Exception(json['message'] ?? 'Không thể tải trạng thái lộ trình 14 tuần');
     } catch (e) {
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
@@ -87,11 +109,65 @@ class RoadmapRepository {
     }
   }
 
+  Future<List<BehavioralExperimentModel>> getBehavioralExperimentHistory(
+    String patientId, {
+    String? token,
+  }) async {
+    try {
+      final response = await http.get(
+        Uri.parse('${ApiConstants.behavioralExperimentHistory}?patientId=$patientId'),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      _handleHttpError(response, 'tải lịch sử bài thực hành');
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      if (json['status'] == 200 && json['data'] != null) {
+        final list = json['data'] as List<dynamic>;
+        return list
+            .map((e) => BehavioralExperimentModel.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  Future<BehavioralExperimentModel> selectBehavioralExperiment(
+    String patientId,
+    String ladderItemId, {
+    String? token,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConstants.behavioralExperimentSelect}?patientId=$patientId&ladderItemId=$ladderItemId'),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      _handleHttpError(response, 'chọn bài thực hành');
+      final json = jsonDecode(utf8.decode(response.bodyBytes));
+      if (json['status'] == 200 && json['data'] != null) {
+        return BehavioralExperimentModel.fromJson(json['data'] as Map<String, dynamic>);
+      }
+      throw Exception(json['message'] ?? 'Không thể chọn bài thực hành');
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
   Future<BehavioralExperimentModel> startBehavioralExperiment(
     String id, {
     required String prediction,
-    required int predictionBelief,
+    int? predictionBeliefBefore,
+    int? predictionBelief,
     required List<String> safetyBehaviors,
+    bool dropWithoutSafetyBehaviors = false,
     String? token,
   }) async {
     try {
@@ -107,8 +183,9 @@ class RoadmapRepository {
         },
         body: jsonEncode({
           'prediction': prediction,
-          'predictionBelief': predictionBelief,
+          'predictionBeliefBefore': predictionBeliefBefore ?? predictionBelief,
           'safetyBehaviorsJson': jsonEncode(normalizedSafetyBehaviors),
+          'dropWithoutSafetyBehaviors': dropWithoutSafetyBehaviors,
         }),
       );
       _handleHttpError(response, 'bắt đầu Behavioral Experiment');
@@ -125,7 +202,10 @@ class RoadmapRepository {
   Future<BehavioralExperimentModel> debriefBehavioralExperiment(
     String id, {
     required String executionNotes,
-    required String debrief,
+    String? outcome,
+    String? learning,
+    int? predictionBeliefAfter,
+    String? debrief,
     required int postFearScore,
     required int postAvoidanceScore,
     String? token,
@@ -139,7 +219,9 @@ class RoadmapRepository {
         },
         body: jsonEncode({
           'executionNotes': executionNotes,
-          'debrief': debrief,
+          'outcome': outcome ?? debrief ?? '',
+          'learning': learning ?? debrief ?? '',
+          'predictionBeliefAfter': predictionBeliefAfter,
           'postFearScore': postFearScore,
           'postAvoidanceScore': postAvoidanceScore,
         }),

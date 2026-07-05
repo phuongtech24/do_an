@@ -1,10 +1,25 @@
-spring:
+﻿spring:
   application:
     name: reconnect_backend
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:false}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS_ENABLE:false}
   datasource:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:mindhealth_db}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: ${DB_USER:mindhealth_user}
     password: ${DB_PASSWORD:mindhealth_password}
+  flyway:
+    enabled: ${FLYWAY_ENABLED:false}
+    locations: classpath:db/migration
+    baseline-on-migrate: true
   jpa:
     hibernate:
       ddl-auto: update
@@ -23,6 +38,11 @@ server:
 app:
   security:
     jwt-secret: ${JWT_SECRET:replace-this-secret}
+  mail:
+    enabled: ${APP_MAIL_ENABLED:true}
+    from: ${MAIL_FROM:no-reply@mindhealth.local}
+    reset-password-subject: ${MAIL_RESET_PASSWORD_SUBJECT:MindHealth - Đặt lại mật khẩu}
+    reset-password-url-base: ${MAIL_RESET_PASSWORD_URL_BASE:}
   ai:
     enabled: ${AI_ENABLED:true}
     gemini:
@@ -36,3 +56,8 @@ app:
     distortions:
       call-ai-only-when-suspicious: ${AI_DISTORTIONS_CALL_AI_ONLY_WHEN_SUSPICIOUS:true}
       max-suggestions: ${AI_DISTORTIONS_MAX_SUGGESTIONS:3}
+
+# Local Mailpit defaults:
+# - SMTP: localhost:1025
+# - Web UI: http://localhost:8025
+

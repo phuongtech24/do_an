@@ -21,4 +21,11 @@ public interface UserMoodRepository extends JpaRepository<UserMood, UUID> {
     );
 
     List<UserMood> findTop3ByPatientProfile_IdOrderByCreateDateDesc(UUID patientId);
+
+    List<UserMood> findTop5ByPatientProfile_IdOrderByCreateDateDesc(UUID patientId);
+
+    List<UserMood> findByPatientProfile_IdAndCreateDateBetweenOrderByCreateDateAsc(
+            UUID patientId,
+            Date startDate,
+            Date endDate);
 }

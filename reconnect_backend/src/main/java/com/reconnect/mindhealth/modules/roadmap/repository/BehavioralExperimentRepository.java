@@ -12,7 +12,14 @@ import com.reconnect.mindhealth.modules.roadmap.enums.BehavioralExperimentStatus
 public interface BehavioralExperimentRepository extends JpaRepository<BehavioralExperiment, UUID> {
     List<BehavioralExperiment> findByPatientProfile_IdOrderByAssignedAtDesc(UUID patientId);
 
+    void deleteByPatientProfile_Id(UUID patientId);
+
     Optional<BehavioralExperiment> findTopByPatientProfile_IdAndStatusInOrderByAssignedAtDesc(
             UUID patientId,
+            List<BehavioralExperimentStatus> statuses);
+
+    Optional<BehavioralExperiment> findTopByPatientProfile_IdAndFearLadderItem_IdAndStatusInOrderByAssignedAtDesc(
+            UUID patientId,
+            UUID fearLadderItemId,
             List<BehavioralExperimentStatus> statuses);
 }

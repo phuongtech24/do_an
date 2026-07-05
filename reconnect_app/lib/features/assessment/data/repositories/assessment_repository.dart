@@ -1,7 +1,8 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:reconnect_app/core/constants/api_constants.dart';
+import 'package:reconnect_app/features/assessment/data/models/lsas_progress_model.dart';
 import 'package:reconnect_app/features/assessment/data/models/lsas_situation_model.dart';
 import 'package:reconnect_app/features/assessment/data/models/lsas_submission_model.dart';
 import 'package:reconnect_app/features/assessment/data/models/user_mood_model.dart';
@@ -87,5 +88,17 @@ class AssessmentRepository {
       return UserMoodModel.fromJson(json['data']);
     }
     throw Exception(json['message'] ?? 'Ghi nhận tâm trạng thất bại');
+  }
+
+  Future<LsasProgressResponseModel> getLsasProgress({String? token}) async {
+    final response = await http.get(
+      Uri.parse(ApiConstants.lsasProgress),
+      headers: _headers(token),
+    );
+    final json = _decode(response);
+    if (json['status'] == 200 && json['data'] != null) {
+      return LsasProgressResponseModel.fromJson(json['data'] as Map<String, dynamic>);
+    }
+    throw Exception(json['message'] ?? 'Không thể tải tiến trình phục hồi LSAS');
   }
 }

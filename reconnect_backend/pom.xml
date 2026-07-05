@@ -41,6 +41,15 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-redis</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-mail</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-core</artifactId>
+      <version>10.8.1</version>
+    </dependency>
 
     <dependency>
       <groupId>com.mysql</groupId>
@@ -63,6 +72,11 @@
       <scope>test</scope>
     </dependency>
     <!-- JWT: Thư viện để tạo và đọc Token -->
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>io.jsonwebtoken</groupId>
       <artifactId>jjwt-api</artifactId>
