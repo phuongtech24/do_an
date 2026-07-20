@@ -15,6 +15,11 @@
 **/build/
 **/pubspec.lock
 
+# Python scratch/cache
+**/__pycache__/
+*.py[cod]
+scratch/.pydeps/
+
 # OS
 .DS_Store
 Thumbs.db
@@ -26,4 +31,3 @@ Thumbs.db
 .env.production
 *.pem
 *.key
-

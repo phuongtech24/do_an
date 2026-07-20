@@ -21,8 +21,11 @@ class _ProgressScreenState extends State<ProgressScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final patientId = auth.loginResponse?.user.id ?? '';
     _future ??= _repository.getLsasProgress(
-      token: Provider.of<AuthProvider>(context, listen: false).loginResponse?.token,
+      patientId: patientId,
+      token: auth.loginResponse?.token,
     );
   }
 
@@ -57,6 +60,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
           }
 
           final dataPoints = _toChartSpots(progress.chartData);
+          final maxX = progress.chartData.length <= 1 ? 1.0 : (progress.chartData.length - 1).toDouble();
 
           return ListView(
             padding: const EdgeInsets.all(24),
@@ -67,7 +71,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
               ),
               const SizedBox(height: 8),
               const Text(
-                'Biểu đồ thể hiện mức độ Lo âu xã hội của bạn giảm dần qua các tuần trị liệu.',
+                'Biểu đồ thể hiện sự thay đổi mức độ lo âu xã hội qua các lần đánh giá LSAS.',
                 style: TextStyle(color: Colors.grey),
               ),
               const SizedBox(height: 24),
@@ -83,7 +87,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                   child: LineChart(
                     LineChartData(
                       minX: 0,
-                      maxX: 8,
+                      maxX: maxX,
                       minY: 0,
                       maxY: 144,
                       gridData: FlGridData(
@@ -120,18 +124,14 @@ class _ProgressScreenState extends State<ProgressScreen> {
                             showTitles: true,
                             reservedSize: 28,
                             getTitlesWidget: (value, meta) {
-                              final labels = {
-                                0: 'W0',
-                                2: 'W2',
-                                4: 'W4',
-                                6: 'W6',
-                                8: 'W8',
-                              };
-                              final label = labels[value.toInt()];
-                              if (label == null) {
+                              final index = value.toInt();
+                              if (index < 0 || index >= progress.chartData.length || value != index.toDouble()) {
                                 return const SizedBox.shrink();
                               }
-                              return Text(label, style: const TextStyle(fontSize: 11));
+                              return Text(
+                                progress.chartData[index].weekLabel,
+                                style: const TextStyle(fontSize: 11),
+                              );
                             },
                           ),
                         ),
@@ -194,10 +194,10 @@ class _ProgressScreenState extends State<ProgressScreen> {
   }
 
   List<FlSpot> _toChartSpots(List<LsasProgressPointModel> chartData) {
-    final labels = {'W0': 0.0, 'W2': 2.0, 'W4': 4.0, 'W6': 6.0, 'W8': 8.0};
-    return chartData
-        .map((item) => FlSpot(labels[item.weekLabel] ?? 0, item.totalScore.toDouble()))
-        .toList();
+    return List.generate(
+      chartData.length,
+      (index) => FlSpot(index.toDouble(), chartData[index].totalScore.toDouble()),
+    );
   }
 
   LineChartBarData _buildLineChart(List<FlSpot> spots) {

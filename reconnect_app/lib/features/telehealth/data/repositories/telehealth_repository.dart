@@ -12,6 +12,8 @@ class TelehealthRepository {
       throw Exception('Phiên đăng nhập hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.');
     } else if (response.statusCode == 403) {
       throw Exception('Bạn không có quyền thực hiện hành động này (403 Forbidden).');
+    } else if (response.statusCode == 409) {
+      throw Exception('Khung giờ này đã có người đặt, vui lòng chọn giờ khác.');
     } else if (response.statusCode != 200 && response.statusCode != 201) {
       throw Exception('Máy chủ phản hồi lỗi ${response.statusCode} khi $actionName.');
     }

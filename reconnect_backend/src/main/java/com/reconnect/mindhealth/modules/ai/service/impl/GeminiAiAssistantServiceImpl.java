@@ -78,10 +78,11 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
 
     @Override
     public GuidedDiscoveryResponseDto guidedDiscovery(GuidedDiscoveryRequestDto request) {
+        List<String> fallbackQuestions = List.of(
+                "Bang chung nao dang ung ho suy nghi nay, va bang chung nao dang phan bien lai no?",
+                "Co cach giai thich nao khac, can bang hon va it tieu cuc hon, cho tinh huong nay khong?");
         if (!aiProperties.isEnabled()) {
-            return new GuidedDiscoveryResponseDto(List.of(
-                    "Ã„ÂiÃ¡Â»Âu gÃƒÂ¬ khiÃ¡ÂºÂ¿n bÃ¡ÂºÂ¡n tin rÃ¡ÂºÂ±ng suy nghÃ„Â© Ã„â€˜ÃƒÂ³ chÃ¡ÂºÂ¯c chÃ¡ÂºÂ¯n lÃƒÂ  Ã„â€˜ÃƒÂºng?",
-                    "NÃ¡ÂºÂ¿u mÃ¡Â»â„¢t ngÃ†Â°Ã¡Â»Âi bÃ¡ÂºÂ¡n thÃƒÂ¢n Ã¡Â»Å¸ trong tÃƒÂ¬nh huÃ¡Â»â€˜ng nÃƒÂ y, bÃ¡ÂºÂ¡n sÃ¡ÂºÂ½ nÃƒÂ³i gÃƒÂ¬ Ã„â€˜Ã¡Â»Æ’ giÃƒÂºp hÃ¡Â»Â nhÃƒÂ¬n khÃƒÂ¡c Ã„â€˜i?"));
+            return new GuidedDiscoveryResponseDto(fallbackQuestions);
         }
 
         List<GuideKnowledgeCard> matchedCards = retrieveThoughtRecordKnowledge(
@@ -100,19 +101,12 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
                                 null,
                                 "GUIDED_DISCOVERY"),
                         matchedCards,
-                        "KhÃ´ng cÃ³ tri thá»©c retrieve khá»›p rÃµ. HÃ£y Ä‘áº·t cÃ¢u há»i CBT an toÃ n, ngáº¯n vÃ  trung tÃ­nh."));
+                        "Khong co tri thuc retrieve khop ro. Hay dat cau hoi CBT ngan, an toan va trung tinh."));
         String raw = generateContent(prompt, 1024, 0.1, guidedDiscoveryResponseSchema());
         List<String> questions = parseQuestionsJson(raw);
-        if (questions.isEmpty()) {
-            log.warn("Guided discovery parse empty, using fallback.");
-            questions = List.of(
-                    "Bang chung nao dang ung ho suy nghi nay, va bang chung nao dang phan bien lai no?",
-                    "Co cach giai thich nao khac, can bang hon va it tieu cuc hon, cho tinh huong nay khong?");
-        }
-        if (questions.stream().anyMatch(this::hasMojibakeMarker)) {
-            questions = List.of(
-                    "Bang chung nao dang ung ho suy nghi nay, va bang chung nao dang phan bien lai no?",
-                    "Co cach giai thich nao khac, can bang hon va it tieu cuc hon, cho tinh huong nay khong?");
+        if (questions.isEmpty() || questions.stream().anyMatch(this::hasMojibakeMarker)) {
+            log.warn("Guided discovery parse empty or mojibake, using fallback.");
+            questions = fallbackQuestions;
         }
         return new GuidedDiscoveryResponseDto(cleanTextList(questions));
     }
@@ -157,7 +151,7 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
                 resolveKnowledgeBlock(
                         buildJournalRiskKnowledgeQuery(journalType, journalJsonContent, ruleScore),
                         matchedCards,
-                        "KhÃ´ng cÃ³ tri thá»©c CBT / safety retrieve khá»›p rÃµ. HÃ£y cháº¥m risk theo nguyÃªn táº¯c an toÃ n, Æ°u tiÃªn khÃ´ng bá» sÃ³t."));
+                        "Khong co tri thuc CBT hoac safety retrieve khop ro. Hay cham risk theo nguyen tac an toan, uu tien khong bo sot."));
         String raw = generateContent(prompt, 512, 0.1, riskScoringResponseSchema());
 
         JournalAiRiskResultDto parsed = parseRiskJson(raw);
@@ -577,25 +571,37 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
         String phase = request.getProgramPhaseCode() != null ? request.getProgramPhaseCode() : "";
         String week = request.getProgramWeek() != null ? String.valueOf(request.getProgramWeek()) : "";
 
-        return ""
-                + "Bạn là AI Bạn Đồng Hành của ứng dụng ReConnect MindHealth.\n"
-                + "Vai trò: hướng dẫn sử dụng app, giải thích CBT ở mức nhẹ, gợi ý bước tiếp theo cho người có lo âu xã hội.\n"
-                + "Không chẩn đoán. Không kê thuốc. Không thay thế bác sĩ hay nhà trị liệu. Không nói sang trầm cảm như một bệnh lý chính.\n"
-                + "Chỉ trả lời dựa trên tri thức nội bộ bên dưới và bối cảnh màn hình hiện tại.\n"
-                + "Ưu tiên câu hỏi hiện tại của người dùng hơn patientRoute và lịch sử phân luồng.\n"
-                + "Nếu tri thức truy hồi không trực tiếp liên quan câu hỏi, không được dùng nó để chuyển sang chủ đề khác.\n"
-                + "Câu trả lời dài khoảng 80-180 từ. Tối đa 2 gợi ý hành động.\n"
-                + "Trả về DUY NHẤT một JSON object hợp lệ theo schema.\n"
-                + "Tri thức nội bộ:\n"
-                + knowledgeBlock + "\n\n"
-                + "Ngữ cảnh:\n"
-                + "- screenContext: " + request.getScreenContext() + "\n"
-                + "- patientRoute: " + route + "\n"
-                + "- programWeek: " + week + "\n"
-                + "- programPhaseCode: " + phase + "\n"
-                + "- intent: " + intent + "\n"
-                + "Câu hỏi người dùng: " + request.getUserMessage();
+        return """
+                Ban la tro ly AI cua ung dung ReConnect MindHealth.
+                Vai tro: giai thich chuc nang cua app, giai thich CBT o muc de hieu va goi y buoc tiep theo phu hop.
+                Khong chan doan, khong ke thuoc, khong thay the bac si hay nha tri lieu.
+                Neu noi ve AI, phai nhan manh AI chi ho tro va khong thay bac si.
+                Chi tra loi dua tren tri thuc noi bo retrieve duoc va boi canh man hinh hien tai.
+                Khong bia flow khong co trong he thong. Khong chuyen sang chu de khac neu tri thuc retrieve khong lien quan.
+                Tra loi theo 3 y ngan: (1) giai thich khai niem/chuc nang, (2) he thong hien tai xu ly ra sao, (3) neu phu hop thi goi y buoc tiep theo.
+                Cau tra loi dai khoang 80-180 tu. Toi da 2 goi y hanh dong.
+                Tra ve DUY NHAT mot JSON object hop le theo schema.
+
+                Tri thuc noi bo:
+                %s
+
+                Ngu canh:
+                - screenContext: %s
+                - patientRoute: %s
+                - programWeek: %s
+                - programPhaseCode: %s
+                - intent: %s
+                Cau hoi nguoi dung: %s
+                """.formatted(
+                knowledgeBlock,
+                request.getScreenContext(),
+                route,
+                week,
+                phase,
+                intent,
+                request.getUserMessage());
     }
+
     private Map<String, Object> guideChatResponseSchema() {
         return Map.of(
                 "type", "OBJECT",
@@ -616,38 +622,47 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
     private String buildGuidedDiscoveryPrompt(GuidedDiscoveryRequestDto r, String knowledgeBlock) {
         String moodLine = r.getMoodScore() != null ? ("Mood=" + r.getMoodScore() + "/100.\n") : "";
         String emotionLine = (r.getEmotion() != null && !r.getEmotion().isBlank())
-                ? ("Cảm xúc: " + r.getEmotion() + "\n")
+                ? ("Cam xuc: " + r.getEmotion() + "\n")
                 : "";
 
-        return ""
-                + "Bạn là một nhà trị liệu CBT. Nhiệm vụ: tạo 1-2 câu hỏi Socratic ngắn gọn bằng tiếng Việt.\n"
-                + "Không tư vấn y khoa. Không nhắc đến chính sách. Không giải thích dài.\n"
-                + "Phải ưu tiên bám sát tri thức CBT nội bộ bên dưới, không trả lời chung chung.\n"
-                + "Trả về DUY NHẤT một JSON object hợp lệ. Ký tự đầu tiên phải là { và ký tự cuối cùng phải là }.\n"
-                + "Không markdown. Không code fence. Không ```json. Không text ngoài JSON.\n"
-                + "Mỗi câu hỏi tối đa 120 ký tự. Schema bắt buộc: {\"questions\":[\"câu hỏi 1\",\"câu hỏi 2\"]}\n"
-                + "Tri thức CBT nội bộ:\n"
-                + knowledgeBlock + "\n"
-                + moodLine
-                + "Tình huống: " + r.getSituation() + "\n"
-                + "Suy nghĩ tự động: " + r.getAutomaticThought() + "\n"
-                + emotionLine;
+        return """
+                Ban la mot nha tri lieu CBT. Nhiem vu: tao 1-2 cau hoi Socratic ngan gon bang tieng Viet.
+                Khong tu van y khoa. Khong nhac den chinh sach. Khong giai thich dai.
+                Phai bam sat tri thuc CBT noi bo retrieve ben duoi, khong tra loi chung chung.
+                Tra ve DUY NHAT mot JSON object hop le. Ky tu dau tien phai la { va ky tu cuoi cung phai la }.
+                Khong markdown, khong code fence, khong text ngoai JSON.
+                Moi cau hoi toi da 120 ky tu.
+                Schema bat buoc: {"questions":["cau hoi 1","cau hoi 2"]}
+
+                Tri thuc CBT noi bo:
+                %s
+                %sTinh huong: %s
+                Suy nghi tu dong: %s
+                %s
+                """.formatted(
+                knowledgeBlock,
+                moodLine,
+                r.getSituation(),
+                r.getAutomaticThought(),
+                emotionLine);
     }
+
     private String cognitiveDistortionDefinitionsPrompt() {
-        return ""
-                + "CÃ†Â¡ sÃ¡Â»Å¸ phÃƒÂ¢n loÃ¡ÂºÂ¡i 12 Cognitive Distortions. ChÃ¡Â»â€° chÃ¡Â»Ân code trong danh sÃƒÂ¡ch nÃƒÂ y nÃ¡ÂºÂ¿u nÃ¡Â»â„¢i dung thÃ¡ÂºÂ­t sÃ¡Â»Â± phÃƒÂ¹ hÃ¡Â»Â£p:\n"
-                + "- ALL_OR_NOTHING: TÃ†Â° duy trÃ¡ÂºÂ¯ng-Ã„â€˜en; nhÃƒÂ¬n tÃƒÂ¬nh huÃ¡Â»â€˜ng theo hai thÃƒÂ¡i cÃ¡Â»Â±c thay vÃƒÂ¬ mÃ¡Â»â„¢t dÃ¡ÂºÂ£i liÃƒÂªn tÃ¡Â»Â¥c.\n"
-                + "- CATASTROPHIZING: ThÃ¡ÂºÂ£m hÃ¡Â»Âa hÃƒÂ³a/dÃ¡Â»Â± Ã„â€˜oÃƒÂ¡n tÃ†Â°Ã†Â¡ng lai tiÃƒÂªu cÃ¡Â»Â±c mÃƒÂ  bÃ¡Â»Â qua kÃ¡ÂºÂ¿t quÃ¡ÂºÂ£ thÃ¡Â»Â±c tÃ¡ÂºÂ¿ hÃ†Â¡n.\n"
-                + "- DISQUALIFYING_POSITIVE: BÃƒÂ¡c bÃ¡Â»Â hoÃ¡ÂºÂ·c Ã„â€˜ÃƒÂ¡nh giÃƒÂ¡ thÃ¡ÂºÂ¥p trÃ¡ÂºÂ£i nghiÃ¡Â»â€¡m, hÃƒÂ nh Ã„â€˜Ã¡Â»â„¢ng, phÃ¡ÂºÂ©m chÃ¡ÂºÂ¥t tÃƒÂ­ch cÃ¡Â»Â±c.\n"
-                + "- EMOTIONAL_REASONING: Cho rÃ¡ÂºÂ±ng Ã„â€˜iÃ¡Â»Âu gÃƒÂ¬ Ã„â€˜ÃƒÂ³ Ã„â€˜ÃƒÂºng chÃ¡Â»â€° vÃƒÂ¬ cÃ¡ÂºÂ£m thÃ¡ÂºÂ¥y/tin rÃ¡ÂºÂ¥t mÃ¡ÂºÂ¡nh nhÃ†Â° vÃ¡ÂºÂ­y.\n"
-                + "- LABELING: GÃ¡ÂºÂ¯n nhÃƒÂ£n tiÃƒÂªu cÃ¡Â»Â±c, cÃ¡Â»â€˜ Ã„â€˜Ã¡Â»â€¹nh, toÃƒÂ n diÃ¡Â»â€¡n cho bÃ¡ÂºÂ£n thÃƒÂ¢n hoÃ¡ÂºÂ·c ngÃ†Â°Ã¡Â»Âi khÃƒÂ¡c.\n"
-                + "- MAGNIFICATION_MINIMIZATION: PhÃƒÂ³ng Ã„â€˜Ã¡ÂºÂ¡i Ã„â€˜iÃ¡Â»Âu tiÃƒÂªu cÃ¡Â»Â±c hoÃ¡ÂºÂ·c thu nhÃ¡Â»Â Ã„â€˜iÃ¡Â»Âu tÃƒÂ­ch cÃ¡Â»Â±c mÃ¡Â»â„¢t cÃƒÂ¡ch vÃƒÂ´ lÃƒÂ½.\n"
-                + "- MENTAL_FILTER: ChÃ¡Â»â€° chÃƒÂº ÃƒÂ½ mÃ¡Â»â„¢t chi tiÃ¡ÂºÂ¿t tiÃƒÂªu cÃ¡Â»Â±c thay vÃƒÂ¬ nhÃƒÂ¬n toÃƒÂ n bÃ¡Â»â„¢ bÃ¡Â»Â©c tranh.\n"
-                + "- MIND_READING: Tin chÃ¡ÂºÂ¯c mÃƒÂ¬nh biÃ¡ÂºÂ¿t ngÃ†Â°Ã¡Â»Âi khÃƒÂ¡c Ã„â€˜ang nghÃ„Â© gÃƒÂ¬ mÃƒÂ  khÃƒÂ´ng xÃƒÂ©t khÃ¡ÂºÂ£ nÃ„Æ’ng khÃƒÂ¡c.\n"
-                + "- OVERGENERALIZATION: RÃƒÂºt ra kÃ¡ÂºÂ¿t luÃ¡ÂºÂ­n tiÃƒÂªu cÃ¡Â»Â±c bao quÃƒÂ¡t vÃ†Â°Ã¡Â»Â£t xa tÃƒÂ¬nh huÃ¡Â»â€˜ng hiÃ¡Â»â€¡n tÃ¡ÂºÂ¡i.\n"
-                + "- PERSONALIZATION: TÃ¡Â»Â± Ã„â€˜Ã¡Â»â€¢ lÃ¡Â»â€”i cho phÃ¡ÂºÂ£n Ã¡Â»Â©ng/hÃƒÂ nh vi tiÃƒÂªu cÃ¡Â»Â±c cÃ¡Â»Â§a ngÃ†Â°Ã¡Â»Âi khÃƒÂ¡c mÃƒÂ  bÃ¡Â»Â qua giÃ¡ÂºÂ£i thÃƒÂ­ch hÃ¡Â»Â£p lÃƒÂ½ hÃ†Â¡n.\n"
-                + "- SHOULD_MUST: CÃƒÂ¢u lÃ¡Â»â€¡nh phÃ¡ÂºÂ£i/nÃƒÂªn cÃ¡Â»Â©ng nhÃ¡ÂºÂ¯c vÃ¡Â»Â cÃƒÂ¡ch bÃ¡ÂºÂ£n thÃƒÂ¢n hoÃ¡ÂºÂ·c ngÃ†Â°Ã¡Â»Âi khÃƒÂ¡c phÃ¡ÂºÂ£i hÃƒÂ nh xÃ¡Â»Â­.\n"
-                + "- TUNNEL_VISION: ChÃ¡Â»â€° nhÃƒÂ¬n thÃ¡ÂºÂ¥y cÃƒÂ¡c khÃƒÂ­a cÃ¡ÂºÂ¡nh tiÃƒÂªu cÃ¡Â»Â±c cÃ¡Â»Â§a mÃ¡Â»â„¢t tÃƒÂ¬nh huÃ¡Â»â€˜ng.\n";
+        return """
+                Co so phan loai 12 cognitive distortions. Chi chon code khi that su phu hop voi noi dung:
+                - ALL_OR_NOTHING: Tu duy trang-den, chi nhin hai cuc.
+                - CATASTROPHIZING: Tham hoa hoa, du doan ket cuc xau nhat.
+                - DISQUALIFYING_POSITIVE: Bac bo trai nghiem hoac diem tich cuc.
+                - EMOTIONAL_REASONING: Tin dieu gi do dung chi vi minh cam thay rat manh.
+                - LABELING: Gan nhan tieu cuc, co dinh cho ban than hoac nguoi khac.
+                - MAGNIFICATION_MINIMIZATION: Phong dai dieu xau, thu nho dieu tot.
+                - MENTAL_FILTER: Chi nhin mot chi tiet tieu cuc va bo qua toan canh.
+                - MIND_READING: Cho rang minh biet nguoi khac nghi gi ma khong co bang chung.
+                - OVERGENERALIZATION: Rut ra ket luan tieu cuc qua muc tu mot tinh huong.
+                - PERSONALIZATION: Tu do loi cho minh qua muc khi xay ra van de.
+                - SHOULD_MUST: Tu duy cung nhac voi cac cau phai/nen.
+                - TUNNEL_VISION: Chi nhin thay mat xau cua tinh huong.
+                """;
     }
 
     private String buildStandardRiskPrompt(
@@ -680,28 +695,39 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
     }
 
     private String buildRiskPrompt(JournalType journalType, String journalJsonContent) {
-        return ""
-                + "BÃ¡ÂºÂ¡n lÃƒÂ  hÃ¡Â»â€¡ thÃ¡Â»â€˜ng phÃƒÂ¢n loÃ¡ÂºÂ¡i rÃ¡Â»Â§i ro ngÃƒÂ´n ngÃ¡Â»Â¯ (NLP) cho Ã¡Â»Â©ng dÃ¡Â»Â¥ng CBT.\n"
-                + "HÃƒÂ£y phÃƒÂ¢n loÃ¡ÂºÂ¡i mÃ¡Â»Â©c rÃ¡Â»Â§i ro tÃ¡Â»Â« nÃ¡Â»â„¢i dung nhÃ¡ÂºÂ­t kÃƒÂ½. ChÃ¡Â»â€° cÃ¡ÂºÂ§n 3 mÃ¡Â»Â©c:\n"
-                + "- 0: NORMAL\n"
-                + "- 70: CORE_BELIEF_ACTIVATION (bÃ¡ÂºÂ¿ tÃ¡ÂºÂ¯c cÃƒÂ¹ng cÃ¡Â»Â±c, bÃ¡ÂºÂ¥t lÃ¡Â»Â±c, vÃƒÂ´ giÃƒÂ¡ trÃ¡Â»â€¹, khÃƒÂ´ng thÃ¡Â»Æ’ yÃƒÂªu thÃ†Â°Ã†Â¡ng)\n"
-                + "- 100: LIFE_THREAT (tÃ¡Â»Â« khoÃƒÂ¡ tÃ¡Â»Â± sÃƒÂ¡t/cÃƒÂ¡i chÃ¡ÂºÂ¿t/ÃƒÂ½ Ã„â€˜Ã¡Â»â€¹nh tÃ¡Â»Â± hÃ¡ÂºÂ¡i)\n"
-                + "Ã„ÂÃ¡ÂºÂ§u ra BÃ¡ÂºÂ®T BUÃ¡Â»ËœC lÃƒÂ  JSON thuÃ¡ÂºÂ§n Ã„â€˜ÃƒÂºng schema: {\"aiRiskScore\":0|70|100,\"severityLevel\":\"NORMAL|CORE_BELIEF|LIFE_THREAT\"}\n"
-                + "journalType=" + journalType.name() + "\n"
-                + "journalJson=" + journalJsonContent;
+        return """
+                Ban la he thong phan loai rui ro ngon ngu cho ung dung CBT.
+                Hay phan loai muc rui ro tu noi dung nhat ky. Chi co 3 muc:
+                - 0: NORMAL
+                - 70: CORE_BELIEF_ACTIVATION (be tac, vo gia tri, buong xuoi mo nhat)
+                - 100: LIFE_THREAT (y dinh tu sat, tu hai, nhac truc tiep den cai chet)
+                Dau ra BAT BUOC la JSON thuan dung schema:
+                {"aiRiskScore":0,"severityLevel":"NORMAL"}
+                journalType=%s
+                journalJson=%s
+                """.formatted(journalType.name(), journalJsonContent);
     }
 
     private String buildCognitiveDistortionsPrompt(CognitiveDistortionRequestDto r, int max, String knowledgeBlock) {
-        return ""
-                + "Bạn là chuyên gia CBT. Nhiệm vụ: dựa vào automaticThought và situation để gợi ý 1-3 lỗi tư duy.\n"
-                + "Phải bám sát tri thức CBT retrieve bên dưới, không gắn nhãn tuỳ tiện.\n"
-                + "Tri thức retrieve:\n"
-                + knowledgeBlock + "\n"
-                + cognitiveDistortionDefinitionsPrompt()
-                + "Đầu ra BẮT BUỘC là JSON thuần đúng schema: {\"distortions\":[\"CODE\"...],\"hint\":\"...\"}\n"
-                + "Quy tắc: distortions dài tối đa " + max + " phần tử; hint 1 câu ngắn tiếng Việt.\n"
-                + "situation=" + r.getSituation() + "\n"
-                + "automaticThought=" + r.getAutomaticThought();
+        return """
+                Ban la chuyen gia CBT. Nhiem vu: dua vao automaticThought va situation de goi y 1-3 loi tu duy.
+                Phai bam sat tri thuc CBT retrieve ben duoi, khong gan nhan tuy tien.
+
+                Tri thuc retrieve:
+                %s
+
+                %s
+                Dau ra BAT BUOC la JSON thuan dung schema:
+                {"distortions":["CODE"],"hint":"goi y ngan"}
+                Quy tac: distortions toi da %d phan tu; hint la 1 cau ngan bang tieng Viet.
+                situation=%s
+                automaticThought=%s
+                """.formatted(
+                knowledgeBlock,
+                cognitiveDistortionDefinitionsPrompt(),
+                max,
+                r.getSituation(),
+                r.getAutomaticThought());
     }
 
     private List<GuideKnowledgeCard> retrieveThoughtRecordKnowledge(
@@ -917,7 +943,7 @@ public class GeminiAiAssistantServiceImpl implements IAiAssistantService {
                 JsonNode parts = candidates.get(0).path("content").path("parts");
                 if (parts.isArray() && parts.size() > 0) {
                     String text = parts.get(0).path("text").asText("");
-                    return text != null ? text : "";
+                    return text != null ? cleanText(text) : "";
                 }
             }
         } catch (Exception e) {

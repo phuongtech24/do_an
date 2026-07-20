@@ -8,6 +8,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.cache.annotation.CachingConfigurer;
 import org.springframework.cache.interceptor.CacheErrorHandler;
 import org.springframework.cache.support.NoOpCacheManager;
 import org.springframework.context.annotation.Bean;
@@ -23,7 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Configuration
 @EnableCaching
 @EnableConfigurationProperties(AppCacheProperties.class)
-public class CacheConfig {
+public class CacheConfig implements CachingConfigurer {
 
     private static final Logger log = LoggerFactory.getLogger(CacheConfig.class);
 
@@ -53,8 +54,8 @@ public class CacheConfig {
                 .build();
     }
 
-    @Bean
-    public CacheErrorHandler cacheErrorHandler() {
+    @Override
+    public CacheErrorHandler errorHandler() {
         return new CacheErrorHandler() {
             private final Logger logger = LoggerFactory.getLogger("MindHealthCache");
 

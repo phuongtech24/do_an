@@ -48,7 +48,7 @@ class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
+    final auth = context.read<AuthProvider>();
     final provider = context.watch<AssessmentProvider>();
     final userId = auth.loginResponse?.user.id ?? '';
     final token = auth.token;
@@ -207,13 +207,11 @@ class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
     final phoneController = TextEditingController();
     final formKey = GlobalKey<FormState>();
 
-    final result = await showDialog<bool>(
+    final result = await showDialog<Map<String, String>>(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) {
-        bool submitting = false;
-        return StatefulBuilder(
-          builder: (context, setStateDialog) => AlertDialog(
+        return AlertDialog(
             scrollable: true,
             title: const Text('Mở khóa kết quả và lộ trình CBT'),
             content: SizedBox(
@@ -316,41 +314,22 @@ class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
             ),
             actions: [
               TextButton(
-                onPressed: submitting ? null : () => Navigator.pop(dialogContext, false),
+                onPressed: () => Navigator.pop(dialogContext),
                 child: const Text('Để sau'),
               ),
               ElevatedButton(
-                onPressed: submitting
-                    ? null
-                    : () async {
-                        if (!formKey.currentState!.validate()) return;
-                        setStateDialog(() => submitting = true);
-                        final ok = await auth.linkGuestAccount(
-                          email: emailController.text.trim(),
-                          password: passwordController.text,
-                          realFullName: realNameController.text.trim(),
-                          phoneNumber: phoneController.text.trim(),
-                        );
-                        if (!dialogContext.mounted) return;
-                        if (ok) {
-                          Navigator.pop(dialogContext, true);
-                        } else {
-                          setStateDialog(() => submitting = false);
-                          ScaffoldMessenger.of(dialogContext).showSnackBar(
-                            SnackBar(content: Text(auth.errorMessage)),
-                          );
-                        }
-                      },
-                child: submitting
-                    ? const SizedBox(
-                        height: 18,
-                        width: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Text('Liên kết và xem kết quả'),
+                onPressed: () {
+                  if (!formKey.currentState!.validate()) return;
+                  Navigator.pop(dialogContext, {
+                    'email': emailController.text.trim(),
+                    'password': passwordController.text,
+                    'realFullName': realNameController.text.trim(),
+                    'phoneNumber': phoneController.text.trim(),
+                  });
+                },
+                child: const Text('Liên kết và xem kết quả'),
               ),
             ],
-          ),
         );
       },
     );
@@ -360,7 +339,21 @@ class _LsasAssessmentScreenState extends State<LsasAssessmentScreen> {
     confirmPasswordController.dispose();
     realNameController.dispose();
     phoneController.dispose();
-    return result == true;
+    if (result == null || !context.mounted) return false;
+
+    final ok = await auth.linkGuestAccount(
+      email: result['email'] ?? '',
+      password: result['password'] ?? '',
+      realFullName: result['realFullName'] ?? '',
+      phoneNumber: result['phoneNumber'] ?? '',
+    );
+    if (!context.mounted) return false;
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(auth.errorMessage)),
+      );
+    }
+    return ok;
   }
 
   Future<bool> _showMedicalSafetyGateDialog(BuildContext context) async {
@@ -522,15 +515,23 @@ class _LsasFormState extends State<_LsasForm> {
 
     return Column(
       children: [
-        const _GuideCard(
-          icon: Icons.psychology_alt_rounded,
-          title: 'Bài kiểm tra này là gì?',
-          message:
-              'Bạn sẽ chấm 24 tình huống xã hội theo 2 trục: mức sợ/hồi hộp và mức né tránh. Bài đầu tiên và các lần đánh giá lại sau này đều dùng cùng 24 tình huống để theo dõi thay đổi.',
+        Row(
+          children: [
+            Expanded(
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 8,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton.filledTonal(
+              tooltip: 'Giải thích bài kiểm tra',
+              onPressed: () => _showLsasInfo(context),
+              icon: const Icon(Icons.info_outline_rounded),
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
-        LinearProgressIndicator(value: progress, minHeight: 8, borderRadius: BorderRadius.circular(999)),
-        const SizedBox(height: 8),
         Text(
           '$completed/${widget.situations.length} tình huống đã hoàn tất',
           style: const TextStyle(color: Colors.black54),
@@ -590,6 +591,27 @@ class _LsasFormState extends State<_LsasForm> {
           ),
         ),
       ],
+    );
+  }
+
+  Future<void> _showLsasInfo(BuildContext context) async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(Icons.psychology_alt_rounded, color: Color(0xFF0F8B7F)),
+        title: const Text('Bài kiểm tra LSAS'),
+        content: const Text(
+          'Bạn chấm 24 tình huống theo hai mức: sợ hãi/hồi hộp và né tránh. '
+          'Hệ thống dùng cùng bộ tình huống ở các lần đánh giá để theo dõi thay đổi theo thời gian.',
+          style: TextStyle(height: 1.45),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Đã hiểu'),
+          ),
+        ],
+      ),
     );
   }
 
