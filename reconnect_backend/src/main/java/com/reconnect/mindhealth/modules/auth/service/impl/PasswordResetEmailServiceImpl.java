@@ -40,18 +40,16 @@ public class PasswordResetEmailServiceImpl implements PasswordResetEmailService 
     @Override
     public void sendResetPasswordEmail(String email, String resetToken, Date expiresAt) {
         if (!mailEnabled) {
-            log.info("Password reset email skipped because app.mail.enabled=false email={}, resetToken={}, expiresAt={}",
+            log.info("Password reset email skipped because app.mail.enabled=false email={}, expiresAt={}",
                     email,
-                    resetToken,
                     expiresAt);
             return;
         }
 
         JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
         if (mailSender == null) {
-            log.warn("Password reset email fallback because JavaMailSender is unavailable email={}, resetToken={}, expiresAt={}",
+            log.warn("Password reset email fallback because JavaMailSender is unavailable email={}, expiresAt={}",
                     email,
-                    resetToken,
                     expiresAt);
             return;
         }
@@ -66,9 +64,8 @@ public class PasswordResetEmailServiceImpl implements PasswordResetEmailService 
             mailSender.send(message);
             log.info("Password reset email sent successfully email={}, expiresAt={}", email, expiresAt);
         } catch (MailException exception) {
-            log.error("Failed to send password reset email email={}, resetToken={}, expiresAt={}",
+            log.error("Failed to send password reset email email={}, expiresAt={}",
                     email,
-                    resetToken,
                     expiresAt,
                     exception);
         }

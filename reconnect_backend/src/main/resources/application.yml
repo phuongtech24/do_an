@@ -21,7 +21,7 @@
   datasource:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:mindhealth_db}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Bangkok&characterEncoding=UTF-8
     username: ${DB_USER:root}
-    password: ${DB_PASSWORD:123456}
+    password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
   flyway:
     enabled: ${FLYWAY_ENABLED:false}
@@ -102,6 +102,6 @@ app:
 # Encryption configuration
 # Keys are loaded from environment variables (ENCRYPTION_KEY, ENCRYPTION_IV)
 encryption:
-  key: ${ENCRYPTION_KEY:ReconnectMindH78}
-  iv: ${ENCRYPTION_IV:MindHealthIv1234}
+  key: ${ENCRYPTION_KEY:dev-only-16chars}
+  iv: ${ENCRYPTION_IV:dev-only-iv-1234}
 
