@@ -340,9 +340,8 @@ public class AuthServiceImpl implements IAuthService {
             user.setResetPasswordExpiresAt(expiresAt);
             userRepository.save(user);
             passwordResetEmailService.sendResetPasswordEmail(normalizedEmail, resetToken, expiresAt);
-            log.info("Password reset token generated email={}, resetToken={}, expiresAt={}",
+            log.info("Password reset token generated email={}, expiresAt={}",
                     normalizedEmail,
-                    resetToken,
                     expiresAt);
         });
     }

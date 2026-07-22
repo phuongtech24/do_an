@@ -90,9 +90,9 @@ class AssessmentRepository {
     throw Exception(json['message'] ?? 'Ghi nhận tâm trạng thất bại');
   }
 
-  Future<LsasProgressResponseModel> getLsasProgress({String? token}) async {
+  Future<LsasProgressResponseModel> getLsasProgress({required String patientId, String? token}) async {
     final response = await http.get(
-      Uri.parse(ApiConstants.lsasProgress),
+      Uri.parse(ApiConstants.lsasProgress).replace(queryParameters: {'patientId': patientId}),
       headers: _headers(token),
     );
     final json = _decode(response);

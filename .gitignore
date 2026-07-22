@@ -15,6 +15,11 @@
 **/build/
 **/pubspec.lock
 
+# Python scratch/cache
+**/__pycache__/
+*.py[cod]
+scratch/.pydeps/
+
 # OS
 .DS_Store
 Thumbs.db
@@ -27,3 +32,23 @@ Thumbs.db
 *.pem
 *.key
 
+# Local editor / agent notes
+AGENTS.md
+.agents/
+
+# Runtime uploads and generated local files
+reconnect_backend/uploads/
+reconnect_backend/build_ai_patch.log
+reconnect_app/analyze_*.txt
+reconnect_app/build_errors.txt
+
+# Local helper scripts and generated review artifacts
+scratch/
+
+# Local Postman collections / environments
+docs/postman/
+infra/postman/
+
+# Generated GitHub helper folders
+.github/java-upgrade/
+.github/modernize/

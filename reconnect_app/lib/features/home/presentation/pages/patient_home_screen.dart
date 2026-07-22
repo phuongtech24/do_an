@@ -420,7 +420,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     );
   }
 
-  void _showAISuggestionDialog() {
+  Future<void> _showAISuggestionDialog() async {
     final shouldOpenThoughtRecord = _shouldSuggestThoughtRecord;
     final shouldOpenBehavioralExposure =
         !shouldOpenThoughtRecord && _shouldSuggestBehavioralExposure;
@@ -440,7 +440,8 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
     String guideTitle;
     String guideMessage;
     String primaryLabel;
-    VoidCallback primaryAction;
+    String? targetRoute;
+    Map<String, dynamic>? targetExtra;
 
     if (shouldOpenThoughtRecord) {
       dialogIcon = Icons.psychology_alt_outlined;
@@ -451,14 +452,12 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
       guideMessage =
           'Nhật ký 6 bước sẽ giúp bạn bóc tách suy nghĩ tự động, nhận diện méo mó nhận thức và viết phản hồi thích nghi dựa trên bằng chứng.';
       primaryLabel = 'Mở Nhật ký suy nghĩ';
-      primaryAction = () {
-        Navigator.pop(context);
-        context.push('/thought-record', extra: {
-          'anxietyScore': _anxietyScore.toInt(),
-          'avoidanceUrgeScore': _avoidanceUrgeScore.toInt(),
-          'anticipatoryAnxietyScore': _anticipatoryAnxietyScore.toInt(),
-          'postEventRuminationScore': _postEventRuminationScore.toInt(),
-        });
+      targetRoute = '/thought-record';
+      targetExtra = {
+        'anxietyScore': _anxietyScore.toInt(),
+        'avoidanceUrgeScore': _avoidanceUrgeScore.toInt(),
+        'anticipatoryAnxietyScore': _anticipatoryAnxietyScore.toInt(),
+        'postEventRuminationScore': _postEventRuminationScore.toInt(),
       };
     } else if (shouldOpenBehavioralExposure) {
       dialogIcon = Icons.directions_run_outlined;
@@ -469,10 +468,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
       guideMessage =
           'Fear Ladder giúp bạn đi từ bước dễ tới bước khó hơn, phá vỡ khuynh hướng né tránh bằng những trải nghiệm thực tế có cấu trúc.';
       primaryLabel = 'Đi tới Thang sợ hãi';
-      primaryAction = () {
-        Navigator.pop(context);
-        context.go('/roadmap');
-      };
+      targetRoute = '/roadmap';
     } else if (shouldOpenEmotionalSoothing) {
       dialogIcon = Icons.spa_outlined;
       dialogTitle = 'Bạn cần điều hòa cảm xúc trước';
@@ -482,10 +478,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
       guideMessage =
           'Bạn có thể đọc nhanh Thẻ đối phó hoặc dùng bài tập điều hòa để hạ nhiệt cảm xúc trước, rồi quay lại lộ trình khi đã ổn định hơn.';
       primaryLabel = 'Mở Thẻ đối phó';
-      primaryAction = () {
-        Navigator.pop(context);
-        context.push('/coping-cards');
-      };
+      targetRoute = '/coping-cards';
     } else if (isStableProgress) {
       dialogIcon = Icons.favorite_outline;
       dialogTitle = 'Tiến trình hôm nay đang ổn định';
@@ -495,10 +488,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
       guideMessage =
           'Hôm nay hệ thống chưa mở thêm nhánh can thiệp mới. Bạn có thể tiếp tục lộ trình hiện tại hoặc đọc lại các công cụ đã lưu.';
       primaryLabel = 'Xem lộ trình';
-      primaryAction = () {
-        Navigator.pop(context);
-        context.go('/roadmap');
-      };
+      targetRoute = '/roadmap';
     } else {
       dialogIcon = Icons.insights_outlined;
       dialogTitle = 'Tiếp tục theo dõi thêm';
@@ -508,14 +498,12 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
       guideMessage =
           'Bạn vẫn có thể chủ động mở lộ trình, nhật ký suy nghĩ hoặc Thẻ đối phó nếu muốn tự hỗ trợ ngay lúc này.';
       primaryLabel = 'Đóng';
-      primaryAction = () {
-        Navigator.pop(context);
-      };
+      targetRoute = null;
     }
 
-    showDialog(
+    final shouldNavigate = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
@@ -550,7 +538,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Để sau', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
@@ -558,12 +546,16 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
               backgroundColor: AppColors.primary,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            onPressed: primaryAction,
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: Text(primaryLabel, style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
+
+    if (shouldNavigate == true && mounted && targetRoute != null) {
+      context.push(targetRoute, extra: targetExtra);
+    }
   }
 
   @override

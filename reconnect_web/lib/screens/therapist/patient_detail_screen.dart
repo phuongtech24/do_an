@@ -52,8 +52,6 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadRiskAnalytics();
-      _loadQuestProgress();
       _loadPreSessionReview();
     });
   }
@@ -143,11 +141,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
   }
 
   Future<void> _refreshAll() async {
-    await Future.wait([
-      _loadRiskAnalytics(),
-      _loadQuestProgress(),
-      _loadPreSessionReview(),
-    ]);
+    await _loadPreSessionReview();
   }
 
   @override
@@ -166,39 +160,23 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
           ),
         ],
       ),
-      body: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 2,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildPatientHeader(statusColor),
-                  const SizedBox(height: 24),
-                  _buildIdentityPanel(),
-                  const SizedBox(height: 24),
-                  _buildPreSessionReviewPanel(),
-                  const SizedBox(height: 24),
-                  _buildRiskAnalyticsPanel(),
-                  const SizedBox(height: 24),
-                  _buildActionPanel(),
-                ],
-              ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(32),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1180),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildPatientHeader(statusColor),
+                const SizedBox(height: 24),
+                _buildIdentityPanel(),
+                const SizedBox(height: 24),
+                _buildPreSessionReviewPanel(),
+              ],
             ),
           ),
-          Container(width: 1, color: Colors.grey.shade200),
-          Expanded(
-            flex: 1,
-            child: Container(
-              color: Colors.white,
-              padding: const EdgeInsets.all(32),
-              child: _buildQuestProgressPanel(),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -225,7 +203,10 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     _Badge(label: _hasRedFlag ? 'Cảnh báo' : 'Ổn định', color: statusColor),
-                    _Badge(label: 'Risk $_currentRiskScore/100', color: _currentRiskScore >= 70 ? AppColors.alert : AppColors.primary),
+                    _Badge(
+                      label: 'Nguy cơ $_currentRiskScore/100',
+                      color: _currentRiskScore >= 70 ? AppColors.alert : AppColors.primary,
+                    ),
                     if (_isAnonymous)
                       const Row(
                         mainAxisSize: MainAxisSize.min,
@@ -358,12 +339,12 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
             children: [
               const Expanded(
                 child: Text(
-                  'Pre-session review',
+                  'Tóm tắt trước phiên tư vấn',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primary),
                 ),
               ),
               IconButton(
-                tooltip: 'Tải lại review',
+                tooltip: 'Tải lại bản tóm tắt',
                 onPressed: _preSessionLoading ? null : _loadPreSessionReview,
                 icon: const Icon(Icons.refresh),
               ),
@@ -371,7 +352,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Tóm tắt nhanh trước phiên: LSAS, tuần trị liệu, bài tập gần đây, check-in và cảnh báo an toàn.',
+            'Tóm tắt nhanh trước phiên: LSAS, tuần trị liệu, bài tập gần đây, điểm danh cảm xúc và cảnh báo an toàn.',
             style: TextStyle(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 16),
@@ -382,8 +363,8 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
           else if (review == null)
             const _EmptyBox(
               icon: Icons.fact_check_outlined,
-              title: 'Chưa có packet pre-session review',
-              message: 'Khi có đủ dữ liệu LSAS, check-in, thought record và bài tập, hệ thống sẽ tổng hợp tại đây.',
+              title: 'Chưa có dữ liệu tóm tắt trước phiên',
+              message: 'Khi có dữ liệu LSAS, điểm danh cảm xúc, nhật ký suy nghĩ và bài thực hành, hệ thống sẽ tổng hợp tại đây.',
             )
           else
             Column(
@@ -393,14 +374,14 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                   spacing: 12,
                   runSpacing: 12,
                   children: [
-                    _Badge(label: 'LSAS baseline: ${review.baselineLsasScore ?? '-'}', color: AppColors.secondary),
+                    _Badge(label: 'LSAS ban đầu: ${review.baselineLsasScore ?? '-'}', color: AppColors.secondary),
                     _Badge(label: 'LSAS hiện tại: ${review.currentLsasScore ?? '-'}', color: AppColors.primary),
                     if (review.programWeek != null)
                       _Badge(label: 'Tuần ${review.programWeek}', color: AppColors.primary),
                     if (review.programPhaseLabel.isNotEmpty)
-                      _Badge(label: review.programPhaseLabel, color: AppColors.secondary),
-                    _Badge(label: 'Homework xong: ${review.recentHomeworkCompleted}', color: AppColors.success),
-                    _Badge(label: 'Check-in tuần qua: ${review.dailyCheckinsLastWeek}', color: AppColors.primary),
+                      _Badge(label: _translateClinicalSummary(review.programPhaseLabel), color: AppColors.secondary),
+                    _Badge(label: 'Bài tập đã hoàn thành: ${review.recentHomeworkCompleted}', color: AppColors.success),
+                    _Badge(label: 'Lần điểm danh tuần qua: ${review.dailyCheckinsLastWeek}', color: AppColors.primary),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -410,11 +391,11 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                     style: const TextStyle(color: AppColors.textPrimary, height: 1.45),
                   ),
                 const SizedBox(height: 14),
-                _buildSummaryList('Behavioral experiments gần đây', review.recentBehavioralExperimentSummaries),
+                _buildSummaryList('Thử nghiệm hành vi gần đây', review.recentBehavioralExperimentSummaries),
                 const SizedBox(height: 10),
-                _buildSummaryList('Thought records gần đây', review.recentThoughtRecordSummaries),
+                _buildSummaryList('Nhật ký suy nghĩ gần đây', review.recentThoughtRecordSummaries),
                 const SizedBox(height: 10),
-                _buildSummaryList('Daily check-in gần đây', review.recentDailyCheckinSummaries),
+                _buildSummaryList('Điểm danh cảm xúc gần đây', review.recentDailyCheckinSummaries),
               ],
             ),
         ],
@@ -439,7 +420,10 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
                     children: [
                       const Text('• ', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
                       Expanded(
-                        child: Text(item, style: const TextStyle(color: AppColors.textSecondary, height: 1.4)),
+                        child: Text(
+                          _translateClinicalSummary(item),
+                          style: const TextStyle(color: AppColors.textSecondary, height: 1.4),
+                        ),
                       ),
                     ],
                   ),
@@ -447,6 +431,19 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
               ),
       ],
     );
+  }
+
+  String _translateClinicalSummary(String value) {
+    return value
+        .replaceAll('THOUGHT_RECORD', 'Nhật ký suy nghĩ')
+        .replaceAll('PLANNED', 'Đã lên kế hoạch')
+        .replaceAll('IN_PROGRESS', 'Đang thực hiện')
+        .replaceAll('COMPLETED', 'Đã hoàn thành')
+        .replaceAll('CANCELLED', 'Đã hủy')
+        .replaceAll('SELF_HELP', 'Tự hỗ trợ có hướng dẫn')
+        .replaceAll('REASSURANCE', 'Theo dõi và trấn an')
+        .replaceAll('THERAPIST_TRACK_14_WEEKS', 'Lộ trình cùng bác sĩ')
+        .replaceAll('URGENT_RED_FLAG', 'Ưu tiên an toàn khẩn cấp');
   }
 
   Widget _buildRiskMetricRow(TherapistRiskAnalyticsModel analytics) {

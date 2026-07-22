@@ -4,10 +4,10 @@ services:
     container_name: mindhealth-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: mindhealth_db
-      MYSQL_USER: mindhealth_user
-      MYSQL_PASSWORD: mindhealth_password
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-change_me_root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-mindhealth_db}
+      MYSQL_USER: ${MYSQL_USER:-mindhealth_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-change_me_db}
     ports:
       - "3306:3306"
     volumes:
@@ -52,11 +52,11 @@ services:
     environment:
       DB_HOST: mysql
       DB_PORT: 3306
-      DB_NAME: mindhealth_db
-      DB_USER: mindhealth_user
-      DB_PASSWORD: mindhealth_password
+      DB_NAME: ${MYSQL_DATABASE:-mindhealth_db}
+      DB_USER: ${MYSQL_USER:-mindhealth_user}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-change_me_db}
       SERVER_PORT: 8080
-      JWT_SECRET: mindhealth-docker-secret-change-this-32chars-min
+      JWT_SECRET: ${JWT_SECRET:-change_me_to_at_least_32_chars}
       AI_ENABLED: "false"
       AI_RAG_ENABLED: "false"
       AI_RAG_AUTO_INGEST_ON_STARTUP: "false"

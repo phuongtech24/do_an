@@ -5,7 +5,6 @@ import '../../core/auth/auth_provider.dart';
 import '../../theme/app_colors.dart';
 import '../auth/therapist_login_screen.dart';
 import 'admin_patient_profiles_screen.dart';
-import 'admin_quests_screen.dart';
 import 'admin_verify_doctor_screen.dart';
 
 class MainAdminScreen extends StatefulWidget {
@@ -120,7 +119,7 @@ class _MainAdminScreenState extends State<MainAdminScreen> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Quản trị hồ sơ bệnh nhân, nội dung CBT và điều phối chuyên gia trong cùng một không gian làm việc.',
+              'Quản trị hồ sơ bệnh nhân và điều phối chuyên gia trong cùng một không gian làm việc.',
               style: TextStyle(color: Colors.white70, height: 1.45),
             ),
             const SizedBox(height: 24),
@@ -132,17 +131,10 @@ class _MainAdminScreenState extends State<MainAdminScreen> {
             ),
             const SizedBox(height: 12),
             _menuItem(
-              icon: Icons.library_books_outlined,
-              label: 'Kho nội dung trị liệu',
-              subtitle: 'Quản lý thư viện tình huống mẫu',
-              index: 1,
-            ),
-            const SizedBox(height: 12),
-            _menuItem(
               icon: Icons.manage_accounts_outlined,
               label: 'Quản lý chuyên gia',
               subtitle: 'Duyệt và theo dõi chuyên gia',
-              index: 2,
+              index: 1,
             ),
             const SizedBox(height: 18),
             Container(
@@ -235,7 +227,7 @@ class _MainAdminScreenState extends State<MainAdminScreen> {
   }
 
   Widget _buildTopBar({required bool compact}) {
-    const labels = ['Hồ sơ bệnh nhân', 'Kho nội dung trị liệu', 'Quản lý chuyên gia'];
+    const labels = ['Hồ sơ bệnh nhân', 'Quản lý chuyên gia'];
 
     return Container(
       margin: compact ? EdgeInsets.zero : const EdgeInsets.fromLTRB(0, 20, 20, 0),
@@ -313,8 +305,7 @@ class _MainAdminScreenState extends State<MainAdminScreen> {
 
   Widget _buildMainContent() {
     final child = switch (_selectedIndex) {
-      1 => const AdminQuestsScreen(),
-      2 => const AdminVerifyDoctorScreen(),
+      1 => const AdminVerifyDoctorScreen(),
       _ => const AdminPatientProfilesScreen(),
     };
 
